@@ -13,7 +13,8 @@ from datetime import timedelta
 from collections import Counter
 import json
 import logging
-
+from django.views.decorators.http import require_POST
+# Certifique-se de que get_object_or_404 e JsonResponse estão importados
 from .models import (
     Assunto, Questao, Alternativa, RespostaUsuario,
     ComentarioQuestao, CurtidaComentario, DenunciaComentario,
@@ -149,7 +150,7 @@ def listar_questoes_view(request, assunto_id):
         # Subquery para pegar a data máxima de resposta para cada questão
         max_data_subquery = RespostaUsuario.objects.filter(
             id_usuario_id=user_id,
-            id_questao_id=OuterRef('id')
+            id_questao=OuterRef('id')
         ).values('id_questao').annotate(
             max_data=Max('data_resposta')
         ).values('max_data')
@@ -157,7 +158,7 @@ def listar_questoes_view(request, assunto_id):
         # Busca a última resposta de cada questão
         ultimas_respostas = RespostaUsuario.objects.filter(
             id_usuario_id=user_id,
-            id_questao_id__in=questoes_ids,
+            id_questao__in=questoes_ids,
             data_resposta=Subquery(max_data_subquery)
         ).values('id_questao', 'acertou')
         
@@ -229,13 +230,20 @@ def listar_questoes_view(request, assunto_id):
     # Calcula contadores conforme documentação
     total_todas = questoes.count()
     
+    # DEBUG: Log para verificar contagem
+    print(f"DEBUG: Total de questões no assunto: {total_todas}")
+    print(f"DEBUG: IDs das questões: {questoes_ids}")
+    
     if user_id:
         # Contador: Respondidas (questões respondidas pelo menos uma vez)
         respondidas_ids = RespostaUsuario.objects.filter(
             id_usuario_id=user_id,
-            id_questao_id__in=questoes_ids
+            id_questao__in=questoes_ids
         ).values_list('id_questao', flat=True).distinct()
         total_respondidas = len(respondidas_ids)
+        
+        print(f"DEBUG: Questões respondidas IDs: {list(respondidas_ids)}")
+        print(f"DEBUG: Total respondidas: {total_respondidas}")
         
         # Contador: Não Respondidas (diferença entre total e respondidas)
         total_nao_respondidas = total_todas - total_respondidas
@@ -250,6 +258,10 @@ def listar_questoes_view(request, assunto_id):
                     total_certas += 1
                 else:  # acertou = False
                     total_erradas += 1
+        
+        print(f"DEBUG: Total certas: {total_certas}")
+        print(f"DEBUG: Total erradas: {total_erradas}")
+        print(f"DEBUG: Respostas dict: {respostas_dict}")
     else:
         total_respondidas = 0
         total_nao_respondidas = total_todas
@@ -837,8 +849,8 @@ def deletar_questao_view(request):
                 with transaction.atomic():
                     # Se seus modelos têm on_delete=CASCADE, as próximas linhas são opcionais/redundantes,
                     # mas garantem a ordem e o controle na transação.
-                    # RespostaUsuario.objects.filter(id_questao=questao).delete()
-                    # Alternativa.objects.filter(id_questao=questao).delete()
+                    # RespostaUsuario.objects.filter(questao=questao).delete()
+                    # Alternativa.objects.filter(questao=questao).delete()
                     
                     questao.delete() # Deleta em cascata se configurado corretamente
                 
@@ -1256,64 +1268,80 @@ def responder_relatorio_view(request):
 # ==============================================================================
 
 # Adicionar se não existirem
-@csrf_exempt
+# NO ARQUIVO: /app/questoes/views.py
+
+
+# Remova o @csrf_exempt se ele estiver aqui!
+
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+import json
+from django.views.decorators.http import require_POST
+# Importe aqui seus modelos (Questao, Alternativa, RespostaUsuario, etc.)
+# from .models import Questao, Alternativa, RespostaUsuario # Exemplo
+# NO ARQUIVO views.py, DEPOIS DOS IMPORTS
+
+@require_POST
 def validar_resposta_view(request):
     """View que processa a resposta do quiz."""
-    if request.method == 'POST':
-        try:
-            import json
-            data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+        
+        questao_id = data.get('id_questao')      
+        alternativa_id = data.get('id_alternativa')
+        
+        if not questao_id or not alternativa_id:
+            return JsonResponse({'sucesso': False, 'erro': 'Dados inválidos (ID da Questão ou Alternativa faltando).'}, status=400)
+        
+        # Busca a questão e alternativa
+        # ASSUMIMOS QUE VOCÊ TEM: Questao, Alternativa
+        questao = get_object_or_404(Questao, id=questao_id)
+        alternativa = get_object_or_404(Alternativa, id=alternativa_id)
+        
+        # VERIFICAÇÃO DE SEGURANÇA: Garante que a alternativa pertence à questão
+        if alternativa.id_questao.id != questao.id: 
+            return JsonResponse({'sucesso': False, 'erro': 'Alternativa não pertence à questão.'}, status=400)
+        
+        # Verifica se acertou
+        acertou = alternativa.eh_correta 
+        
+        # Salva a resposta do usuário (apenas se estiver logado)
+        if request.user.is_authenticated:
+            # Apaga respostas anteriores para a mesma questão
+            # ASSUMIMOS QUE VOCÊ TEM: RespostaUsuario
+            RespostaUsuario.objects.filter(
+                id_usuario=request.user,
+                id_questao=questao
+            ).delete()
             
-            questao_id = data.get('id_questao')
-            alternativa_id = data.get('id_alternativa')
-            
-            if not questao_id or not alternativa_id:
-                return JsonResponse({'sucesso': False, 'erro': 'Dados inválidos'}, status=400)
-            
-            # Busca a questão e alternativa
-            questao = get_object_or_404(Questao, id=questao_id)
-            alternativa = get_object_or_404(Alternativa, id=alternativa_id)
-            
-            # Verifica se a alternativa pertence à questão
-            if alternativa.id_questao != questao:
-                return JsonResponse({'sucesso': False, 'erro': 'Alternativa inválida'}, status=400)
-            
-            # Verifica se acertou
-            acertou = alternativa.eh_correta
-            
-            # Salva a resposta do usuário (se estiver logado)
-            if request.user.is_authenticated:
-                # Remove resposta anterior se existir (unique_together)
-                RespostaUsuario.objects.filter(
-                    id_usuario=request.user,
-                    id_questao=questao
-                ).delete()
-                
-                # Cria nova resposta
-                RespostaUsuario.objects.create(
-                    id_usuario=request.user,
-                    id_questao=questao,
-                    id_alternativa=alternativa,
-                    acertou=acertou
-                )
-            
-            # Busca a alternativa correta para retornar
-            alternativa_correta = questao.alternativas.filter(eh_correta=True).first()
-            
-            return JsonResponse({
-                'sucesso': True,
-                'acertou': acertou,
-                'id_alternativa_selecionada': alternativa_id,
-                'id_alternativa_correta': alternativa_correta.id if alternativa_correta else None,
-                'explicacao': questao.explicacao or ''
-            })
-            
-        except json.JSONDecodeError:
-            return JsonResponse({'sucesso': False, 'erro': 'JSON inválido'}, status=400)
-        except Exception as e:
-            return JsonResponse({'sucesso': False, 'erro': str(e)}, status=500)
-    
-    return JsonResponse({'sucesso': False, 'erro': 'Método não permitido'}, status=405)
+            # Cria nova resposta
+            RespostaUsuario.objects.create(
+                id_usuario=request.user,
+                id_questao=questao,
+                id_alternativa=alternativa,
+                acertou=acertou
+            )
+
+        # Busca a alternativa correta (para o feedback visual)
+        alternativa_correta = questao.alternativas.filter(eh_correta=True).first()
+        
+        return JsonResponse({
+            'sucesso': True,
+            'acertou': acertou,
+            'id_alternativa_selecionada': alternativa_id,
+            'id_alternativa_correta': alternativa_correta.id if alternativa_correta else None,
+            'explicacao': questao.explicacao or '',
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'sucesso': False, 'erro': 'JSON inválido no corpo da requisição.'}, status=400)
+    except Questao.DoesNotExist:
+        return JsonResponse({'sucesso': False, 'erro': 'Questão não encontrada.'}, status=404)
+    except Alternativa.DoesNotExist:
+        return JsonResponse({'sucesso': False, 'erro': 'Alternativa não encontrada.'}, status=404)
+    except Exception as e:
+        print(f"Erro inesperado na view: {e}")
+        return JsonResponse({'sucesso': False, 'erro': 'Erro interno do servidor.'}, status=500)
 
 
 def quiz_vertical_filtros_view(request, assunto_id):
@@ -1342,7 +1370,7 @@ def quiz_vertical_filtros_view(request, assunto_id):
         
         max_data_subquery = RespostaUsuario.objects.filter(
             id_usuario_id=user_id,
-            id_questao_id=OuterRef('id')
+            id_questao=OuterRef('id')
         ).values('id_questao').annotate(
             max_data=Max('data_resposta')
         ).values('max_data')
@@ -1410,7 +1438,7 @@ def quiz_vertical_filtros_view(request, assunto_id):
     alternativas_dict = {}
     
     if questoes_ids:
-        alternativas = Alternativa.objects.filter(id_questao_id__in=questoes_ids).select_related('id_questao').order_by('id_questao', 'ordem', 'id')
+        alternativas = Alternativa.objects.filter(id_questao__in=questoes_ids).select_related('id_questao').order_by('id_questao', 'ordem', 'id')
         for alt in alternativas:
             if alt.id_questao.id not in alternativas_dict:
                 alternativas_dict[alt.id_questao.id] = []
@@ -1477,7 +1505,7 @@ def simulado_online_view(request, assunto_id):
         
         max_data_subquery = RespostaUsuario.objects.filter(
             id_usuario_id=user_id,
-            id_questao_id=OuterRef('id')
+            id_questao=OuterRef('id')
         ).values('id_questao').annotate(
             max_data=Max('data_resposta')
         ).values('max_data')
@@ -1544,7 +1572,7 @@ def simulado_online_view(request, assunto_id):
     alternativas_dict = {}
     
     if questoes_ids:
-        alternativas = Alternativa.objects.filter(id_questao_id__in=questoes_ids).select_related('id_questao').order_by('id_questao', 'ordem', 'id')
+        alternativas = Alternativa.objects.filter(id_questao__in=questoes_ids).select_related('id_questao').order_by('id_questao', 'ordem', 'id')
         for alt in alternativas:
             if alt.id_questao.id not in alternativas_dict:
                 alternativas_dict[alt.id_questao.id] = []

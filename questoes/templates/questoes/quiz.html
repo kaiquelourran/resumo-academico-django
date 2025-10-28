@@ -4,6 +4,8 @@
 
 {% block title %}Quiz - {{ assunto.nome }}{% endblock %}
 
+{% csrf_token %}
+
 {% block breadcrumb %}
 <div class="breadcrumb">
     <div class="header-container">
@@ -286,6 +288,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                 },
                 body: JSON.stringify({
                         id_questao: parseInt(questaoId),

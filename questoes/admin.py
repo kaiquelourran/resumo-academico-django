@@ -70,7 +70,7 @@ class QuestaoAdmin(admin.ModelAdmin):
     texto_resumido.short_description = 'Texto da Questão'
     
     def tem_explicacao(self, obj):
-        return '✓' if obj.explicacao else '✗'
+        return bool(obj.explicacao)
     tem_explicacao.short_description = 'Explicação'
     tem_explicacao.boolean = True
     
@@ -130,7 +130,7 @@ class RespostaUsuarioAdmin(admin.ModelAdmin):
     alternativa_resumida.short_description = 'Alternativa'
     
     def acertou_display(self, obj):
-        return '✓ Acertou' if obj.acertou else '✗ Errou'
+        return obj.acertou
     acertou_display.short_description = 'Resultado'
     acertou_display.boolean = True
 
@@ -161,7 +161,7 @@ class RelatorioBugAdmin(admin.ModelAdmin):
     )
     
     def tem_resposta(self, obj):
-        return '✓' if obj.resposta_admin else '✗'
+        return bool(obj.resposta_admin)
     tem_resposta.short_description = 'Respondido'
     tem_resposta.boolean = True
     

@@ -102,6 +102,8 @@
     const csrfToken = '{{ csrf_token|escapejs }}';
 </script>
 
+{% csrf_token %}
+
 <style>
 /* ======================================== QUIZ VERTICAL FILTROS CSS ======================================== */
 
@@ -971,6 +973,7 @@ function selecionarAlternativa(elemento, questaoId) {
     // Salva resposta
     respostas[questaoId] = elemento.dataset.alternativaId;
 }
+// ... [Código anterior]
 
 function responderQuestao(questaoId, alternativaId, elemento) {
     // Desabilitar todas as alternativas desta questão
@@ -1030,6 +1033,30 @@ function responderQuestao(questaoId, alternativaId, elemento) {
         atualizarFiltros();
     }, 100);
     
+    // 🌟 CORREÇÃO: Chamar a função unificada de comunicação com o servidor
+    enviarResposta(questaoId, alternativaId);
+}
+    
+    // Atualizar status da questão na lista
+    const questaoIndex = questoesList.findIndex(q => q.questao.id === questaoId);
+    if (questaoIndex !== -1) {
+        questoesList[questaoIndex].status = respostaCorreta ? 'certa' : 'errada';
+        console.log(`Status atualizado: Questão ${questaoId} = ${questoesList[questaoIndex].status}`);
+    }
+    
+    // Atualizar status visual no card
+    const statusElement = card.querySelector('.question-status');
+    if (statusElement) {
+        statusElement.textContent = respostaCorreta ? 'CERTA' : 'ERRADA';
+        statusElement.className = `question-status ${respostaCorreta ? 'certa' : 'errada'}`;
+        console.log(`Status visual atualizado: ${respostaCorreta ? 'CERTA' : 'ERRADA'}`);
+    }
+    
+    // Atualizar filtros imediatamente
+    setTimeout(() => {
+        atualizarFiltros();
+    }, 100);
+    
     // Salvar resposta no servidor
     fetch('/questoes/validar-resposta/', {
         method: 'POST',
@@ -1053,7 +1080,7 @@ function responderQuestao(questaoId, alternativaId, elemento) {
     .catch(error => {
         console.error('Erro na requisição:', error);
     });
-}
+
 
 // Função para atualizar os filtros dinamicamente
 function atualizarFiltros() {
@@ -1221,32 +1248,36 @@ function atualizarNavegacao() {
     }
 }
 
+// ... [Código anterior]
 
 // Enviar resposta para servidor
-function enviarResposta(idQuestao, resposta) {
+function enviarResposta(idQuestao, idAlternativa) { // Renomeado o segundo parâmetro para clareza
     fetch('{% url "questoes:validar_resposta" %}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
+            'X-CSRFToken': csrfToken // ✅ Usa a constante global do template HTML
         },
         body: JSON.stringify({
-            id_questao: idQuestao,
-            id_alternativa: resposta
+            // ✅ Nomenclatura Padronizada
+            questao_id: idQuestao,
+            alternativa_id: idAlternativa 
         })
     })
     .then(response => response.json())
     .then(data => {
-        if (data.sucesso) {
-            console.log('Resposta enviada com sucesso');
+        if (data.success) {
+            console.log('Resposta salva com sucesso no servidor');
         } else {
-            console.error('Erro ao enviar resposta:', data.erro);
+            console.error('Erro ao salvar resposta:', data.error);
         }
     })
     .catch(error => {
-        console.error('Erro:', error);
+        console.error('Erro na requisição:', error);
     });
 }
+
+// ... [Código restante]
 
 // Pular questão
 function pularQuestao() {
