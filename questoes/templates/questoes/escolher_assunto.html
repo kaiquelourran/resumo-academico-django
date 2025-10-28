@@ -1,0 +1,291 @@
+{% extends 'questoes/base.html' %}
+{% load static %}
+
+{% block title %}Escolher Conteúdo{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modern-style.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    body.subjects-page {
+        background-image: linear-gradient(to top, #00C6FF, #0072FF);
+        background-attachment: fixed;
+        min-height: 100vh;
+    }
+    
+    .assuntos-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px 20px;
+    }
+    
+    .subjects-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    
+    .search-input {
+        flex: 1;
+        padding: 12px 14px;
+        border: 1px solid #e9eef3;
+        border-radius: 10px;
+        background: #fff;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+    
+    .search-input:focus {
+        outline: none;
+        border-color: #0072FF;
+        box-shadow: 0 0 0 4px rgba(0,114,255,0.18);
+    }
+    
+    .categorias-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+        margin-top: 20px;
+    }
+    
+    .categoria-coluna {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        border: 1px solid #e9eef3;
+    }
+    
+    .categoria-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #f0f7ff;
+    }
+    
+    .categoria-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        color: #fff;
+    }
+    
+    .categoria-temas .categoria-icon { background: linear-gradient(135deg, #00C6FF, #0072FF); }
+    .categoria-concursos .categoria-icon { background: linear-gradient(135deg, #ff6b6b, #ee5a52); }
+    .categoria-profissionais .categoria-icon { background: linear-gradient(135deg, #4ecdc4, #44a08d); }
+    
+    .categoria-titulo {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #222;
+        margin: 0;
+    }
+    
+    .categoria-count {
+        background: #f8f9fa;
+        color: #666;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-left: auto;
+    }
+    
+    .categoria-conteudos {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .conteudo-item {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid #e9ecef;
+    }
+    
+    .conteudo-item:hover {
+        background: #e3f2fd;
+        border-color: #0072FF;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,114,255,0.15);
+    }
+    
+    .conteudo-nome {
+        font-weight: 600;
+        color: #222;
+        margin-bottom: 6px;
+        font-size: 0.95rem;
+    }
+    
+    .conteudo-questoes {
+        color: #666;
+        font-size: 0.85rem;
+    }
+    
+    .ver-resto-btn {
+        background: linear-gradient(135deg, #00C6FF, #0072FF);
+        color: #fff;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 16px;
+        width: 100%;
+    }
+    
+    .ver-resto-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,114,255,0.3);
+    }
+    
+    .voltar-btn {
+        background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
+        color: #fff;
+        padding: 12px 18px;
+        border-radius: 10px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 18px rgba(0,114,255,0.28);
+        font-weight: 700;
+        transition: all 0.2s;
+    }
+    
+    .voltar-btn:hover {
+        color: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 12px 26px rgba(0,114,255,0.32);
+    }
+    
+    @media (max-width: 1024px) {
+        .categorias-container {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="assuntos-container">
+    <a href="{% url 'questoes:index' %}" class="voltar-btn">
+        <span>←</span> Voltar
+    </a>
+    
+    <div class="subjects-toolbar">
+        <input id="search-assunto" class="search-input" type="text" placeholder="Buscar conteúdo...">
+    </div>
+    
+    {% if categorias.temas or categorias.concursos or categorias.profissionais %}
+        <div class="categorias-container">
+            <!-- Temas -->
+            <div class="categoria-coluna categoria-temas">
+                <div class="categoria-header">
+                    <div class="categoria-icon">📚</div>
+                    <h3 class="categoria-titulo">Temas</h3>
+                    <span class="categoria-count">{{ categorias.temas|length }}</span>
+                </div>
+                <div class="categoria-conteudos" data-categoria="temas">
+                    {% for assunto in categorias.temas|slice:":6" %}
+                        <div class="conteudo-item" 
+                             data-name="{{ assunto.nome|lower }}"
+                             onclick="window.location.href='{% url 'questoes:listar_questoes' assunto.id %}'"
+                             role="button" tabindex="0">
+                            <div class="conteudo-nome">{{ assunto.nome }}</div>
+                            <div class="conteudo-questoes">{{ assunto.total_questoes }} questões</div>
+                        </div>
+                    {% endfor %}
+    </div>
+</div>
+
+            <!-- Concursos -->
+            <div class="categoria-coluna categoria-concursos">
+                <div class="categoria-header">
+                    <div class="categoria-icon">🏆</div>
+                    <h3 class="categoria-titulo">Concursos</h3>
+                    <span class="categoria-count">{{ categorias.concursos|length }}</span>
+                </div>
+                <div class="categoria-conteudos" data-categoria="concursos">
+                    {% for assunto in categorias.concursos|slice:":6" %}
+                        <div class="conteudo-item" 
+                             data-name="{{ assunto.nome|lower }}"
+                             onclick="window.location.href='{% url 'questoes:listar_questoes' assunto.id %}'"
+                             role="button" tabindex="0">
+                            <div class="conteudo-nome">{{ assunto.nome }}</div>
+                            <div class="conteudo-questoes">{{ assunto.total_questoes }} questões</div>
+                </div>
+            {% endfor %}
+    </div>
+</div>
+            
+            <!-- Profissionais -->
+            <div class="categoria-coluna categoria-profissionais">
+                <div class="categoria-header">
+                    <div class="categoria-icon">💼</div>
+                    <h3 class="categoria-titulo">Profissionais</h3>
+                    <span class="categoria-count">{{ categorias.profissionais|length }}</span>
+                </div>
+                <div class="categoria-conteudos" data-categoria="profissionais">
+                    {% for assunto in categorias.profissionais|slice:":6" %}
+                        <div class="conteudo-item" 
+                             data-name="{{ assunto.nome|lower }}"
+                             onclick="window.location.href='{% url 'questoes:listar_questoes' assunto.id %}'"
+                             role="button" tabindex="0">
+                            <div class="conteudo-nome">{{ assunto.nome }}</div>
+                            <div class="conteudo-questoes">{{ assunto.total_questoes }} questões</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="categoria-coluna">
+            <div class="categoria-header">
+                <div class="categoria-icon">📚</div>
+                <h3 class="categoria-titulo">Nenhum conteúdo encontrado</h3>
+    </div>
+            <div class="categoria-conteudos">
+                <div class="conteudo-item">
+                    <div class="conteudo-nome">Nenhum conteúdo disponível</div>
+                    <div class="conteudo-questoes">Não há conteúdos com questões cadastradas no sistema.</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+</div>
+
+<script>
+    // Filtro de conteúdos
+    document.addEventListener('DOMContentLoaded', function() {
+        const input = document.getElementById('search-assunto');
+        if (!input) return;
+        
+        input.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            
+            document.querySelectorAll('.categoria-conteudos').forEach(container => {
+                const items = container.querySelectorAll('.conteudo-item');
+                items.forEach(item => {
+                    const name = (item.getAttribute('data-name') || '').toLowerCase();
+                    const show = !query || name.indexOf(query) !== -1;
+                    item.style.display = show ? '' : 'none';
+        });
+    });
+        });
+    });
+</script>
+{% endblock %}

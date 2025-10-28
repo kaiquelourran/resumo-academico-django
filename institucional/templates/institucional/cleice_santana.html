@@ -1,0 +1,456 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Currículo - Cleice Santana</title>
+  <link rel="icon" href="{% static 'fotos/minha-logo-apple.png' %}" type="image/png">
+  <link rel="apple-touch-icon" href="{% static 'fotos/minha-logo-apple.png' %}">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+  <style>
+
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-image: linear-gradient(to top, #4A90E2, #50E3C2);
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    header {
+      min-height: 120px;
+      background-image: linear-gradient(135deg, #00C6FF 0%, #0072FF 50%, #0056CC 100%);
+      text-align: center;
+      font-size: 1.2em;
+      padding: 8px 15px 12px 15px;
+      color: white;
+      justify-content: center;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      position: fixed;
+      width: 100%;
+      top: 0;
+      left: 0;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    header p {
+      padding: 0.8em 0.3em;
+      font-size: 1.1em;
+      font-weight: 100;
+    }
+
+    nav {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      background: linear-gradient(135deg, #0096c1, #0072FF);
+      padding: 7px;
+      width: 100%;
+      font-size: 0.8em;
+      color: white;
+      border-radius: 13px;
+      margin-top: 5px;
+      box-shadow: 0 4px 14px rgba(0, 150, 193, 0.3);
+    }
+
+    nav a {
+      text-decoration: none;
+      color: white;
+      font-weight: 600;
+      padding: 9px 14px;
+      border-radius: 7px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    nav a:hover {
+      background: linear-gradient(135deg, #3478F6, #5B9BD5);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(52, 120, 246, 0.4);
+    }
+
+    .menu ul {
+      list-style: none;
+      display: flex;
+      background: transparent;
+      padding: 0;
+      gap: 18px;
+      font-size: 0.8em;
+      position: relative;
+      align-items: center;
+    }
+
+    .menu ul li {
+      position: relative;
+    }
+
+    .menu ul li a {
+      text-decoration: none;
+      color: white;
+      font-weight: 600;
+      padding: 9px 14px;
+      border-radius: 7px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      display: block;
+    }
+
+    .menu ul li a:hover {
+      background: linear-gradient(135deg, #3478F6, #5B9BD5);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(52, 120, 246, 0.4);
+    }
+
+    .menu ul li ul.submenu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: linear-gradient(135deg, #50E3C2, #00C6FF);
+      padding: 8px 0;
+      min-width: 180px;
+      z-index: 1000;
+      flex-direction: column;
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(0, 198, 255, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .menu ul li:hover > ul.submenu {
+      display: block;
+    }
+
+    .menu ul li ul.submenu li a {
+      padding: 12px 20px;
+      margin: 2px 8px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .menu ul li ul.submenu li a:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateX(5px);
+      box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+    }
+
+    main {
+      background-color: #FFFFFF;
+      max-width: 900px;
+      padding: 10px;
+      margin-top: 0.1em;
+      margin-left: auto;
+      margin-right: auto;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.432);
+      border-radius: 10px;
+      text-align: justify;
+      font-size: 1em;
+      color: #333333;
+    }
+
+    @media (min-width: 769px) {
+      main {
+        margin: 200px auto 10px auto;
+      }
+    }
+
+    @media (max-width: 768px) {
+      main {
+        margin: 220px auto 10px auto;
+      }
+    }
+
+    main h2 {
+      margin-bottom: 0.1em;
+      padding-left: 10px;
+      background-image: linear-gradient(to right, #0073ff94, #00c8ff93, transparent 60%);
+      color: #090639f0;
+      text-shadow: 2px 3px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    main h3 {
+      margin-top: 30px;
+      margin-bottom: 10px;
+      padding-left: 10px;
+      background-image: linear-gradient(to left, #0073ff94, #00c8ff93, transparent 60%);
+      color: #090639f0;
+      text-shadow: 2px 3px 4px rgba(0, 0, 0, 0.4);
+      text-align: center;
+      scroll-margin-top: 250px;
+    }
+
+    main ul {
+      margin-left: 30px;
+      padding-left: 10px;
+      line-height: 1.8em;
+    }
+
+    main p {
+      margin-top: 1em;
+      text-indent: 2em;
+      text-align: justify;
+      line-height: 1.8em;
+    }
+
+
+    
+
+    
+
+    
+
+    
+
+    @media (max-width: 768px) {
+      header {
+        min-height: auto;
+        padding: 15px 5px;
+        font-size: 0.9em;
+        border-radius: 0px 0px 10px 10px;
+        margin-bottom: 2px;
+      }
+      nav{
+        background-color: transparent;
+    }
+
+      header p {
+        padding: 0.1em;
+        font-size: 0.9em;
+        border-radius: 10px;
+      }
+
+      main h2 {
+        scroll-margin-top: 250px;
+      }
+
+      main {
+        margin: 220px auto 10px auto;
+      }
+
+      .menu ul {
+        flex-direction: column;
+        gap: 0.2em;
+        width: 100%;
+        background-color: transparent;
+      }
+
+      .menu ul li a {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        background-color: #0072FF;
+        border-radius: 20px;
+      }
+
+      .menu ul li a:hover {
+        background-color: #005ed9;
+      }
+
+      .menu ul li ul.submenu {
+        position: static;
+        background-color: #0096c1;
+      }
+
+      .menu ul li:hover > ul.submenu {
+        display: block;
+      }
+
+      
+      
+       
+      
+    }
+  </style>
+  <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-17492102079"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-17492102079');
+</script>
+</head>
+<body>
+  <header>
+    <h1>Cleice Santana</h1>
+    <p>
+        Terapia Ocupacional | cleice*********** | (79) 999******** | Lagarto-SE |
+        <a href="https://www.instagram.com/cleice.santtana?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" style="color: white; text-decoration: none; text-shadow: none;">
+            <i class="fa-brands fa-instagram"></i>
+        </a>
+    </p>
+    <nav class="menu">
+      <ul>
+        <li>
+          <a href="{% url 'institucional:index' %}">HOME</a>
+          <ul class="submenu">
+            <li><a href="{% url 'institucional:index' %}#resumo">Início Rápido</a></li>
+            <li><a href="{% url 'institucional:index' %}#cleice">Apresentação</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="{% url 'institucional:index' %}#sobre">SOBRE</a>
+          <ul class="submenu">
+            <li><a href="{% url 'institucional:index' %}#resumo">RESUMO ACADÊMICO</a></li>
+            <li><a href="{% url 'institucional:index' %}#cleice">EMBAIXADORA T.O</a></li>
+            <li><a href="{% url 'institucional:index' %}#funcionamento">FUNCIONAMENTO</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="{% url 'institucional:index' %}#conteudo">CONTEÚDO</a>
+          <ul class="submenu">
+            <li><a href="{% url 'institucional:index' %}#lista">LISTA DE CONTEUDO</a></li>
+            <li><a href="{% url 'institucional:index' %}#origem">ORIGEM E HISTÓRIA</a></li>
+            <li><a href="{% url 'questoes:escolher_assunto' %}">QUESTÕES</a></li>
+          </ul>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <article>
+      <h2>Sobre Mim</h2>
+      <p>
+        Estudante de Terapia Ocupacional com experiência em ensino de idiomas e monitoria pedagógica, buscando aplicar e expandir conhecimentos em saúde e educação. Possuo forte interesse em inclusão e desenvolvimento de crianças, com participação ativa em projetos de extensão e eventos na área da saúde e educação.
+      </p>
+
+      <h2>Formação Acadêmica</h2>
+      <ul>
+        <li>Graduação em Terapia Ocupacional (em andamento) – Universidade Federal de Sergipe (UFS), desde 2023</li>
+        <li>Ensino Médio – Colégio Estadual Silvio Romero, 2020 - 2022</li>
+      </ul>
+
+      <h2>Experiência Profissional</h2>
+      <ul>
+        <li>Professora de Inglês e Monitora Pedagógica – Wizard Idiomas, 2022 - 2025</li>
+        <li>Professora de Inglês – Fisk Centro de Ensino, 2025 - Atual</li>
+        <li>Vínculo Institucional – Universidade Federal de Sergipe (UFS), desde 2023</li>
+      </ul>
+
+      <h2>Formação Complementar</h2>
+      <h3>Inglês e Intercâmbio Cultural</h3>
+      <ul>
+        <li>Aspire Leaders Program – Harvard Aspire Institute, 2025</li>
+        <li>Inglês (210h) – Wizard Brasil, 2020 - 2022</li>
+        <li>Future 7 (2h) – Pearson, 2023</li>
+        <li>Wizard International Program (2h) – Pearson, 2023</li>
+        <li>Olimpíada de Inglês (16h) – U.S. Embassy & ChatClass, 2020</li>
+      </ul>
+
+      <h3>Empreendedorismo e Desenvolvimento Pessoal</h3>
+      <ul>
+        <li>Empreendedorismo (86h) – SEBRAE/MG, 2021</li>
+        <li>Empreendedorismo digital e profissões do futuro (4h) – SEBRAE/SE, 2020</li>
+        <li>Desenvolvimento profissional e empregabilidade (8h) – Prepara Cursos, 2019</li>
+        <li>Oratória e desenvolvimento econômico comunitário (4h) – RYLA, 2021</li>
+        <li>Relações humanas (4h) – SEBRAE/SE, 2020</li>
+        <li>Comunicação e marketing (4h) – SEBRAE/SE, 2020</li>
+        <li>Apresentação pessoal (2h) – Pearson, 2023</li>
+      </ul>
+
+      <h2>Cursos de Qualificação Profissional</h2>
+      <h3>Saúde Mental</h3>
+      <ul>
+        <li>Enfermaria de Psiquiatria em Hospital Geral</li>
+        <li>Estratégias Sensoriais em Transtornos Mentais Graves</li>
+        <li>Atuação no CAPS</li>
+        <li>Flexibilidade Cognitiva em Transtornos Mentais</li>
+        <li>Psicofarmacologia para Terapeutas Ocupacionais</li>
+        <li>Projeto Terapêutico Familiar no Domicílio</li>
+        <li>Avaliação Padronizada em Saúde Mental</li>
+      </ul>
+
+      <h3>Desenvolvimento Infantil</h3>
+      <ul>
+        <li>Marcos: 0 a 1 Ano</li>
+        <li>Marcos: 1 a 3 Anos</li>
+        <li>Marcos: 3 a 5 Anos</li>
+        <li>Brincar Enquanto Ocupação: 0 a 5 Anos</li>
+      </ul>
+
+      <h3>Projetos de Extensão</h3>
+      <ul>
+        <li>Socorristas Mirins – UFS (2024 - atual)</li>
+        <li>Território Feliz – UFS (2024 - atual)</li>
+        <li>Tchibum – Fisioterapia Aquática – UFS (2024 - atual)</li>
+      </ul>
+
+      <h2>Participação em Eventos</h2>
+      <ul>
+        <li>Oficina: Atualização em Psicologia Clínica</li>
+        <li>Congressos: TEA, TDAH, Ansiedade, Inclusão</li>
+        <li>Simpósios: Inclusão, Neurociência e Desenvolvimento</li>
+        <li>Oficinas: Avaliação Psicopedagógica, Motricidade, TDAH</li>
+      </ul>
+
+      <h2>Apresentações Científicas</h2>
+      <ul>
+        <li>Congresso Sergipano de Oncologia</li>
+        <li>Congresso Brasileiro de Transtornos do Neurodesenvolvimento</li>
+        <li>Congresso Brasileiro de Doenças Crônicas</li>
+        <li>Congresso Multidisciplinar de Saúde</li>
+      </ul>
+
+      <h2>Idiomas</h2>
+      <p>Inglês – Avançado</p>
+
+      <h2></h2>
+
+      
+      
+  </article>
+</main>
+
+  <!-- Footer padrão -->
+  {% include 'institucional/footer.html' %}
+
+  <!-- Script de Consentimento de Cookies -->
+  <script>
+  function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+
+  function setCookie(name, value, days) {
+      const date = new Date();
+      date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+      const expires = `expires=${date.toUTCString()}`;
+      document.cookie = `${name}=${value};${expires};path=/`;
+  }
+
+  window.addEventListener('DOMContentLoaded', function() {
+      if (!getCookie('cookies_aceitos')) {
+          const banner = document.getElementById('cookie-banner');
+          if (banner) {
+              banner.style.display = 'block';
+          }
+      }
+  });
+  </script>
+
+</body>
+</html>
+

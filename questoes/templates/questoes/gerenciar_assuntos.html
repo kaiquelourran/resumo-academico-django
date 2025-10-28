@@ -1,0 +1,189 @@
+{% extends 'questoes/base.html' %}
+{% load static %}
+
+{% block title %}Gerenciar Conteúdos - Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .header {
+        background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        text-align: center;
+        position: relative;
+    }
+    
+    .subjects-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .subjects-table th,
+    .subjects-table td {
+        padding: 15px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .subjects-table th {
+        background: #f8f9fa;
+        font-weight: bold;
+        color: #495057;
+    }
+    
+    .subjects-table tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .delete-form {
+        display: inline;
+    }
+    
+    .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 2em;
+        font-weight: bold;
+        color: #00C6FF;
+    }
+    
+    .badge {
+        background: #e9ecef;
+        color: #495057;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.875em;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="header">
+        <div class="header-nav">
+            <button onclick="goBack()" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </button>
+        </div>
+        <h1>🎯 Gerenciar Conteúdos</h1>
+        <p>Administre os conteúdos do sistema</p>
+        <div style="margin-top: 15px;">
+            <a href="{% url 'questoes:admin_dashboard' %}" class="btn btn-secondary">← Voltar ao Dashboard</a>
+            <a href="{% url 'questoes:adicionar_assunto' %}" class="btn btn-success">+ Adicionar Conteúdo</a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {% if message.tags == 'success' %}
+                    <strong>✅ Sucesso!</strong>
+                {% endif %}
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    {% if assuntos %}
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total de Conteúdos</h3>
+                <div class="stat-number">{{ total_assuntos }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total de Questões</h3>
+                <div class="stat-number">{{ total_questoes }}</div>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if not assuntos %}
+        <div class="alert alert-warning">
+            <strong>Nenhum assunto encontrado!</strong> 
+            <a href="{% url 'questoes:adicionar_assunto' %}">Clique aqui para adicionar o primeiro assunto</a>.
+        </div>
+    {% else %}
+        <table class="subjects-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th>Questões</th>
+                    <th>Criado em</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assunto in assuntos %}
+                    <tr>
+                        <td>{{ assunto.id }}</td>
+                        <td><strong>{{ assunto.nome }}</strong></td>
+                        <td>{{ assunto.get_tipo_assunto_display }}</td>
+                        <td>
+                            <span class="badge">{{ assunto.questoes.count }} questões</span>
+                        </td>
+                        <td>{{ assunto.criado_em|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <div class="actions">
+                                <a href="{% url 'questoes:listar_questoes' assunto.id %}" 
+                                   class="btn btn-primary" target="_blank">Ver Questões</a>
+                                
+                                {% if assunto.questoes.count > 0 %}
+                                    <span class="btn btn-secondary" style="opacity: 0.6; cursor: not-allowed;" 
+                                          title="Não é possível excluir assunto com questões">
+                                        🔒 Excluir
+                                    </span>
+                                {% else %}
+                                    <form method="POST" action="{% url 'questoes:deletar_assunto' %}" class="delete-form"
+                                          onsubmit="return confirm('Tem certeza que deseja excluir o conteúdo \'{{ assunto.nome }}\'? Esta ação não pode ser desfeita!')">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="id" value="{{ assunto.id }}">
+                                        <button type="submit" class="btn btn-danger">🗑️ Excluir</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+
+<script>
+    function goBack() {
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            window.location.href = '{% url "questoes:index" %}';
+        }
+    }
+</script>
+{% endblock %}
+

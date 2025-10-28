@@ -1,0 +1,392 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contato - Resumo Acadêmico</title>
+    <meta name="description" content="Entre em contato com o Resumo Acadêmico. Envie suas dúvidas, sugestões ou solicite informações sobre nosso sistema de questões.">
+    <link rel="icon" href="{% static 'fotos/minha-logo-apple.png' %}" type="image/png">
+    <link rel="apple-touch-icon" href="{% static 'fotos/minha-logo-apple.png' %}">
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17492102079"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'AW-17492102079');
+    </script>
+    
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+    .contact-form-container {
+        background: #fff;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+    }
+
+    .contact-form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+        font-size: 0.95em;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 1em;
+        transition: all 0.3s ease;
+        background: #fff;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #0072FF;
+        box-shadow: 0 0 0 3px rgba(0, 114, 255, 0.1);
+    }
+
+    .submit-btn {
+        background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 8px;
+        font-size: 1.1em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 114, 255, 0.3);
+    }
+
+    .contact-info {
+        background: #f8fafc;
+        padding: 30px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .contact-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 15px;
+        margin-bottom: 25px;
+        padding: 15px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .contact-icon {
+        font-size: 1.5em;
+        min-width: 40px;
+        text-align: center;
+    }
+
+    .contact-details h4 {
+        color: #374151;
+        margin-bottom: 5px;
+        font-size: 1.1em;
+    }
+
+    .contact-details p {
+        color: #6b7280;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .faq-section {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 2px solid #e2e8f0;
+    }
+
+    .faq-section h4 {
+        color: #374151;
+        margin-bottom: 15px;
+        font-size: 1.1em;
+    }
+
+    .faq-item {
+        margin-bottom: 15px;
+        padding: 10px 0;
+    }
+
+    .faq-item strong {
+        color: #374151;
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .faq-item p {
+        color: #6b7280;
+        margin: 0;
+        font-size: 0.95em;
+    }
+
+    .faq-item a {
+        color: #0072FF;
+        text-decoration: none;
+    }
+
+    .faq-item a:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+        .contact-form-container,
+        .contact-info {
+            padding: 20px;
+        }
+        
+        .contact-item {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .contact-icon {
+            margin-bottom: 10px;
+        }
+    }
+    </style>
+</head>
+<body>
+    <!-- CABEÇALHO -->
+    <header>
+        <h1>Resumo Acadêmico - Terapia Ocupacional</h1>
+        <p>Sistema interativo de questões para estudantes e profissionais de Terapia Ocupacional</p>
+        
+        <nav class="menu" id="menu">
+            <ul>
+                <li><a href="{% url 'institucional:index' %}">🏠 HOME</a></li>
+                <li><a href="{% url 'institucional:sobre' %}">👥 SOBRE</a></li>
+                <li><a href="{% url 'questoes:escolher_assunto' %}">📚 QUESTÕES</a></li>
+                <li><a href="{% url 'institucional:origem_to' %}">📖 ORIGEM TO</a></li>
+                <li><a href="{% url 'institucional:contato' %}">📞 CONTATO</a></li>
+            </ul>
+        </nav>
+        
+        <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu de navegação" aria-expanded="false">
+            <span aria-hidden="true">☰</span>
+        </button>
+    </header>
+
+    <!-- CONTEÚDO -->
+    <main>
+        <article>
+            <h2>📞 Entre em Contato Conosco</h2>
+            <p style="text-align: center; margin-bottom: 40px; color: #666;">
+                Tem dúvidas, sugestões ou precisa de ajuda? Estamos aqui para ajudar você!
+            </p>
+
+            <!-- MENSAGEM DE STATUS -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div style="background: {% if message.tags == 'success' %}#f0fdf4{% else %}#fef2f2{% endif %}; 
+                                  border-left: 4px solid {% if message.tags == 'success' %}#10b981{% else %}#ef4444{% endif %}; 
+                                  padding: 20px; 
+                                  border-radius: 8px; 
+                                  margin-bottom: 30px;">
+                        <strong style="color: {% if message.tags == 'success' %}#10b981{% else %}#ef4444{% endif %};">
+                            {% if message.tags == 'success' %}✅{% else %}❌{% endif %} {{ message }}
+                        </strong>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="contact-grid">
+                <!-- FORMULÁRIO DE CONTATO -->
+                <div class="contact-form-container">
+                    <h3>✉️ Envie sua Mensagem</h3>
+                    <form method="POST" action="{% url 'institucional:contato' %}" class="contact-form">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="nome">Nome Completo *</label>
+                            <input type="text" id="nome" name="nome" required 
+                                   placeholder="Seu nome completo">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">E-mail *</label>
+                            <input type="email" id="email" name="email" required 
+                                   placeholder="seu@email.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="assunto">Assunto *</label>
+                            <select id="assunto" name="assunto" required>
+                                <option value="">Selecione um assunto</option>
+                                <option value="duvida">Dúvida sobre o Sistema</option>
+                                <option value="sugestao">Sugestão de Melhoria</option>
+                                <option value="problema">Reportar Problema</option>
+                                <option value="parceria">Proposta de Parceria</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="mensagem">Mensagem *</label>
+                            <textarea id="mensagem" name="mensagem" required rows="5" 
+                                      placeholder="Descreva sua dúvida, sugestão ou problema..."></textarea>
+                        </div>
+
+                        <button type="submit" class="submit-btn">
+                            <span>📤</span>
+                            Enviar Mensagem
+                        </button>
+                    </form>
+                </div>
+
+                <!-- INFORMAÇÕES DE CONTATO -->
+                <div class="contact-info">
+                    <h3>📋 Informações de Contato</h3>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">📧</div>
+                        <div class="contact-details">
+                            <h4>E-mail</h4>
+                            <p>Cleicevitoria02@gmail.com</p>
+                        </div>
+                    </div>
+
+                    <div class="contact-item">
+                        <div class="contact-icon">⏰</div>
+                        <div class="contact-details">
+                            <h4>Horário de Atendimento</h4>
+                            <p>Segunda a Sexta: 9h às 18h<br>Sábado: 9h às 12h</p>
+                        </div>
+                    </div>
+
+                    <div class="contact-item">
+                        <div class="contact-icon">⚡</div>
+                        <div class="contact-details">
+                            <h4>Tempo de Resposta</h4>
+                            <p>Até 24 horas em dias úteis</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EMBAIXADORA T.O -->
+            <div style="background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%); padding: 40px; border-radius: 15px; color: white; text-align: center; margin: 30px 0; box-shadow: 0 10px 40px rgba(0,114,255,0.3);">
+                <h3 style="font-size: 2em; margin-bottom: 15px; font-weight: 600; color: #ffffff;">💬 Contato</h3>
+                <p style="font-size: 1.2em; margin-bottom: 30px; opacity: 0.95;">
+                    Para entrar em contato, fale com a nossa <strong>embaixadora</strong>.
+                </p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-top: 25px;">
+                    <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 15px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2);">
+                        <div style="font-size: 2.5em; margin-bottom: 15px;">📧</div>
+                        <h4 style="font-size: 1.3em; margin-bottom: 10px; font-weight: 600;">E-mail</h4>
+                        <p style="font-size: 1.1em; margin: 0; opacity: 0.95;">Cleicevitoria02@gmail.com</p>
+                    </div>
+                    
+                    <a href="https://instagram.com/cleice.santtana" target="_blank" style="text-decoration: none; color: inherit; display: block;">
+                        <div style="background: rgba(255,255,255,0.15); padding: 25px; border-radius: 15px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); transition: all 0.3s ease; cursor: pointer;">
+                            <div style="font-size: 2.5em; margin-bottom: 15px;">📸</div>
+                            <h4 style="font-size: 1.3em; margin-bottom: 10px; font-weight: 600;">Instagram</h4>
+                            <p style="font-size: 1.1em; margin: 0; opacity: 0.95;">@cleice.santtana</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- FAQ RÁPIDO -->
+            <div class="faq-section">
+                <h4>❓ Perguntas Frequentes</h4>
+                <div class="faq-item">
+                    <strong>Como acessar o sistema de questões?</strong>
+                    <p>Clique em "QUESTÕES" no menu ou <a href="{% url 'questoes:escolher_assunto' %}">acesse aqui</a>.</p>
+                </div>
+                <div class="faq-item">
+                    <strong>O sistema é gratuito?</strong>
+                    <p>Sim! Nosso sistema é completamente gratuito para estudantes e profissionais.</p>
+                </div>
+                <div class="faq-item">
+                    <strong>Posso sugerir novos temas?</strong>
+                    <p>Claro! Use o formulário acima com o assunto "Sugestão de Melhoria".</p>
+                </div>
+            </div>
+
+            <!-- CTA FINAL -->
+            <div style="text-align: center; margin-top: 40px; padding: 30px; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px;">
+                <h3>🚀 Pronto para Começar?</h3>
+                <p style="margin-bottom: 20px;">Acesse nosso sistema de questões e teste seus conhecimentos em Terapia Ocupacional!</p>
+                <a href="{% url 'questoes:escolher_assunto' %}" class="botao-quiz">
+                    <span class="btn-icon">📚</span>
+                    <span class="btn-text">Acessar Sistema de Questões</span>
+                </a>
+            </div>
+        </article>
+    </main>
+
+    <!-- RODAPÉ PADRÃO -->
+    {% include 'institucional/footer.html' %}
+
+    <!-- Banner de Consentimento de Cookies -->
+    <div id="cookie-banner" class="cookie-banner" style="display: none;">
+        <div class="cookie-content">
+            <p>🍪 Este site utiliza cookies para melhorar sua experiência. Ao continuar navegando, você concorda com nossa <a href="{% url 'institucional:politica_privacidade' %}">Política de Privacidade</a>.</p>
+            <button id="accept-cookies" class="cookie-accept-btn">Aceitar Cookies</button>
+        </div>
+    </div>
+
+    <script>
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    function setCookie(name, value, days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        const expires = `expires=${date.toUTCString()}`;
+        document.cookie = `${name}=${value};${expires};path=/`;
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+        if (!getCookie('cookies_aceitos')) {
+            document.getElementById('cookie-banner').style.display = 'block';
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const acceptBtn = document.getElementById('accept-cookies');
+        if (acceptBtn) {
+            acceptBtn.addEventListener('click', function() {
+                setCookie('cookies_aceitos', 'true', 365);
+                document.getElementById('cookie-banner').style.display = 'none';
+            });
+        }
+    });
+    </script>
+</body>
+</html>

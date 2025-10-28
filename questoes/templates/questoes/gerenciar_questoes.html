@@ -1,0 +1,196 @@
+{% extends 'questoes/base.html' %}
+{% load static %}
+
+{% block title %}Gerenciar Questões - Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-container {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+    
+    .stat-card {
+        background: white;
+        border: 1px solid #e1e5e9;
+        border-radius: 12px;
+        padding: 20px;
+        min-width: 150px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #00C6FF;
+    }
+    
+    .search-box {
+        margin-bottom: 20px;
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e1e5e9;
+        border-radius: 8px;
+        font-size: 1em;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .question-preview {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .actions {
+        display: flex;
+        gap: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="card">
+        <h2 class="card-title">📝 Gerenciar Questões</h2>
+        <p>Administre todas as questões do sistema</p>
+        
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-bottom:15px; flex-wrap: wrap;">
+            <a href="{% url 'questoes:admin_dashboard' %}" class="btn btn-outline">← Voltar ao Dashboard</a>
+            <a href="{% url 'questoes:adicionar_questao' %}" class="btn btn-success">+ Adicionar Questão</a>
+            <a href="{% url 'questoes:gerenciar_assuntos' %}" class="btn btn-primary">Gerenciar Conteúdos</a>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {% if message.tags == 'success' %}
+                        <strong>✅ Sucesso!</strong>
+                    {% elif message.tags == 'error' %}
+                        <strong>❌ Erro!</strong>
+                    {% endif %}
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <h3>Total de Questões</h3>
+                <div class="stat-number">{{ total_questoes }}</div>
+            </div>
+            {% for dificuldade, count in questoes_por_dificuldade.items %}
+                <div class="stat-card">
+                    <h3>{{ dificuldade|title }}</h3>
+                    <div class="stat-number">{{ count }}</div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar questões por assunto ou enunciado...">
+        </div>
+
+        {% if not questoes %}
+            <div class="alert alert-warning">
+                <strong>Nenhuma questão encontrada!</strong> 
+                <a href="{% url 'questoes:adicionar_questao' %}">Clique aqui para adicionar a primeira questão</a>.
+            </div>
+        {% else %}
+            <div class="table-container">
+                <table class="modern-table" id="questionsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Conteúdo</th>
+                            <th>Enunciado</th>
+                            <th>Dificuldade</th>
+                            <th>Alternativas</th>
+                            <th>Criado em</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for questao in questoes %}
+                            <tr>
+                                <td><strong>#{{ questao.id }}</strong></td>
+                                <td><span class="badge">{{ questao.id_assunto.nome }}</span></td>
+                                <td>
+                                    <div class="question-preview" title="{{ questao.texto }}">
+                                        {{ questao.texto|truncatewords:10 }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge">
+                                        {% if questao.dificuldade == 'facil' %}
+                                            <span style="background:#eafaea; color:#2e7d32; padding: 4px 8px; border-radius: 6px;">Fácil</span>
+                                        {% elif questao.dificuldade == 'medio' %}
+                                            <span style="background:#fff3cd; color:#856404; padding: 4px 8px; border-radius: 6px;">Médio</span>
+                                        {% elif questao.dificuldade == 'dificil' %}
+                                            <span style="background:#f8d7da; color:#721c24; padding: 4px 8px; border-radius: 6px;">Difícil</span>
+                                        {% else %}
+                                            Não definida
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge">{{ questao.alternativas.count }} opções</span>
+                                </td>
+                                <td>{{ questao.criado_em|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    <div class="actions">
+                                        <a href="{% url 'questoes:quiz' questao.id_assunto.id %}?questao={{ questao.id }}" 
+                                           class="btn btn-primary" target="_blank" title="Visualizar">👁️</a>
+                                        <a href="{% url 'questoes:editar_questao' questao.id %}" 
+                                           class="btn btn-warning" title="Editar">✏️</a>
+                                        <form method="POST" action="{% url 'questoes:deletar_questao' %}" 
+                                              onsubmit="return confirm('Tem certeza que deseja excluir esta questão? Esta ação não pode ser desfeita!')"
+                                              style="display: inline;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="questao_id" value="{{ questao.id }}">
+                                            <button type="submit" class="btn btn-danger" title="Excluir">🗑️</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    document.getElementById('searchInput')?.addEventListener('keyup', function() {
+        const searchTerm = this.value.toLowerCase();
+        const table = document.getElementById('questionsTable');
+        if (!table) return;
+        const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const assunto = row.cells[1].textContent.toLowerCase();
+            const enunciado = row.cells[2].textContent.toLowerCase();
+            row.style.display = (assunto.includes(searchTerm) || enunciado.includes(searchTerm)) ? '' : 'none';
+        }
+    });
+</script>
+{% endblock %}

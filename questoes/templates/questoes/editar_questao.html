@@ -1,0 +1,239 @@
+{% extends 'questoes/base.html' %}
+{% load static %}
+
+{% block title %}Editar Questão - Resumo Acadêmico{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-group {
+        margin-bottom: 25px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+        font-size: 1.1em;
+    }
+    
+    .alternativas-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 12px;
+        margin: 20px 0;
+    }
+    
+    .alternativas-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 15px;
+        font-weight: 600;
+        color: #333;
+        font-size: 1.1em;
+    }
+    
+    .alternativa-row {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        padding: 15px;
+        margin-bottom: 10px;
+        border: 2px solid #e1e5e9;
+        border-radius: 12px;
+        background: white;
+        transition: all 0.3s ease;
+    }
+    
+    .alternativa-row:hover {
+        border-color: #00C6FF;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.1);
+    }
+    
+    .alternativa-row.correta {
+        border-color: #28a745;
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    }
+    
+    .alt-letra {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
+        color: white;
+        border-radius: 50%;
+        font-weight: 700;
+        font-size: 1.1em;
+    }
+    
+    .alternativa-row.correta .alt-letra {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    }
+    
+    .alternativa-row input[type="text"] {
+        flex: 1;
+        border: none;
+        background: transparent;
+        font-size: 1em;
+        padding: 8px 12px;
+    }
+    
+    .alternativa-row input[type="text"]:focus {
+        background: rgba(102, 126, 234, 0.05);
+        border-radius: 6px;
+    }
+    
+    .alternativa-row input[type="radio"] {
+        width: 24px;
+        height: 24px;
+        accent-color: #00C6FF;
+        cursor: pointer;
+        transform: scale(1.2);
+    }
+    
+    .actions-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 2px solid #f0f0f0;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="header">
+        <div class="header-nav">
+            <button onclick="goBack()" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </button>
+        </div>
+        <div class="logo">📚</div>
+        <h1 class="title">Editar Questão</h1>
+        <p class="subtitle">Atualize os dados da questão selecionada</p>
+    </div>
+
+    <div class="form-container">
+        {% if not questao %}
+            <div class="status-message error">
+                <p>Selecione uma questão válida a partir de <a href="{% url 'questoes:gerenciar_questoes' %}" class="btn btn-primary">Gerenciar Questões</a>.</p>
+            </div>
+        {% else %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <form action="{% url 'questoes:editar_questao' questao.id %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="id_questao" value="{{ questao.id }}">
+
+                <div class="form-group">
+                    <label for="id_assunto">📋 Conteúdo:</label>
+                    <select id="id_assunto" name="id_assunto" class="form-control" required>
+                        {% for assunto in assuntos %}
+                            <option value="{{ assunto.id }}" {% if assunto.id == questao.id_assunto.id %}selected{% endif %}>
+                                {{ assunto.nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="enunciado">❓ Enunciado da Questão:</label>
+                    <textarea id="enunciado" name="enunciado" class="form-control" required placeholder="Digite o enunciado da questão...">{{ questao.texto }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="explicacao">💡 Explicação (opcional):</label>
+                    <textarea id="explicacao" name="explicacao" class="form-control" placeholder="Digite uma explicação para a resposta...">{{ questao.explicacao }}</textarea>
+                </div>
+
+                <div class="alternativas-section">
+                    <div class="alternativas-header">
+                        <span>✅ Alternativas</span>
+                        <small style="color: #666;">(marque a alternativa correta)</small>
+                    </div>
+                    
+                    {% for alt in alternativas %}
+                        <div class="alternativa-row {% if alt.eh_correta %}correta{% endif %}" data-alt-id="{{ alt.id }}">
+                            <div class="alt-letra">{% if forloop.counter0 == 0 %}A{% elif forloop.counter0 == 1 %}B{% elif forloop.counter0 == 2 %}C{% elif forloop.counter0 == 3 %}D{% elif forloop.counter0 == 4 %}E{% else %}{{ forloop.counter }}{% endif %}</div>
+                            <input type="text" name="alternativas[{{ alt.id }}]" value="{{ alt.texto }}" required>
+                            <input type="radio" name="correta" value="{{ alt.id }}" {% if alt.eh_correta %}checked{% endif %} title="Marcar como correta">
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="actions-container">
+                    <div class="btn-group">
+                        <a href="{% url 'questoes:gerenciar_questoes' %}" class="btn btn-outline">
+                            ← Voltar para Gerenciar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            💾 Salvar Alterações
+                        </button>
+                    </div>
+                </div>
+            </form>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function goBack() {
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            window.location.href = '{% url "questoes:index" %}';
+        }
+    }
+
+    // Destaque visual da alternativa correta
+    document.addEventListener('DOMContentLoaded', function () {
+        var radios = document.querySelectorAll('input[type="radio"][name="correta"]');
+        
+        function marcarCorreta() {
+            document.querySelectorAll('.alternativa-row').forEach(function(row){ 
+                row.classList.remove('correta'); 
+            });
+            
+            var selecionado = document.querySelector('input[type="radio"][name="correta"]:checked');
+            if (selecionado) {
+                var row = selecionado.closest('.alternativa-row');
+                if (row) { 
+                    row.classList.add('correta'); 
+                }
+            }
+        }
+        
+        radios.forEach(function(r){ 
+            r.addEventListener('change', marcarCorreta); 
+        });
+        
+        marcarCorreta();
+
+        var form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function(e){
+                if(!confirm('Confirmar salvar alterações desta questão?')) {
+                    e.preventDefault();
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
+
+

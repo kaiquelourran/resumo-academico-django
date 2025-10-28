@@ -1,0 +1,700 @@
+{% extends 'questoes/base.html' %}
+{% load static %}
+
+{% block title %}Adicionar Questão - Sistema Quiz{% endblock %}
+
+{% block extra_css %}
+<style>
+    .header-nav {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 2;
+    }
+
+    .btn-back {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        backdrop-filter: blur(10px);
+    }
+
+    .btn-back:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-2px);
+    }
+
+    .stats-bar {
+        background: #f8fafc;
+        padding: 20px 30px;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-around;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .stat-item {
+        text-align: center;
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #00C6FF;
+        display: block;
+    }
+
+    .stat-label {
+        color: #64748b;
+        font-size: 0.9rem;
+        margin-top: 5px;
+    }
+
+    .alternatives-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 10px;
+    }
+
+    .alternative-item {
+        position: relative;
+    }
+
+    .alternative-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .alt-letter {
+        background: #00C6FF;
+        color: white;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+
+    .alt-optional {
+        color: #6b7280;
+        font-size: 0.75rem;
+        font-weight: 400;
+        background: #f3f4f6;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+    }
+
+    /* Garantir que os grupos de seleção sejam exibidos corretamente */
+    #grupo-concursos,
+    #grupo-temas,
+    #grupo-profissionais {
+        display: none !important;
+    }
+
+    #grupo-concursos.show,
+    #grupo-temas.show,
+    #grupo-profissionais.show {
+        display: block !important;
+    }
+
+    .correct-answer-section {
+        background: #f8fafc;
+        padding: 25px;
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+    }
+
+    .radio-group {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-top: 15px;
+    }
+
+    .radio-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        padding: 10px 15px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+    }
+
+    .radio-item:hover {
+        background: #f1f5f9;
+    }
+
+    .radio-item input[type="radio"] {
+        width: 18px;
+        height: 18px;
+        accent-color: #00C6FF;
+    }
+
+    .radio-item input[type="radio"]:checked + .radio-label {
+        color: #00C6FF;
+        font-weight: 600;
+    }
+
+    .preview-section {
+        background: #f8fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 25px;
+        margin-top: 30px;
+        display: none;
+    }
+
+    .preview-section.show {
+        display: block;
+        animation: slideIn 0.3s ease-out;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-container fade-in">
+    <div class="header">
+        <div class="header-nav">
+            <button onclick="goBack()" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </button>
+        </div>
+        <div class="title-section">
+            <h1><i class="fas fa-plus-circle"></i> Adicionar Questão</h1>
+            <p>Crie novas questões para enriquecer o banco de dados do sistema</p>
+        </div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-number">{{ total_questoes }}</span>
+            <div class="stat-label">Total de Questões</div>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">{{ total_assuntos }}</span>
+            <div class="stat-label">Conteúdos Disponíveis</div>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number" id="session-count">0</span>
+            <div class="stat-label">Questões nesta Sessão</div>
+        </div>
+    </div>
+
+    <div class="form-container">
+        {% if mensagem_status %}
+            <div class="alert alert-{{ mensagem_status }} fade-in">
+                {% if mensagem_status == 'success' %}
+                    <i class="fas fa-check-circle"></i>
+                {% else %}
+                    <i class="fas fa-exclamation-triangle"></i>
+                {% endif %}
+                {{ mensagem_texto|safe }}
+            </div>
+        {% endif %}
+
+        <form method="POST" id="questionForm" novalidate>
+            {% csrf_token %}
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="tipo_conteudo">
+                        <i class="fas fa-tag"></i> Tipo de Conteúdo
+                    </label>
+                    <select name="tipo_conteudo" id="tipo_conteudo" class="form-control" onchange="atualizarSeletoresConteudo()">
+                        <option value="">Selecione o tipo de conteúdo</option>
+                        <option value="tema">📚 Temas</option>
+                        <option value="concurso">🏆 Concursos</option>
+                        <option value="profissional">💼 Profissionais</option>
+                    </select>
+                </div>
+                
+                <!-- Seletor para Temas -->
+                <div class="form-group" id="grupo-temas">
+                    <label for="assunto_tema">
+                        <i class="fas fa-book"></i> Tema
+                    </label>
+                    <select name="assunto_tema" id="assunto_tema" class="form-control">
+                        <option value="">Selecione um tema</option>
+                        {% for assunto in assuntos_por_tipo.tema %}
+                            <option value="{{ assunto.id }}">{{ assunto.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Seletores para Concursos -->
+                <div id="grupo-concursos">
+                    <div class="form-group">
+                        <label for="concurso_orgao_sel">
+                            <i class="fas fa-building"></i> Órgão
+                        </label>
+                        <select name="concurso_orgao_sel" id="concurso_orgao_sel" class="form-control" onchange="atualizarBancas()">
+                            <option value="">Selecione o órgão</option>
+                            {% for orgao in orgaos %}
+                                <option value="{{ orgao }}">{{ orgao }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="concurso_banca_sel">
+                            <i class="fas fa-university"></i> Banca
+                        </label>
+                        <select name="concurso_banca_sel" id="concurso_banca_sel" class="form-control" onchange="atualizarAnos()">
+                            <option value="">Selecione a banca</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="concurso_ano_sel">
+                            <i class="fas fa-calendar"></i> Ano
+                        </label>
+                        <select name="concurso_ano_sel" id="concurso_ano_sel" class="form-control" onchange="atualizarProvas()">
+                            <option value="">Selecione o ano</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="concurso_prova_sel">
+                            <i class="fas fa-file-alt"></i> Prova
+                        </label>
+                        <select name="concurso_prova_sel" id="concurso_prova_sel" class="form-control" onchange="selecionarAssuntoConcurso()">
+                            <option value="">Selecione a prova</option>
+                        </select>
+                    </div>
+                    
+                    <input type="hidden" id="id_assunto_concurso" value="">
+                </div>
+                
+                <!-- Campo principal id_assunto (hidden) - ÚNICO campo enviado ao servidor -->
+                <input type="hidden" name="id_assunto" id="id_assunto" value="">
+                
+                <!-- Seletor para Profissionais -->
+                <div class="form-group" id="grupo-profissionais">
+                    <label for="assunto_profissional">
+                        <i class="fas fa-briefcase"></i> Profissional
+                    </label>
+                    <select name="assunto_profissional" id="assunto_profissional" class="form-control">
+                        <option value="">Selecione um profissional</option>
+                        {% for assunto in assuntos_por_tipo.profissional %}
+                            <option value="{{ assunto.id }}">{{ assunto.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="validation-message" id="assunto-error"></div>
+
+                <div class="form-group">
+                    <label for="enunciado">
+                        <i class="fas fa-question-circle"></i> Enunciado da Questão
+                    </label>
+                    <div class="input-wrapper">
+                        <textarea name="enunciado" id="enunciado" class="form-control"
+                                  placeholder="Digite o enunciado da questão de forma clara e objetiva..."
+                                  maxlength="1000"></textarea>
+                        <div class="char-counter" id="enunciado-counter">0/1000</div>
+                    </div>
+                    <div class="validation-message" id="enunciado-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <i class="fas fa-list"></i> Alternativas
+                    </label>
+                    <div class="alternatives-grid">
+                        {% for i in "1,2,3,4,5"|make_list %}
+                        <div class="alternative-item">
+                            <div class="alternative-label">
+                                <span class="alt-letter">
+                                {% if i == "1" %}A{% elif i == "2" %}B{% elif i == "3" %}C{% elif i == "4" %}D{% elif i == "5" %}E{% endif %}
+                                </span>
+                                Alternativa 
+                                {% if i == "1" %}A{% elif i == "2" %}B{% elif i == "3" %}C{% elif i == "4" %}D{% elif i == "5" %}E{% endif %}
+                                {% if i == "5" %}
+                                    <span class="alt-optional">(Opcional)</span>
+                                {% endif %}
+                            </div>
+                            <input type="text" name="alt{{ i }}" 
+                                   id="alt{{ i }}" class="form-control"
+                                   placeholder="Digite a alternativa {% if i == "1" %}A{% elif i == "2" %}B{% elif i == "3" %}C{% elif i == "4" %}D{% elif i == "5" %}E{% endif %}"
+                                   maxlength="500"
+                                   {% if i == "5" %}data-optional="true"{% endif %}>
+                            <div class="validation-message" id="alt{{ i }}-error"></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="explicacao">
+                        <i class="fas fa-lightbulb"></i> Explicação (Opcional)
+                    </label>
+                    <div class="input-wrapper">
+                        <textarea name="explicacao" id="explicacao" class="form-control" 
+                                  placeholder="Adicione uma explicação detalhada sobre a resposta correta..."
+                                  maxlength="2000"></textarea>
+                        <div class="char-counter" id="explicacao-counter">0/2000</div>
+                    </div>
+                </div>
+
+                <div class="correct-answer-section">
+                    <label>
+                        <i class="fas fa-check-circle"></i> Alternativa Correta
+                    </label>
+                    <div class="radio-group">
+                        {% for i in "1,2,3,4,5"|make_list %}
+                        <div class="radio-item">
+                            <input type="radio" name="correta" id="correta{{ i }}" 
+                                   value="{{ i }}">
+                            <label for="correta{{ i }}" class="radio-label">
+                                Alternativa {% if i == "1" %}A{% elif i == "2" %}B{% elif i == "3" %}C{% elif i == "4" %}D{% elif i == "5" %}E{% endif %}
+                                {% if i == "5" %}
+                                    <span class="alt-optional">(Opcional)</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="validation-message" id="correta-error"></div>
+                </div>
+            </div>
+
+            <div class="preview-section" id="preview-section">
+                <h3><i class="fas fa-eye"></i> Pré-visualização da Questão</h3>
+                <div id="preview-content"></div>
+            </div>
+
+            <div class="submit-section">
+                <button type="button" class="btn-secondary" onclick="togglePreview()">
+                    <i class="fas fa-eye"></i> Pré-visualizar
+                </button>
+                <button type="button" class="btn-secondary" onclick="clearForm()">
+                    <i class="fas fa-eraser"></i> Limpar
+                </button>
+                <button type="submit" class="btn-primary" id="submitBtn">
+                    <i class="fas fa-plus-circle"></i>
+                    Adicionar Questão
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Dados dos assuntos para JavaScript
+    const assuntosPorTipo = {{ assuntos_por_tipo_json|safe }};
+    
+    // Função para voltar à página anterior
+    function goBack() {
+        window.location.href = '{% url "questoes:index" %}';
+    }
+    
+    // Função para atualizar seletores de conteúdo
+    function atualizarSeletoresConteudo() {
+        const tipoConteudo = document.getElementById('tipo_conteudo').value;
+        
+        // Ocultar todos os grupos
+        document.getElementById('grupo-temas').classList.remove('show');
+        document.getElementById('grupo-concursos').classList.remove('show');
+        document.getElementById('grupo-profissionais').classList.remove('show');
+        
+        // Limpar seleções
+        document.getElementById('assunto_tema').value = '';
+        document.getElementById('assunto_profissional').value = '';
+        document.getElementById('id_assunto_concurso').value = '';
+        document.getElementById('id_assunto').value = '';
+        
+        // Mostrar grupo apropriado
+        if (tipoConteudo === 'tema') {
+            document.getElementById('grupo-temas').classList.add('show');
+        } else if (tipoConteudo === 'concurso') {
+            document.getElementById('grupo-concursos').classList.add('show');
+        } else if (tipoConteudo === 'profissional') {
+            document.getElementById('grupo-profissionais').classList.add('show');
+        }
+    }
+    
+    // Função para atualizar bancas baseado no órgão selecionado
+    function atualizarBancas() {
+        const orgao = document.getElementById('concurso_orgao_sel').value;
+        const bancaSelect = document.getElementById('concurso_banca_sel');
+        
+        bancaSelect.innerHTML = '<option value="">Selecione a banca</option>';
+        
+        if (orgao) {
+            const bancas = [...new Set(assuntosPorTipo.concurso
+                .filter(a => a.concurso_orgao === orgao)
+                .map(a => a.concurso_banca)
+                .filter(b => b))];
+            
+            bancas.forEach(banca => {
+                const option = document.createElement('option');
+                option.value = banca;
+                option.textContent = banca;
+                bancaSelect.appendChild(option);
+            });
+        }
+        
+        atualizarAnos();
+    }
+    
+    // Função para atualizar anos
+    function atualizarAnos() {
+        const orgao = document.getElementById('concurso_orgao_sel').value;
+        const banca = document.getElementById('concurso_banca_sel').value;
+        const anoSelect = document.getElementById('concurso_ano_sel');
+        
+        anoSelect.innerHTML = '<option value="">Selecione o ano</option>';
+        
+        if (orgao && banca) {
+            const anos = [...new Set(assuntosPorTipo.concurso
+                .filter(a => a.concurso_orgao === orgao && a.concurso_banca === banca)
+                .map(a => a.concurso_ano)
+                .filter(a => a)
+                .sort((a, b) => b - a))];
+            
+            anos.forEach(ano => {
+                const option = document.createElement('option');
+                option.value = ano;
+                option.textContent = ano;
+                anoSelect.appendChild(option);
+            });
+        }
+        
+        atualizarProvas();
+    }
+    
+    // Função para atualizar provas
+    function atualizarProvas() {
+        const orgao = document.getElementById('concurso_orgao_sel').value;
+        const banca = document.getElementById('concurso_banca_sel').value;
+        const ano = document.getElementById('concurso_ano_sel').value;
+        const provaSelect = document.getElementById('concurso_prova_sel');
+        
+        provaSelect.innerHTML = '<option value="">Selecione a prova</option>';
+        
+        if (orgao && banca && ano) {
+            const provas = [...new Set(assuntosPorTipo.concurso
+                .filter(a => a.concurso_orgao === orgao && a.concurso_banca === banca && a.concurso_ano === ano)
+                .map(a => a.concurso_prova)
+                .filter(p => p))];
+            
+            provas.forEach(prova => {
+                const option = document.createElement('option');
+                option.value = prova;
+                option.textContent = prova;
+                provaSelect.appendChild(option);
+            });
+        }
+        
+        document.getElementById('id_assunto_concurso').value = '';
+    }
+    
+    // Função para selecionar o assunto de concurso
+    function selecionarAssuntoConcurso() {
+        const orgao = document.getElementById('concurso_orgao_sel').value;
+        const banca = document.getElementById('concurso_banca_sel').value;
+        const ano = document.getElementById('concurso_ano_sel').value;
+        const prova = document.getElementById('concurso_prova_sel').value;
+        
+        if (orgao && banca && ano && prova) {
+            const assunto = assuntosPorTipo.concurso.find(a => 
+                a.concurso_orgao === orgao && 
+                a.concurso_banca === banca && 
+                a.concurso_ano === ano && 
+                a.concurso_prova === prova
+            );
+            
+            if (assunto) {
+                document.getElementById('id_assunto_concurso').value = assunto.id;
+                document.getElementById('id_assunto').value = assunto.id;
+            }
+        }
+    }
+    
+    // Contadores de caracteres
+    function setupCharCounters() {
+        ['enunciado', 'explicacao'].forEach(id => {
+            const textarea = document.getElementById(id);
+            const counter = document.getElementById(id + '-counter');
+            if (textarea && counter) {
+                const updateCounter = () => {
+                    const current = textarea.value.length;
+                    const max = parseInt(textarea.getAttribute('maxlength'));
+                    counter.textContent = `${current}/${max}`;
+                    counter.style.color = current > max * 0.9 ? '#ef4444' : '#6b7280';
+                };
+                textarea.addEventListener('input', updateCounter);
+                updateCounter();
+            }
+        });
+    }
+    
+    // Auto-save
+    function setupAutoSave() {
+        ['enunciado', 'alt1', 'alt2', 'alt3', 'alt4', 'alt5', 'explicacao'].forEach(fieldName => {
+            const field = document.getElementById(fieldName);
+            if (field) {
+                const saved = localStorage.getItem('questao_' + fieldName);
+                if (saved && !field.value) {
+                    field.value = saved;
+                }
+                
+                field.addEventListener('input', () => {
+                    localStorage.setItem('questao_' + fieldName, field.value);
+                });
+            }
+        });
+        
+        {% if mensagem_status == 'success' %}
+        ['enunciado', 'alt1', 'alt2', 'alt3', 'alt4', 'alt5', 'explicacao'].forEach(fieldName => {
+            localStorage.removeItem('questao_' + fieldName);
+        });
+        clearFormAfterSuccess();
+        {% endif %}
+    }
+    
+    function clearFormAfterSuccess() {
+        document.getElementById('questionForm').reset();
+        document.querySelectorAll('.validation-message').forEach(msg => msg.classList.remove('show'));
+        document.querySelectorAll('.form-control').forEach(field => field.classList.remove('error'));
+        document.getElementById('preview-section').classList.remove('show');
+        setupCharCounters();
+    }
+    
+    // Pré-visualização
+    function togglePreview() {
+        const previewSection = document.getElementById('preview-section');
+        const previewContent = document.getElementById('preview-content');
+        
+        if (previewSection.classList.contains('show')) {
+            previewSection.classList.remove('show');
+            return;
+        }
+        
+        const enunciado = document.getElementById('enunciado').value;
+        const alternativas = ['alt1', 'alt2', 'alt3', 'alt4', 'alt5'].map(id => 
+            document.getElementById(id).value
+        );
+        const correta = document.querySelector('input[name="correta"]:checked');
+        const explicacao = document.getElementById('explicacao').value;
+        
+        let html = '<div style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; background: white;">';
+        
+        if (enunciado) {
+            html += `<div style="font-weight: 600; margin-bottom: 15px; font-size: 1.1rem;">${enunciado}</div>`;
+        }
+        
+        const letters = ['A', 'B', 'C', 'D', 'E'];
+        alternativas.forEach((alt, index) => {
+            if (alt) {
+                const isCorrect = correta && correta.value == (index + 1);
+                html += `<div style="margin: 8px 0; padding: 10px; border-radius: 6px; 
+                    ${isCorrect ? 'background: #f0fdf4; border-left: 3px solid #22c55e;' : 'background: #f8fafc;'}">
+                    <strong>${letters[index]})</strong> ${alt}
+                    ${isCorrect ? ' <span style="color: #22c55e;">✓</span>' : ''}
+                </div>`;
+            }
+        });
+        
+        if (explicacao) {
+            html += `<div style="margin-top: 15px; padding: 15px; background: #fef3c7; border-radius: 6px;">
+                <strong>Explicação:</strong><br>${explicacao}
+            </div>`;
+        }
+        
+        html += '</div>';
+        previewContent.innerHTML = html;
+        previewSection.classList.add('show');
+    }
+    
+    function clearForm() {
+        if (confirm('Tem certeza que deseja limpar todos os campos?')) {
+            document.getElementById('questionForm').reset();
+            document.querySelectorAll('.validation-message').forEach(msg => msg.classList.remove('show'));
+            document.querySelectorAll('.form-control').forEach(field => field.classList.remove('error'));
+            document.getElementById('preview-section').classList.remove('show');
+            setupCharCounters();
+        }
+    }
+    
+    // Validação do formulário
+    document.getElementById('questionForm').addEventListener('submit', function(e) {
+        const tipoConteudo = document.getElementById('tipo_conteudo').value;
+        const idAssunto = document.getElementById('id_assunto');
+        let conteudoSelecionado = false;
+        
+        if (tipoConteudo === 'tema') {
+            const assuntoTema = document.getElementById('assunto_tema');
+            if (assuntoTema && assuntoTema.value) {
+                idAssunto.value = assuntoTema.value;
+                conteudoSelecionado = true;
+            }
+        } else if (tipoConteudo === 'profissional') {
+            const assuntoProfissional = document.getElementById('assunto_profissional');
+            if (assuntoProfissional && assuntoProfissional.value) {
+                idAssunto.value = assuntoProfissional.value;
+                conteudoSelecionado = true;
+            }
+        } else if (tipoConteudo === 'concurso') {
+            const idAssuntoConcurso = document.getElementById('id_assunto_concurso');
+            if (idAssuntoConcurso && idAssuntoConcurso.value) {
+                idAssunto.value = idAssuntoConcurso.value;
+                conteudoSelecionado = true;
+            }
+        }
+        
+        if (!conteudoSelecionado) {
+            e.preventDefault();
+            alert('Erro: Nenhum conteúdo foi selecionado. Por favor, selecione um conteúdo válido.');
+            return false;
+        }
+        
+        // Event listeners para atualizar id_assunto
+        document.getElementById('assunto_tema')?.addEventListener('change', function() {
+            document.getElementById('id_assunto').value = this.value;
+        });
+        
+        document.getElementById('assunto_profissional')?.addEventListener('change', function() {
+            document.getElementById('id_assunto').value = this.value;
+        });
+    });
+    
+    // Inicializar
+    document.addEventListener('DOMContentLoaded', function() {
+        setupCharCounters();
+        setupAutoSave();
+        
+        const sessionCount = parseInt(localStorage.getItem('session_questions') || '0');
+        {% if mensagem_status == 'success' %}
+            const newCount = sessionCount + 1;
+            localStorage.setItem('session_questions', newCount);
+            document.getElementById('session-count').textContent = newCount;
+        {% else %}
+            document.getElementById('session-count').textContent = sessionCount;
+        {% endif %}
+    });
+</script>
+{% endblock %}
+

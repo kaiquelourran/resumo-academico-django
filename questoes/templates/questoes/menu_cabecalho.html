@@ -1,0 +1,28 @@
+<!-- Menu de Navegação Reutilizável -->
+<nav class="menu-padrao">
+    <ul>
+        <li><a href="{% url 'questoes:escolher_assunto' %}">🏠 Início</a></li>
+        
+        {% if user.is_authenticated %}
+            <li><a href="{% url 'questoes:escolher_assunto' %}">🎯 Questões</a></li>
+            
+            {% if user.is_staff %}
+                <li>
+                    <a href="#">⚙️ Admin</a>
+                    <ul class="submenu">
+                        <li><a href="/admin/">Dashboard</a></li>
+                        <li><a href="/admin/questoes/assunto/">Assuntos</a></li>
+                        <li><a href="/admin/questoes/questao/">Questões</a></li>
+                        <li><a href="/admin/auth/user/">Usuários</a></li>
+                    </ul>
+                </li>
+            {% endif %}
+            
+            <li><a href="{% url 'questoes:logout' %}">🚪 Sair</a></li>
+        {% else %}
+            <li><a href="{% url 'questoes:login' %}">🔑 Login</a></li>
+            <li><a href="{% url 'questoes:cadastro' %}">📝 Cadastro</a></li>
+        {% endif %}
+    </ul>
+</nav>
+

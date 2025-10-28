@@ -1,0 +1,339 @@
+{% extends 'questoes/base.html' %}
+{% load static %}
+{% load questao_filters %}
+
+{% block title %}Quiz - {{ assunto.nome }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <div class="header-container">
+        <nav class="breadcrumb-nav">
+            <a href="{% url 'questoes:index' %}" class="breadcrumb-link">🏠 Início</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <a href="{% url 'questoes:escolher_assunto' %}" class="breadcrumb-link">📚 Conteúdos</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <a href="{% url 'questoes:listar_questoes' assunto.id %}" class="breadcrumb-link">📋 Lista de Questões</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <span class="breadcrumb-current">🎯 Quiz</span>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div class="header-container">
+        <h1 class="page-title">🎯 Quiz</h1>
+        <p class="page-subtitle">{{ assunto.nome }}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modern-style.css' %}">
+<link rel="stylesheet" href="{% static 'css/alternative-clean.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    body {
+        background-image: linear-gradient(to top, #00C6FF, #0072FF);
+        min-height: 100vh;
+    }
+    
+    .questions-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .question-card {
+        background: white;
+        border-radius: 14px;
+        padding: 0;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+        border: 1px solid #e1e5e9;
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+    }
+    
+    .question-card:hover {
+        transform: translateY(-5px) scale(1.01);
+        box-shadow: 0 15px 35px rgba(0,114,255,0.2);
+        border-color: #00C6FF;
+    }
+    
+    .question-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 18px;
+        background: linear-gradient(to top, #00C6FF, #0072FF);
+        border-radius: 14px 14px 0 0;
+    }
+    
+    .question-number {
+        font-weight: 700;
+        color: #FFFFFF;
+        font-size: 0.95em;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .question-status {
+        padding: 10px 18px;
+        border-radius: 25px;
+        font-size: 0.85em;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    
+    .status-nao-respondida {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        color: #6c757d;
+    }
+    
+    .status-certa {
+        background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+        color: #FFFFFF;
+    }
+    
+    .status-errada {
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        color: #721c24;
+    }
+    
+    .question-text {
+        font-size: 1.05em;
+        line-height: 1.5;
+        color: #333;
+        padding: 15px 18px;
+        background: #FFFFFF;
+        font-weight: 500;
+    }
+    
+    .alternatives-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 0 18px 18px;
+        background: #FFFFFF;
+    }
+    
+    .explicacao-container {
+        background: linear-gradient(135deg, rgba(0, 198, 255, 0.08) 0%, rgba(0, 114, 255, 0.08) 100%);
+        border-left: 4px solid #0072FF;
+        padding: 16px 20px;
+        margin: 16px 20px 20px;
+        border-radius: 0 10px 10px 0;
+        opacity: 0;
+        animation: fadeIn 0.5s ease-in-out forwards;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-15px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .stats-panel,
+    .comments-panel {
+        display: none;
+    }
+    
+    /* Animações para toast */
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+    
+    /* Botão próxima questão */
+    .next-question-btn {
+        display: none;
+        background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 10px;
+        font-size: 1em;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 18px rgba(0,114,255,0.28);
+    }
+    
+    .next-question-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 26px rgba(0,114,255,0.32);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Informações das Questões -->
+<div class="questoes-info">
+    <h3>🎯 Questões do Conteúdo</h3>
+    <p>{{ total_questoes }} questão(ões) disponível(eis)</p>
+    </div>
+    
+<!-- Container das Questões -->
+<div class="questions-container">
+    {% for questao in questoes %}
+        <div class="question-card" id="questao-{{ questao.id }}">
+            <div class="question-header">
+                <div class="question-number">
+                    🎯 Questão #{{ questao.id }}
+                </div>
+                <div class="question-status status-nao-respondida">
+                    ❓ Não Respondida
+                </div>
+            </div>
+            
+        <div class="question-text">
+                {{ questao.texto }}
+        </div>
+        
+            <form class="questoes-form" data-questao-id="{{ questao.id }}">
+                <input type="hidden" name="id_questao" value="{{ questao.id }}">
+                
+                <div class="alternatives-container" id="alternativas-{{ questao.id }}">
+            {% for alternativa in questao.alternativas.all %}
+                        {% if forloop.counter0 < 5 %}
+                            {% with letras="ABCDEFGHIJ" %}
+            <label class="alternative" 
+                                   data-alternativa="{{ letras|index:forloop.counter0 }}"
+                   data-alternativa-id="{{ alternativa.id }}"
+                                   data-questao-id="{{ questao.id }}"
+                                   data-correta="{% if alternativa.eh_correta %}true{% else %}false{% endif %}">
+                                <input type="radio" name="alternative_{{ questao.id }}" value="{{ alternativa.id }}" style="display: none;">
+                                <div class="alternative-letter">{{ letras|index:forloop.counter0 }}</div>
+                                <div class="alternative-text">{{ alternativa.texto }}</div>
+            </label>
+                            {% endwith %}
+                        {% endif %}
+            {% endfor %}
+        </div>
+            </form>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Navegação -->
+<div class="navigation-section">
+    <div class="nav-buttons">
+        <a href="{% url 'questoes:listar_questoes' assunto.id %}" class="nav-btn nav-btn-primary">
+            ← Voltar à Lista
+        </a>
+        <a href="{% url 'questoes:index' %}" class="nav-btn nav-btn-outline">
+            🏠 Início
+        </a>
+        <a href="{% url 'questoes:escolher_assunto' %}" class="nav-btn nav-btn-outline">
+            📚 Escolher Conteúdo
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Funcionalidade de quiz
+    document.addEventListener('DOMContentLoaded', function() {
+        const alternativeLinks = document.querySelectorAll('.alternative');
+        
+        alternativeLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const questaoId = this.dataset.questaoId;
+                const alternativaId = this.dataset.alternativaId;
+                const alternativaSelecionada = this.dataset.alternativa;
+                
+                console.log('Enviando resposta:', {
+                    id_questao: questaoId,
+                    id_alternativa: alternativaId
+                });
+                
+                // Enviar resposta via AJAX
+                fetch('{% url "questoes:validar_resposta" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                        id_questao: parseInt(questaoId),
+                        id_alternativa: parseInt(alternativaId)
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Resposta recebida:', data);
+                    
+                    if (data.sucesso) {
+                        mostrarFeedback(questaoId, data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                });
+            });
+        });
+    });
+    
+    function mostrarFeedback(questaoId, data) {
+        const questaoCard = document.querySelector(`#questao-${questaoId}`);
+        if (!questaoCard) return;
+        
+        const alternativas = questaoCard.querySelectorAll('.alternative');
+        
+        // Marcar feedback visual
+        alternativas.forEach(alt => {
+            const ehCorreta = alt.dataset.correta === 'true';
+            const alternativaLetra = alt.dataset.alternativa;
+            
+            // Limpar classes anteriores
+            alt.classList.remove('alternative-correct', 'alternative-incorrect-chosen');
+            
+            // Marcar alternativas
+            if (data.acertou && ehCorreta) {
+                        alt.classList.add('alternative-correct');
+            } else if (!data.acertou && alt.dataset.alternativaId == data.id_alternativa_selecionada) {
+                        alt.classList.add('alternative-incorrect-chosen');
+                    }
+                });
+                
+        // Mostrar explicação se disponível
+                if (data.explicacao) {
+            let explicacaoContainer = questaoCard.querySelector('.explicacao-container');
+            if (!explicacaoContainer) {
+                explicacaoContainer = document.createElement('div');
+                explicacaoContainer.className = 'explicacao-container';
+                explicacaoContainer.innerHTML = `
+                    <div class="explicacao-title">💡 Explicação:</div>
+                    <div class="explicacao-text">${data.explicacao}</div>
+                `;
+                
+                const form = questaoCard.querySelector('.questoes-form');
+                if (form) {
+                    form.parentNode.insertBefore(explicacaoContainer, form.nextSibling);
+                }
+            }
+        }
+    }
+</script>
+{% endblock %}

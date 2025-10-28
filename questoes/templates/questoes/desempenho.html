@@ -1,0 +1,259 @@
+{% extends 'questoes/base.html' %}
+{% load static %}
+
+{% block title %}Meu Desempenho{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modern-style.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    /* Estilos específicos para desempenho */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin: 30px 0;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #00C6FF 0%, #0072FF 100%);
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 35px rgba(0,114,255,0.15);
+        border-color: #0072FF;
+    }
+    
+    .stat-card.stat-primary::before { background: linear-gradient(90deg, #0072FF 0%, #00C6FF 100%); }
+    .stat-card.stat-success::before { background: linear-gradient(90deg, #28a745 0%, #20c997 100%); }
+    .stat-card.stat-accuracy::before { background: linear-gradient(90deg, #ffc107 0%, #fd7e14 100%); }
+    .stat-card.stat-subjects::before { background: linear-gradient(90deg, #6f42c1 0%, #e83e8c 100%); }
+    
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+        font-size: 1.5rem;
+        color: white;
+    }
+    
+    .stat-primary .stat-icon { background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%); }
+    .stat-success .stat-icon { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); }
+    .stat-accuracy .stat-icon { background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); }
+    .stat-subjects .stat-icon { background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #1a202c;
+        margin-bottom: 4px;
+        line-height: 1;
+    }
+    
+    .stat-label {
+        font-size: 0.95rem;
+        color: #718096;
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
+    
+    .stat-trend {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        color: #4a5568;
+        font-weight: 500;
+    }
+    
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 24px;
+    }
+    
+    .chart-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+    }
+    
+    .subjects-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+    }
+    
+    .subject-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+    }
+    
+    .activities-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <h1>Meu Desempenho</h1>
+    
+    <div class="stats-grid">
+        <div class="stat-card stat-primary">
+            <div class="stat-icon">
+                <i class="fas fa-question-circle"></i>
+            </div>
+            <div class="stat-number">{{ total_respostas }}</div>
+            <div class="stat-label">Questões Respondidas</div>
+        </div>
+        
+        <div class="stat-card stat-success">
+            <div class="stat-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-number">{{ respostas_corretas }}</div>
+            <div class="stat-label">Respostas Corretas</div>
+        </div>
+        
+        <div class="stat-card stat-accuracy">
+            <div class="stat-icon">
+                <i class="fas fa-percentage"></i>
+            </div>
+            <div class="stat-number">{{ percentual_acerto }}%</div>
+            <div class="stat-label">Taxa de Acerto</div>
+        </div>
+        
+        <div class="stat-card stat-subjects">
+            <div class="stat-icon">
+                <i class="fas fa-book"></i>
+            </div>
+            <div class="stat-number">{{ stats_assuntos|length }}</div>
+            <div class="stat-label">Conteúdos Estudados</div>
+        </div>
+    </div>
+    
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h3>Últimas 24 Horas</h3>
+            <div class="period-number">{{ questoes_24h }}</div>
+        </div>
+        
+        <div class="chart-card">
+            <h3>Últimos 7 Dias</h3>
+            <div class="period-number">{{ questoes_7d }}</div>
+        </div>
+        
+        <div class="chart-card">
+            <h3>Últimos 365 Dias</h3>
+            <div class="period-number">{{ questoes_365d }}</div>
+        </div>
+    </div>
+    
+    <!-- Gráficos Chart.js -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px;">
+        <div class="chart-card">
+            <h3>Acertos e Erros</h3>
+            <canvas id="donutChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Desempenho por Conteúdo</h3>
+            <canvas id="contentChart"></canvas>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Gráfico Donut (Acertos e Erros)
+    const respostasCorretas = {{ respostas_corretas }};
+    const respostasErradas = {{ total_respostas|default:0 }} - {{ respostas_corretas }};
+    
+    const donutCtx = document.getElementById('donutChart').getContext('2d');
+    new Chart(donutCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Acertos', 'Erros'],
+            datasets: [{
+                data: [respostasCorretas, respostasErradas],
+                backgroundColor: ['#4caf50', '#f44336'],
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    
+    // Gráfico de Barras (Desempenho por Conteúdo)
+    const subjectData = {{ stats_assuntos|length }};
+    
+    const contentCtx = document.getElementById('contentChart').getContext('2d');
+    new Chart(contentCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Conteúdos Estudados'],
+            datasets: [{
+                label: 'Número de Conteúdos',
+                data: [subjectData],
+                backgroundColor: 'rgba(0, 198, 255, 0.7)',
+                borderColor: '#0072FF',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
+

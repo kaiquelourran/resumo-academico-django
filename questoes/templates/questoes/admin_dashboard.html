@@ -1,0 +1,396 @@
+{% extends 'questoes/base.html' %}
+{% load static %}
+
+{% block title %}Painel Admin - Resumo Acadêmico{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Padrão visual alinhado ao index.php */
+    body {
+        background-image: linear-gradient(to top, #00C6FF, #0072FF);
+        min-height: 100vh;
+        margin: 0;
+    }
+    .main-container {
+        max-width: 1100px;
+        margin: 40px auto;
+        background: #FFFFFF;
+        border-radius: 16px;
+        border: 1px solid transparent;
+        background-image: linear-gradient(#FFFFFF, #FFFFFF), linear-gradient(to top, #00C6FF, #0072FF);
+        background-origin: border-box;
+        background-clip: padding-box, border-box;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        padding: 30px;
+    }
+    .user-info a { text-decoration: none; font-weight: 600; }
+    .user-info a:hover { text-decoration: none; }
+    /* Botões de navegação aprimorados */
+    .nav-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%); color: #fff; border: 1px solid #bfe0ff; font-weight: 800; text-decoration: none; box-shadow: 0 8px 18px rgba(0,114,255,0.28); transition: transform .2s ease, box-shadow .2s ease, filter .2s ease; letter-spacing: .2px; }
+    .nav-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(0,114,255,0.32); filter: brightness(1.03); }
+    .nav-btn:focus { outline: 3px solid rgba(0,114,255,0.35); outline-offset: 2px; }
+    .nav-btn.secondary { background: linear-gradient(180deg, #6c757d 0%, #495057 100%); border-color: #adb5bd; box-shadow: 0 8px 18px rgba(108,117,125,0.28); }
+    .nav-btn.secondary:hover { box-shadow: 0 12px 26px rgba(108,117,125,0.32); }
+    .nav-btn.danger { background: linear-gradient(180deg, #dc3545 0%, #c82333 100%); border-color: #dc3545; box-shadow: 0 8px 18px rgba(220,53,69,0.28); }
+    .nav-btn.danger:hover { box-shadow: 0 12px 26px rgba(220,53,69,0.32); }
+    /* Cards */
+    .card { background: #FFFFFF; border: 1px solid #e1e5e9; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.06); }
+    .card-title { color: #333333; margin-bottom: 16px; }
+    .card-description { color: #666666; }
+    .btn { display: inline-block; padding: 12px 18px; border-radius: 8px; background: linear-gradient(to top, #00C6FF, #0072FF); color: #fff; border: none; font-weight: 600; text-decoration: none; transition: transform .2s ease, box-shadow .2s ease; }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,114,255,0.3); }
+    .btn:active { transform: translateY(0); }
+    .btn:focus { outline: 3px solid rgba(0,114,255,0.35); outline-offset: 2px; }
+    .btn[aria-busy="true"] { cursor: wait; opacity: .8; }
+    .btn-primary { background: linear-gradient(to top, #007bff, #0056b3); }
+    .btn-success { background: linear-gradient(to top, #28a745, #1e7e34); }
+    .btn-warning { background: linear-gradient(to top, #ffc107, #e0a800); color: #212529; }
+    .btn-danger { background: linear-gradient(to top, #dc3545, #c82333); }
+    .btn-secondary { background: linear-gradient(to top, #6c757d, #545b62); }
+    .btn-outline { background: transparent; border: 2px solid #0072FF; color: #0072FF; }
+    .btn-outline:hover { background: #0072FF; color: #fff; }
+    .btn, .nav-btn { cursor: pointer; user-select: none; position: relative; z-index: 10; display: inline-block; text-decoration: none; }
+    .btn:disabled, .nav-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn:disabled:hover, .nav-btn:disabled:hover { transform: none; box-shadow: none; }
+    .buttons-grid a, .user-actions a { position: relative; z-index: 10; pointer-events: auto; }
+    /* Estatísticas */
+    .stats-container { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+    .stat-card { background: #FFFFFF; border: 1px solid #e1e5e9; border-radius: 12px; padding: 20px; min-width: 200px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.06); }
+    .stat-number { color: #0072FF; font-weight: 700; font-size: 2rem; }
+    .stat-label { color: #333; }
+    .stat-card h3 { color: #333; margin-bottom: 10px; font-size: 1rem; }
+    /* Seções */
+    .admin-section, .metrics-section, .analytics-section { margin-bottom: 40px; }
+    .admin-section h2, .metrics-section h2 { color: #333; margin-bottom: 20px; font-size: 1.5rem; }
+    .buttons-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+    .cards-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .analytics-list { list-style: none; padding: 0; margin: 0; }
+    .analytics-list li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; color: #666; }
+    .analytics-list li:last-child { border-bottom: none; }
+    /* Header estiloso */
+    .app-header { background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%); border-radius: 16px; padding: 18px; color: #fff; box-shadow: 0 12px 30px rgba(0,114,255,0.25); margin-bottom: 24px; position: relative; }
+    .app-header .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .app-header .brand { display: flex; align-items: center; gap: 12px; }
+    .app-header .logo { font-size: 1.8rem; }
+    .app-header .titles .title { margin: 0; color: #fff; font-size: 1.8rem; }
+    .app-header .titles .subtitle { margin: 2px 0 0; color: #eaf6ff; font-size: 1rem; }
+    .app-header .user-actions { display: flex; align-items: center; gap: 12px; }
+    .header-nav { position: absolute; top: 18px; left: 18px; z-index: 2; }
+    .btn-back { background: rgba(255, 255, 255, 0.2); color: white; border: 2px solid rgba(255, 255, 255, 0.3); padding: 10px 20px; border-radius: 25px; font-size: 0.9rem; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(10px); }
+    .btn-back:hover { background: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.5); transform: translateY(-2px); }
+    /* Footer */
+    .footer { text-align: center; padding: 20px; color: #666; border-top: 1px solid #e9ecef; margin-top: 40px; }
+    /* Responsividade */
+    @media (max-width: 768px) {
+        html, body { overflow-x: hidden; }
+        .main-container { margin: 16px auto; padding: 18px; max-width: calc(100% - 32px); }
+        .app-header .header-inner { flex-direction: column; align-items: flex-start; }
+        .app-header .user-actions { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+        .stats-container { flex-direction: column; gap: 12px; }
+        .stat-card { width: 100%; }
+        .buttons-grid { grid-template-columns: 1fr; }
+        .cards-container { grid-template-columns: 1fr; }
+        .header-nav { position: static; margin-bottom: 16px; }
+    }
+    @media (max-width: 480px) {
+        .app-header .titles .title { font-size: 1.4rem; }
+        .stat-number { font-size: 1.6rem; }
+    }
+    /* Estilos para seção de usuários */
+    .users-section {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+    .users-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    .users-header p {
+        color: #666;
+        margin: 0;
+        font-size: 14px;
+    }
+    .users-table {
+        background: #f8f9fa;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #e9ecef;
+    }
+    .table-header {
+        display: grid;
+        grid-template-columns: 2fr 2fr 1fr 1fr 1.5fr;
+        gap: 15px;
+        padding: 15px 20px;
+        background: linear-gradient(135deg, #0072FF, #00C6FF);
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+    }
+    .table-body {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .table-row {
+        display: grid;
+        grid-template-columns: 2fr 2fr 1fr 1fr 1.5fr;
+        gap: 15px;
+        padding: 15px 20px;
+        border-bottom: 1px solid #e9ecef;
+        transition: background-color 0.2s ease;
+        align-items: center;
+    }
+    .table-row:hover {
+        background: #f0f7ff;
+    }
+    .table-row:last-child {
+        border-bottom: none;
+    }
+    .col-name {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 500;
+    }
+    .user-avatar-small {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0072FF, #00C6FF);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+    }
+    .col-email {
+        color: #666;
+        font-size: 14px;
+    }
+    .type-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: center;
+    }
+    .type-badge.admin {
+        background: #ff6b6b;
+        color: white;
+    }
+    .type-badge.user {
+        background: #4ecdc4;
+        color: white;
+    }
+    .col-date, .col-login {
+        font-size: 13px;
+        color: #666;
+    }
+    .never-logged {
+        color: #999;
+        font-style: italic;
+    }
+    .no-users {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+    @media (max-width: 768px) {
+        .table-header, .table-row {
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+        .table-header {
+            display: none;
+        }
+        .table-row {
+            display: block;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 10px;
+            border-radius: 8px;
+        }
+        .col-name, .col-email, .col-type, .col-date, .col-login {
+            margin-bottom: 8px;
+        }
+        .col-name::before { content: "👤 "; }
+        .col-email::before { content: "📧 "; }
+        .col-type::before { content: "🏷️ "; }
+        .col-date::before { content: "📅 "; }
+        .col-login::before { content: "🕐 "; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-container fade-in">
+    <div class="app-header">
+        <div class="header-nav">
+            <button onclick="goBack()" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </button>
+        </div>
+        <div class="header-inner">
+            <div class="brand">
+                <span class="logo">👨‍💼</span>
+                <div class="titles">
+                    <h1 class="title">Painel de Administração</h1>
+                    <p class="subtitle">Bem-vindo, {{ user.first_name }}!</p>
+                </div>
+            </div>
+            <div class="user-actions">
+                <a href="{% url 'questoes:desempenho' %}" class="nav-btn secondary">📊 Meu Desempenho</a>
+                <a href="{% url 'questoes:logout' %}" class="nav-btn danger">🚪 Sair</a>
+            </div>
+        </div>
+    </div>
+
+    <main class="content">
+        <section class="admin-section">
+            <h2>Gerenciamento de Conteúdo</h2>
+            <div class="buttons-grid">
+                <a href="{% url 'questoes:gerenciar_questoes' %}" class="btn btn-primary">📋 Gerenciar Questões</a>
+                <a href="{% url 'questoes:adicionar_assunto' %}" class="btn btn-primary">📚 Gerenciar Conteúdos</a>
+                <a href="{% url 'questoes:adicionar_questao' %}" class="btn btn-success">➕ Adicionar Questão</a>
+                <a href="{% url 'questoes:adicionar_assunto' %}" class="btn btn-secondary">📝 Adicionar Conteúdo</a>
+                <a href="{% url 'questoes:index' %}" class="btn btn-outline">🏠 Voltar ao Site</a>
+            </div>
+        </section>
+        
+        <section class="metrics-section">
+            <h2>📊 Métricas Gerais do Site</h2>
+            <div class="stats-container">
+                <div class="stat-card slide-in">
+                    <h3>👥 Usuários Cadastrados</h3>
+                    <div class="stat-number">{{ total_usuarios }}</div>
+                </div>
+                <div class="stat-card slide-in">
+                    <h3>🎯 Questões Respondidas</h3>
+                    <div class="stat-number">{{ total_respostas }}</div>
+                </div>
+                <div class="stat-card slide-in">
+                    <h3>📅 Logins Hoje</h3>
+                    <div class="stat-number">{{ usuarios_hoje }}</div>
+                </div>
+                <div class="stat-card slide-in">
+                    <h3>📆 Logins Última Semana</h3>
+                    <div class="stat-number">{{ usuarios_semana }}</div>
+                </div>
+                <div class="stat-card slide-in">
+                    <h3>📈 Logins Último Mês</h3>
+                    <div class="stat-number">{{ usuarios_mes }}</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="users-section">
+            <h2>👥 Usuários Cadastrados</h2>
+            <div class="users-container">
+                <div class="users-header">
+                    <p>Últimos 10 usuários cadastrados no sistema</p>
+                </div>
+                <div class="users-table">
+                    <div class="table-header">
+                        <div class="col-name">Nome</div>
+                        <div class="col-email">Email</div>
+                        <div class="col-type">Tipo</div>
+                        <div class="col-date">Cadastro</div>
+                        <div class="col-login">Último Login</div>
+                    </div>
+                    <div class="table-body">
+                        {% if usuarios_lista %}
+                            {% for usuario in usuarios_lista %}
+                                <div class="table-row">
+                                    <div class="col-name">
+                                        <div class="user-avatar-small">
+                                            {{ usuario.nome|first|upper }}
+                                        </div>
+                                        <span>{{ usuario.nome }}</span>
+                                    </div>
+                                    <div class="col-email">{{ usuario.email }}</div>
+                                    <div class="col-type">
+                                        <span class="type-badge {% if usuario.is_staff %}admin{% else %}user{% endif %}">
+                                            {% if usuario.is_staff %}👑 Admin{% else %}👤 Usuário{% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="col-date">
+                                        {{ usuario.date_joined|date:"d/m/Y" }}
+                                    </div>
+                                    <div class="col-login">
+                                        <span class="never-logged">N/A</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="no-users">
+                                <p>Nenhum usuário cadastrado ainda.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="analytics-section">
+            <h2>📈 Análises e Relatórios</h2>
+            <div class="cards-container">
+                <div class="card">
+                    <h4>🎯 Conteúdos mais difíceis (taxa de acerto)</h4>
+                    <ul class="analytics-list">
+                        {% if assuntos_dificeis %}
+                            {% for item in assuntos_dificeis %}
+                                <li>{{ item.assunto }} — <strong>{{ item.taxa }}%</strong></li>
+                            {% endfor %}
+                        {% else %}
+                            <li>Sem dados suficientes.</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>📊 Distribuição de dificuldade</h4>
+                    <ul class="analytics-list">
+                        <li>🔴 Difíceis (< 40%): <strong>{{ buckets.dificeis }}</strong></li>
+                        <li>🟡 Médias (40–70%): <strong>{{ buckets.medias }}</strong></li>
+                        <li>🟢 Fáceis (> 70%): <strong>{{ buckets.faceis }}</strong></li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>❌ Questões mais erradas</h4>
+                    <ul class="analytics-list">
+                        {% if questoes_erradas %}
+                            {% for questao in questoes_erradas %}
+                                <li>#{{ questao.id }} — <strong>{{ questao.taxa_erro }}%</strong> erros</li>
+                            {% endfor %}
+                        {% else %}
+                            <li>Sem dados suficientes.</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>🚀 Desenvolvido por <strong>Resumo Acadêmico</strong> &copy; 2025</p>
+    </footer>
+</div>
+
+<script>
+    function goBack() {
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            window.location.href = '{% url "questoes:index" %}';
+        }
+    }
+</script>
+{% endblock %}
+
+

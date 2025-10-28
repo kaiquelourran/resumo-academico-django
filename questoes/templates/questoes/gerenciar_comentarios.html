@@ -1,0 +1,253 @@
+{% extends 'questoes/base.html' %}
+{% load static %}
+
+{% block title %}Gerenciar Comentários - Resumo Acadêmico{% endblock %}
+
+{% block extra_css %}
+<style>
+    .modern-table { 
+        width: 100%; 
+        border-collapse: collapse; 
+        background: #fff; 
+        border-radius: 12px; 
+        overflow: hidden; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+    }
+    .modern-table th { 
+        background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%); 
+        color: #fff; 
+        padding: 16px; 
+        text-align: left; 
+        font-weight: 700; 
+        font-size: 14px; 
+        text-transform: uppercase; 
+        letter-spacing: 0.5px; 
+    }
+    .modern-table td { 
+        padding: 16px; 
+        border-bottom: 1px solid #f0f2f5; 
+        vertical-align: top; 
+    }
+    .modern-table tr:hover { 
+        background: #f8f9fa; 
+    }
+    .modern-table tr:last-child td { 
+        border-bottom: none; 
+    }
+    
+    .badge { 
+        display: inline-block; 
+        padding: 4px 8px; 
+        border-radius: 6px; 
+        font-size: 12px; 
+        font-weight: 600; 
+        text-transform: uppercase; 
+        letter-spacing: 0.5px; 
+    }
+    .badge-success { 
+        background: #d4edda; 
+        color: #155724; 
+    }
+    .badge-danger { 
+        background: #f8d7da; 
+        color: #721c24; 
+    }
+    
+    .btn-sm { 
+        padding: 6px 12px; 
+        font-size: 12px; 
+    }
+    
+    .actions { 
+        display: flex; 
+        gap: 8px; 
+        flex-wrap: wrap; 
+    }
+    
+    .table-responsive { 
+        width: 100%; 
+        overflow-x: auto; 
+        -webkit-overflow-scrolling: touch; 
+    }
+    
+    .modern-table { 
+        min-width: 900px; 
+    }
+    
+    .loading { 
+        text-align: center; 
+        padding: 40px; 
+        color: #666; 
+    }
+    .loading i { 
+        font-size: 2rem; 
+        margin-bottom: 16px; 
+        color: #0072FF; 
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="card">
+        <h2 class="card-title">📋 Comentários Reportados</h2>
+        <p>Aqui você pode visualizar e gerenciar comentários que foram reportados por usuários ou apagados por administradores.</p>
+
+        {% if comentarios %}
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-hashtag"></i> ID</th>
+                            <th><i class="fas fa-question-circle"></i> Questão</th>
+                            <th><i class="fas fa-comment"></i> Comentário</th>
+                            <th><i class="fas fa-user"></i> Autor</th>
+                            <th><i class="fas fa-calendar"></i> Data</th>
+                            <th><i class="fas fa-flag"></i> Status</th>
+                            <th><i class="fas fa-cogs"></i> Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for comentario in comentarios %}
+                            <tr>
+                                <td><strong>#{{ comentario.id }}</strong></td>
+                                <td>
+                                    <a href="{% url 'questoes:quiz' comentario.id_questao.id %}" 
+                                       target="_blank" 
+                                       class="btn btn-sm btn-primary">
+                                        <i class="fas fa-external-link-alt"></i> Questão {{ comentario.id_questao.id }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <div style="max-width: 300px; word-wrap: break-word;">
+                                        {{ comentario.comentario|truncatewords:20 }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>{{ comentario.nome_usuario|default:"Anônimo" }}</strong><br>
+                                        <small style="color: #666;">{{ comentario.email_usuario|default:"N/A" }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <small>{{ comentario.data_comentario|date:"d/m/Y H:i" }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge {% if comentario.ativo %}badge-success{% else %}badge-danger{% endif %}">
+                                        {% if comentario.ativo %}
+                                            <i class="fas fa-check-circle"></i> Ativo
+                                        {% else %}
+                                            <i class="fas fa-ban"></i> Inativo
+                                        {% endif %}
+                                    </span>
+                                    {% if comentario.denuncias.count > 0 %}
+                                        <span class="badge badge-danger" style="margin-left:6px;">
+                                            <i class="fas fa-flag"></i> {{ comentario.denuncias.count }} denúncia(s)
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="actions">
+                                        <form method="POST" action="{% url 'questoes:toggle_comentario' comentario.id %}" style="display: inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm {% if comentario.ativo %}btn-warning{% else %}btn-success{% endif %}">
+                                                <i class="fas {% if comentario.ativo %}fa-ban{% else %}fa-check{% endif %}"></i> 
+                                                {% if comentario.ativo %}Desativar{% else %}Ativar{% endif %}
+                                            </button>
+                                        </form>
+                                        
+                                        <form method="POST" action="{% url 'questoes:deletar_comentario' comentario.id %}" 
+                                              onsubmit="return confirm('Tem certeza que deseja EXCLUIR PERMANENTEMENTE este comentário? Esta ação não pode ser desfeita.')"
+                                              style="display: inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                <i class="fas fa-trash"></i> Excluir
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Nenhum comentário encontrado</strong><br>
+                Não há comentários reportados ou inativos no momento.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Notificações
+    function showNotification(message, type = 'info') {
+        const existingNotification = document.querySelector('.notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+
+        const notification = document.createElement('div');
+        notification.className = `notification alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'}`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            max-width: 500px;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideInRight 0.3s ease-out;
+        `;
+
+        const icon = type === 'success' ? 'fas fa-check-circle' : 
+                    type === 'error' ? 'fas fa-exclamation-triangle' : 
+                    'fas fa-info-circle';
+
+        notification.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <i class="${icon}" style="font-size: 1.2rem;"></i>
+                <span>${message}</span>
+                <button onclick="this.parentElement.parentElement.remove()" 
+                        style="background: none; border: none; color: inherit; cursor: pointer; margin-left: auto;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.style.animation = 'slideOutRight 0.3s ease-in';
+                setTimeout(() => notification.remove(), 300);
+            }
+        }, 5000);
+    }
+
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+
+    {% if messages %}
+        {% for message in messages %}
+            showNotification('{{ message }}', '{{ message.tags }}');
+        {% endfor %}
+    {% endif %}
+</script>
+{% endblock %}
+
+
