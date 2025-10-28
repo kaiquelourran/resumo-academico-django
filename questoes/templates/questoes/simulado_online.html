@@ -1,0 +1,516 @@
+{% extends 'questoes/base.html' %}
+{% load static %}
+
+{% block title %}Simulado Online - {{ assunto.nome }}{% endblock %}
+
+{% block breadcrumb %}
+<!-- Breadcrumb Navigation -->
+<div class="breadcrumb">
+    <div class="header-container">
+        <nav class="breadcrumb-nav">
+            <a href="{% url 'questoes:index' %}" class="breadcrumb-link">🏠 Início</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <a href="{% url 'questoes:escolher_assunto' %}" class="breadcrumb-link">📚 Questões</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <a href="{% url 'questoes:listar_questoes' assunto.pk %}" class="breadcrumb-link">📋 Listar Questões</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <span class="breadcrumb-current">🎯 Simulado</span>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_header %}
+<!-- Page Title Section -->
+<div class="page-header">
+    <div class="header-container">
+        <h1 class="page-title">Simulado Online</h1>
+        <p class="page-subtitle">{{ assunto.nome }}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="simulado-container">
+    <!-- Informações do Simulado -->
+    <div class="simulado-info">
+        <h2 class="simulado-title">Questões</h2>
+        <div class="simulado-stats">
+            <span class="stats-text">{{ total_questoes }} questões encontradas</span>
+            <span class="stats-separator">-</span>
+            <span class="stats-text">{{ porcentagem_respondidas }}% respondidas</span>
+        </div>
+        
+        <div class="simulado-action-box">
+            <p>Questões filtradas por assunto. Ir para o simulado?</p>
+        </div>
+    </div>
+
+    <!-- Lista de Questões -->
+    <div class="questoes-lista">
+        {% for item in questoes_com_status %}
+        <div class="questao-item" data-questao-id="{{ item.questao.id }}">
+            <!-- Header da Questão -->
+            <div class="questao-header">
+                <span class="questao-numero">Questão {{ item.questao.id }}</span>
+                <button class="btn-ver-resposta" onclick="verResposta({{ item.questao.id }})">
+                    Ver Resposta
+                </button>
+            </div>
+            
+            <!-- Texto da Questão -->
+            <div class="questao-texto">
+                {{ item.questao.enunciado }}
+            </div>
+            
+            <!-- Alternativas -->
+            <div class="questao-alternativas">
+                {% for alt in item.alternativas %}
+                <div class="alternativa-item">
+                    <label class="alternativa-label">
+                        <input type="checkbox" 
+                               name="questao_{{ item.questao.id }}" 
+                               value="{{ alt.id }}"
+                               data-letra="{{ alt.letra }}"
+                               onchange="marcarAlternativa(this)">
+                        <span class="checkbox-custom"></span>
+                        <span class="alternativa-texto">{{ alt.texto }}</span>
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Links de Ação -->
+            <div class="questao-acoes">
+                <a href="#" class="acao-link" onclick="verResposta({{ item.questao.id }})">
+                    Ver Resposta
+                </a>
+                <a href="#" class="acao-link" onclick="verComentario({{ item.questao.id }})">
+                    Ver Comentário
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Navegação Inferior -->
+    <div class="simulado-navegacao">
+        <button class="btn-nav btn-voltar" onclick="voltarPagina()">
+            Voltar
+        </button>
+        <button class="btn-nav btn-proximo" onclick="proximaPagina()">
+            Próximo
+        </button>
+        <button class="btn-nav btn-finalizar" onclick="finalizarSimulado()">
+            Finalizar Simulado
+        </button>
+    </div>
+</div>
+
+<style>
+/* ======================================== SIMULADO ONLINE CSS ======================================== */
+
+.simulado-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Informações do Simulado */
+.simulado-info {
+    margin-bottom: 30px;
+}
+
+.simulado-title {
+    font-size: 2em;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.simulado-stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    font-size: 1.1em;
+    color: #666;
+}
+
+.stats-separator {
+    color: #999;
+}
+
+.simulado-action-box {
+    background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,114,255,0.3);
+}
+
+/* Lista de Questões */
+.questoes-lista {
+    margin-bottom: 40px;
+}
+
+.questao-item {
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.questao-item:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+/* Header da Questão */
+.questao-header {
+    background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.questao-numero {
+    font-weight: 700;
+    font-size: 1.2em;
+}
+
+.btn-ver-resposta {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-ver-resposta:hover {
+    background: rgba(255,255,255,0.3);
+    transform: translateY(-1px);
+}
+
+/* Texto da Questão */
+.questao-texto {
+    padding: 20px;
+    font-size: 1.1em;
+    line-height: 1.6;
+    color: #333;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+/* Alternativas */
+.questao-alternativas {
+    padding: 20px;
+}
+
+.alternativa-item {
+    margin-bottom: 15px;
+}
+
+.alternativa-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    padding: 12px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.alternativa-label:hover {
+    background: #f8f9ff;
+}
+
+.alternativa-label input[type="checkbox"] {
+    display: none;
+}
+
+.checkbox-custom {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    position: relative;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.alternativa-label input[type="checkbox"]:checked + .checkbox-custom {
+    background: #0072FF;
+    border-color: #0072FF;
+}
+
+.alternativa-label input[type="checkbox"]:checked + .checkbox-custom::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.alternativa-texto {
+    flex: 1;
+    font-size: 1em;
+    line-height: 1.5;
+    color: #333;
+}
+
+/* Links de Ação */
+.questao-acoes {
+    padding: 15px 20px;
+    background: #f8f9fa;
+    display: flex;
+    gap: 20px;
+    border-top: 1px solid #e9ecef;
+}
+
+.acao-link {
+    color: #28a745;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.acao-link:hover {
+    color: #218838;
+    text-decoration: underline;
+}
+
+/* Navegação Inferior */
+.simulado-navegacao {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    border-top: 2px solid #e9ecef;
+    margin-top: 30px;
+}
+
+.btn-nav {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.btn-voltar {
+    background: #0072FF;
+    color: white;
+}
+
+.btn-voltar:hover {
+    background: #0056b3;
+    transform: translateY(-2px);
+}
+
+.btn-proximo, .btn-finalizar {
+    background: white;
+    color: #333;
+    border: 2px solid #e9ecef;
+}
+
+.btn-proximo:hover, .btn-finalizar:hover {
+    background: #f8f9fa;
+    border-color: #0072FF;
+    transform: translateY(-2px);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .simulado-container {
+        padding: 10px;
+    }
+    
+    .questao-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .simulado-navegacao {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .btn-nav {
+        width: 100%;
+    }
+    
+    .questao-acoes {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .simulado-title {
+        font-size: 1.5em;
+    }
+    
+    .questao-texto {
+        padding: 15px;
+        font-size: 1em;
+    }
+    
+    .questao-alternativas {
+        padding: 15px;
+    }
+    
+    .alternativa-label {
+        padding: 10px;
+    }
+}
+</style>
+
+<script>
+// ======================================== JAVASCRIPT SIMULADO ONLINE ========================================
+
+let respostas = {};
+let questoesData = {{ questoes|safe }};
+
+// Marcar alternativa
+function marcarAlternativa(checkbox) {
+    const questaoId = checkbox.name.replace('questao_', '');
+    const alternativaId = checkbox.value;
+    
+    if (!respostas[questaoId]) {
+        respostas[questaoId] = [];
+    }
+    
+    if (checkbox.checked) {
+        respostas[questaoId].push(alternativaId);
+    } else {
+        const index = respostas[questaoId].indexOf(alternativaId);
+        if (index > -1) {
+            respostas[questaoId].splice(index, 1);
+        }
+    }
+    
+    // Salvar no localStorage
+    localStorage.setItem('simulado_respostas', JSON.stringify(respostas));
+    
+    console.log('Respostas:', respostas);
+}
+
+// Ver resposta
+function verResposta(questaoId) {
+    // Implementar modal ou seção para mostrar resposta
+    alert(`Ver resposta da questão ${questaoId}`);
+}
+
+// Ver comentário
+function verComentario(questaoId) {
+    // Implementar modal ou seção para mostrar comentário
+    alert(`Ver comentário da questão ${questaoId}`);
+}
+
+// Voltar página
+function voltarPagina() {
+    window.history.back();
+}
+
+// Próxima página
+function proximaPagina() {
+    // Implementar navegação para próxima página
+    alert('Próxima página');
+}
+
+// Finalizar simulado
+function finalizarSimulado() {
+    const totalRespostas = Object.keys(respostas).length;
+    const totalQuestoes = questoesData.length;
+    
+    if (confirm(`Finalizar simulado?\n\nQuestões respondidas: ${totalRespostas}/${totalQuestoes}`)) {
+        // Enviar respostas para servidor
+        enviarRespostas();
+        
+        // Redirecionar para resultado
+        window.location.href = `{% url 'questoes:listar_questoes' assunto.pk %}`;
+    }
+}
+
+// Enviar respostas para servidor
+function enviarRespostas() {
+    fetch('{% url "questoes:validar_resposta" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            respostas: respostas,
+            tipo: 'simulado'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            console.log('Respostas enviadas com sucesso');
+        } else {
+            console.error('Erro ao enviar respostas:', data.erro);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+    });
+}
+
+// Carregar respostas salvas
+document.addEventListener('DOMContentLoaded', function() {
+    const respostasSalvas = localStorage.getItem('simulado_respostas');
+    if (respostasSalvas) {
+        respostas = JSON.parse(respostasSalvas);
+        
+        // Restaurar checkboxes marcados
+        Object.keys(respostas).forEach(questaoId => {
+            respostas[questaoId].forEach(alternativaId => {
+                const checkbox = document.querySelector(`input[name="questao_${questaoId}"][value="${alternativaId}"]`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+        });
+    }
+    
+    // Animações de entrada
+    const questoes = document.querySelectorAll('.questao-item');
+    questoes.forEach((questao, index) => {
+        questao.style.opacity = '0';
+        questao.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            questao.style.transition = 'all 0.5s ease';
+            questao.style.opacity = '1';
+            questao.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+
+// Salvar respostas automaticamente ao sair da página
+window.addEventListener('beforeunload', function() {
+    localStorage.setItem('simulado_respostas', JSON.stringify(respostas));
+});
+</script>
+{% endblock %}

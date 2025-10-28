@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.db.models import Count, Q, Sum, Avg, Case, When, IntegerField, FloatField, F, ExpressionWrapper, Max
+from django.db.models import Count, Q, Sum, Avg, Case, When, IntegerField, FloatField, F, ExpressionWrapper, Max, OuterRef, Subquery
 from django.utils import timezone
 from django.core.paginator import Paginator
 from datetime import timedelta
@@ -144,58 +144,73 @@ def listar_questoes_view(request, assunto_id):
     questoes_com_status = []
     
     if user_id:
-        # Busca todas as respostas do usuário para este assunto
-        respostas_usuario = RespostaUsuario.objects.filter(
+        # Busca a ÚLTIMA resposta de cada questão do usuário usando subquery
+        
+        # Subquery para pegar a data máxima de resposta para cada questão
+        max_data_subquery = RespostaUsuario.objects.filter(
             id_usuario_id=user_id,
-            id_questao_id__in=questoes_ids
-        ).order_by('id_questao_id', '-data_resposta')
+            id_questao_id=OuterRef('id')
+        ).values('id_questao').annotate(
+            max_data=Max('data_resposta')
+        ).values('max_data')
         
-        # Agrupa por questão e pega apenas a última resposta de cada
-        respostas_por_questao = {}
-        for resposta in respostas_usuario:
-            if resposta.id_questao_id not in respostas_por_questao:
-                respostas_por_questao[resposta.id_questao_id] = resposta
+        # Busca a última resposta de cada questão
+        ultimas_respostas = RespostaUsuario.objects.filter(
+            id_usuario_id=user_id,
+            id_questao_id__in=questoes_ids,
+            data_resposta=Subquery(max_data_subquery)
+        ).values('id_questao', 'acertou')
         
-        # Monta lista de questões com status
+        # Monta dicionário com a última resposta de cada questão
+        respostas_dict = {}
+        for resposta in ultimas_respostas:
+            respostas_dict[resposta['id_questao']] = resposta['acertou']
+        
+        # Monta lista de questões com status baseado na última resposta
         for questao in questoes:
             status = 'nao-respondida'
             classe_status = 'nao-respondida'
             
-            if questao.id in respostas_por_questao:
-                resposta = respostas_por_questao[questao.id]
-                if resposta.acertou:
+            if questao.id in respostas_dict:
+                acertou = respostas_dict[questao.id]
+                if acertou:
                     status = 'certa'
                     classe_status = 'certa'
                 else:
                     status = 'errada'
                     classe_status = 'errada'
             
-            # Aplica filtro
+            # Aplica filtro conforme documentação
             if filtro == 'todas':
+                # Mostra todas as questões
                 questoes_com_status.append({
                     'questao': questao,
                     'status': status,
                     'classe_status': classe_status
                 })
-            elif filtro == 'respondidas' and questao.id in respostas_por_questao:
+            elif filtro == 'respondidas' and questao.id in respostas_dict:
+                # Mostra apenas questões que foram respondidas pelo menos uma vez
                 questoes_com_status.append({
                     'questao': questao,
                     'status': status,
                     'classe_status': classe_status
                 })
-            elif filtro == 'nao-respondidas' and questao.id not in respostas_por_questao:
+            elif filtro == 'nao-respondidas' and questao.id not in respostas_dict:
+                # Mostra apenas questões nunca respondidas
                 questoes_com_status.append({
                     'questao': questao,
                     'status': 'nao-respondida',
                     'classe_status': 'nao-respondida'
                 })
-            elif filtro == 'certas' and questao.id in respostas_por_questao and respostas_por_questao[questao.id].acertou:
+            elif filtro == 'certas' and questao.id in respostas_dict and respostas_dict[questao.id]:
+                # Mostra apenas questões onde a última resposta foi correta
                 questoes_com_status.append({
                     'questao': questao,
                     'status': 'certa',
                     'classe_status': 'certa'
                 })
-            elif filtro == 'erradas' and questao.id in respostas_por_questao and not respostas_por_questao[questao.id].acertou:
+            elif filtro == 'erradas' and questao.id in respostas_dict and not respostas_dict[questao.id]:
+                # Mostra apenas questões onde a última resposta foi incorreta
                 questoes_com_status.append({
                     'questao': questao,
                     'status': 'errada',
@@ -211,28 +226,29 @@ def listar_questoes_view(request, assunto_id):
                     'classe_status': 'nao-respondida'
                 })
     
-    # Calcula contadores
+    # Calcula contadores conforme documentação
     total_todas = questoes.count()
     
     if user_id:
-        # Conta questões respondidas (pelo menos uma vez)
+        # Contador: Respondidas (questões respondidas pelo menos uma vez)
         respondidas_ids = RespostaUsuario.objects.filter(
             id_usuario_id=user_id,
             id_questao_id__in=questoes_ids
-        ).values_list('id_questao_id', flat=True).distinct()
+        ).values_list('id_questao', flat=True).distinct()
         total_respondidas = len(respondidas_ids)
+        
+        # Contador: Não Respondidas (diferença entre total e respondidas)
         total_nao_respondidas = total_todas - total_respondidas
         
-        # Conta questões certas (última resposta foi correta)
+        # Contador: Certas (questões onde a última resposta foi correta)
         total_certas = 0
         total_erradas = 0
         
         for questao_id in questoes_ids:
-            if questao_id in respostas_por_questao:
-                resposta = respostas_por_questao[questao_id]
-                if resposta.acertou:
+            if questao_id in respostas_dict:
+                if respostas_dict[questao_id]:  # acertou = True
                     total_certas += 1
-                else:
+                else:  # acertou = False
                     total_erradas += 1
     else:
         total_respondidas = 0
@@ -240,12 +256,28 @@ def listar_questoes_view(request, assunto_id):
         total_certas = 0
         total_erradas = 0
     
+    # Calcula porcentagens para as barras de progresso
+    porcentagem_nao_respondidas = (total_nao_respondidas / total_todas * 100) if total_todas > 0 else 0
+    porcentagem_respondidas = (total_respondidas / total_todas * 100) if total_todas > 0 else 0
+    porcentagem_certas = (total_certas / total_respondidas * 100) if total_respondidas > 0 else 0
+    porcentagem_erradas = (total_erradas / total_respondidas * 100) if total_respondidas > 0 else 0
+    porcentagem_taxa_acerto = (total_certas / total_respondidas * 100) if total_respondidas > 0 else 0
+    porcentagem_progresso_geral = (total_respondidas / total_todas * 100) if total_todas > 0 else 0
+    
     stats = {
         'todas': total_todas,
         'respondidas': total_respondidas,
         'nao_respondidas': total_nao_respondidas,
         'acertadas': total_certas,
-        'erradas': total_erradas
+        'erradas': total_erradas,
+        'porcentagens': {
+            'nao_respondidas': round(porcentagem_nao_respondidas, 1),
+            'respondidas': round(porcentagem_respondidas, 1),
+            'certas': round(porcentagem_certas, 1),
+            'erradas': round(porcentagem_erradas, 1),
+            'taxa_acerto': round(porcentagem_taxa_acerto, 1),
+            'progresso_geral': round(porcentagem_progresso_geral, 1)
+        }
     }
     
     context = {
@@ -1282,6 +1314,271 @@ def validar_resposta_view(request):
             return JsonResponse({'sucesso': False, 'erro': str(e)}, status=500)
     
     return JsonResponse({'sucesso': False, 'erro': 'Método não permitido'}, status=405)
+
+
+def quiz_vertical_filtros_view(request, assunto_id):
+    """Quiz vertical com filtros dinâmicos - equivalente ao quiz_vertical_filtros.php"""
+    assunto = get_object_or_404(Assunto, pk=assunto_id)
+    
+    # Captura parâmetros da URL
+    filtro_ativo = request.GET.get('filtro', 'todas')
+    questao_inicial = request.GET.get('questao_inicial', 0)
+    
+    try:
+        questao_inicial = int(questao_inicial)
+    except (ValueError, TypeError):
+        questao_inicial = 0
+    
+    user_id = request.user.id if request.user.is_authenticated else None
+    
+    # Query base para buscar questões com status
+    questoes_query = Questao.objects.filter(id_assunto=assunto).select_related('id_assunto')
+    
+    questoes_com_status = []
+    
+    if user_id:
+        # Busca última resposta de cada questão do usuário
+        from django.db.models import OuterRef, Subquery, Max
+        
+        max_data_subquery = RespostaUsuario.objects.filter(
+            id_usuario_id=user_id,
+            id_questao_id=OuterRef('id')
+        ).values('id_questao').annotate(
+            max_data=Max('data_resposta')
+        ).values('max_data')
+        
+        ultimas_respostas = RespostaUsuario.objects.filter(
+            id_usuario_id=user_id,
+            id_questao__in=questoes_query.values_list('id', flat=True),
+            data_resposta=Subquery(max_data_subquery)
+        ).values('id_questao', 'acertou')
+        
+        respostas_dict = {}
+        for resposta in ultimas_respostas:
+            respostas_dict[resposta['id_questao']] = resposta['acertou']
+        
+        # Aplica filtros
+        for questao in questoes_query:
+            status = 'nao-respondida'
+            
+            if questao.id in respostas_dict:
+                acertou = respostas_dict[questao.id]
+                if acertou:
+                    status = 'certa'
+                else:
+                    status = 'errada'
+            
+            # Aplica filtro específico
+            incluir_questao = False
+            
+            if filtro_ativo == 'todas':
+                incluir_questao = True
+            elif filtro_ativo == 'respondidas' and questao.id in respostas_dict:
+                incluir_questao = True
+            elif filtro_ativo == 'nao-respondidas' and questao.id not in respostas_dict:
+                incluir_questao = True
+            elif filtro_ativo == 'certas' and questao.id in respostas_dict and respostas_dict[questao.id]:
+                incluir_questao = True
+            elif filtro_ativo == 'erradas' and questao.id in respostas_dict and not respostas_dict[questao.id]:
+                incluir_questao = True
+            
+            if incluir_questao:
+                questoes_com_status.append({
+                    'questao': questao,
+                    'status': status
+                })
+    else:
+        # Usuário não logado - mostra apenas filtro 'todas' ou 'nao-respondidas'
+        if filtro_ativo in ['todas', 'nao-respondidas']:
+            for questao in questoes_query:
+                questoes_com_status.append({
+                    'questao': questao,
+                    'status': 'nao-respondida'
+                })
+    
+    # Ordena questões (questão inicial primeiro se especificada)
+    if questao_inicial > 0:
+        questoes_com_status.sort(key=lambda x: (x['questao'].id != questao_inicial, x['questao'].id))
+    else:
+        questoes_com_status.sort(key=lambda x: x['questao'].id)
+    
+    # Calcula estatísticas
+    total_questoes = len(questoes_com_status)
+    
+    # Busca alternativas para cada questão
+    questoes_ids = [item['questao'].id for item in questoes_com_status]
+    alternativas_dict = {}
+    
+    if questoes_ids:
+        alternativas = Alternativa.objects.filter(id_questao_id__in=questoes_ids).select_related('id_questao').order_by('id_questao', 'ordem', 'id')
+        for alt in alternativas:
+            if alt.id_questao.id not in alternativas_dict:
+                alternativas_dict[alt.id_questao.id] = []
+            
+            # Gerar letra baseada na ordem
+            letras = ['A', 'B', 'C', 'D', 'E']
+            ordem_index = len(alternativas_dict[alt.id_questao.id])
+            letra = letras[ordem_index] if ordem_index < len(letras) else chr(65 + ordem_index)
+            
+            alternativas_dict[alt.id_questao.id].append({
+                'id': alt.id,
+                'texto': alt.texto,
+                'eh_correta': alt.eh_correta,
+                'letra': letra
+            })
+    
+    # Adiciona alternativas às questões
+    for item in questoes_com_status:
+        questao_id = item['questao'].id
+        item['alternativas'] = alternativas_dict.get(questao_id, [])
+    
+    import json
+    
+    # Prepara dados para JavaScript
+    questoes_js = []
+    for item in questoes_com_status:
+        questoes_js.append({
+            'questao': {
+                'id': item['questao'].id,
+                'enunciado': item['questao'].texto,  # CORREÇÃO: usar 'texto' em vez de 'enunciado'
+                'texto': item['questao'].texto
+            },
+            'status': item['status'],
+            'alternativas': item['alternativas']
+        })
+    
+    context = {
+        'assunto': assunto,
+        'questoes': json.dumps(questoes_js),
+        'filtro_ativo': filtro_ativo,
+        'questao_inicial': questao_inicial,
+        'total_questoes': total_questoes,
+        'user_authenticated': request.user.is_authenticated
+    }
+    
+    return render(request, 'questoes/quiz_vertical_filtros.html', context)
+    
+def simulado_online_view(request, assunto_id):
+    """Simulado online com estrutura similar ao PHP - todas as questões em uma página"""
+    assunto = get_object_or_404(Assunto, pk=assunto_id)
+    
+    # Captura parâmetros da URL
+    filtro_ativo = request.GET.get('filtro', 'todas')
+    user_id = request.user.id if request.user.is_authenticated else None
+    
+    # Query base para buscar questões com status
+    questoes_query = Questao.objects.filter(id_assunto=assunto).select_related('id_assunto')
+    
+    questoes_com_status = []
+    
+    if user_id:
+        # Busca última resposta de cada questão do usuário
+        from django.db.models import OuterRef, Subquery, Max
+        
+        max_data_subquery = RespostaUsuario.objects.filter(
+            id_usuario_id=user_id,
+            id_questao_id=OuterRef('id')
+        ).values('id_questao').annotate(
+            max_data=Max('data_resposta')
+        ).values('max_data')
+        
+        ultimas_respostas = RespostaUsuario.objects.filter(
+            id_usuario_id=user_id,
+            id_questao__in=questoes_query.values_list('id', flat=True),
+            data_resposta=Subquery(max_data_subquery)
+        ).values('id_questao', 'acertou')
+        
+        respostas_dict = {}
+        for resposta in ultimas_respostas:
+            respostas_dict[resposta['id_questao']] = resposta['acertou']
+        
+        # Aplica filtros
+        for questao in questoes_query:
+            status = 'nao-respondida'
+            
+            if questao.id in respostas_dict:
+                acertou = respostas_dict[questao.id]
+                if acertou:
+                    status = 'certa'
+                else:
+                    status = 'errada'
+            
+            # Aplica filtro específico
+            incluir_questao = False
+            
+            if filtro_ativo == 'todas':
+                incluir_questao = True
+            elif filtro_ativo == 'respondidas' and questao.id in respostas_dict:
+                incluir_questao = True
+            elif filtro_ativo == 'nao-respondidas' and questao.id not in respostas_dict:
+                incluir_questao = True
+            elif filtro_ativo == 'certas' and questao.id in respostas_dict and respostas_dict[questao.id]:
+                incluir_questao = True
+            elif filtro_ativo == 'erradas' and questao.id in respostas_dict and not respostas_dict[questao.id]:
+                incluir_questao = True
+            
+            if incluir_questao:
+                questoes_com_status.append({
+                    'questao': questao,
+                    'status': status
+                })
+    else:
+        # Usuário não logado - mostra apenas filtro 'todas' ou 'nao-respondidas'
+        if filtro_ativo in ['todas', 'nao-respondidas']:
+            for questao in questoes_query:
+                questoes_com_status.append({
+                    'questao': questao,
+                    'status': 'nao-respondida'
+                })
+    
+    # Ordena questões por ID
+    questoes_com_status.sort(key=lambda x: x['questao'].id)
+    
+    # Calcula estatísticas
+    total_questoes = len(questoes_com_status)
+    respondidas = len([q for q in questoes_com_status if q['status'] != 'nao-respondida'])
+    porcentagem_respondidas = round((respondidas / total_questoes * 100) if total_questoes > 0 else 0, 1)
+    
+    # Busca alternativas para cada questão
+    questoes_ids = [item['questao'].id for item in questoes_com_status]
+    alternativas_dict = {}
+    
+    if questoes_ids:
+        alternativas = Alternativa.objects.filter(id_questao_id__in=questoes_ids).select_related('id_questao').order_by('id_questao', 'ordem', 'id')
+        for alt in alternativas:
+            if alt.id_questao.id not in alternativas_dict:
+                alternativas_dict[alt.id_questao.id] = []
+            
+            # Gerar letra baseada na ordem
+            letras = ['A', 'B', 'C', 'D', 'E']
+            ordem_index = len(alternativas_dict[alt.id_questao.id])
+            letra = letras[ordem_index] if ordem_index < len(letras) else chr(65 + ordem_index)
+            
+            alternativas_dict[alt.id_questao.id].append({
+                'id': alt.id,
+                'texto': alt.texto,
+                'eh_correta': alt.eh_correta,
+                'letra': letra
+            })
+    
+    # Adiciona alternativas às questões
+    for item in questoes_com_status:
+        questao_id = item['questao'].id
+        item['alternativas'] = alternativas_dict.get(questao_id, [])
+    
+    import json
+    
+    context = {
+        'assunto': assunto,
+        'questoes': json.dumps(questoes_com_status, default=str),
+        'questoes_com_status': questoes_com_status,
+        'filtro_ativo': filtro_ativo,
+        'total_questoes': total_questoes,
+        'porcentagem_respondidas': porcentagem_respondidas,
+        'user_authenticated': request.user.is_authenticated
+    }
+    
+    return render(request, 'questoes/simulado_online.html', context)
 
 # REMOVIDO: Função duplicada, a original está na linha 111
 

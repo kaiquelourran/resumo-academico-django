@@ -38,8 +38,11 @@ urlpatterns = [
     # Listar questões de um assunto com filtros
     path('assunto/<int:assunto_id>/', views.listar_questoes_view, name='listar_questoes'),
     
-    # Quiz com questões do assunto escolhido
-    path('quiz/<int:assunto_id>/', views.quiz_view, name='quiz'),
+    # Quiz vertical com filtros dinâmicos
+    path('quiz-vertical/<int:assunto_id>/', views.quiz_vertical_filtros_view, name='quiz_vertical_filtros'),
+    
+    # Simulado online com todas as questões em uma página
+    path('simulado/<int:assunto_id>/', views.simulado_online_view, name='simulado_online'),
     
     # Rota para validar as respostas (endpoint de API)
     path('quiz/validar/', views.validar_resposta_view, name='validar_resposta'),
