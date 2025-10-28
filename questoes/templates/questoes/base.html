@@ -78,7 +78,7 @@
         </header>
         
         <!-- Breadcrumb Navigation -->
-        {% if not user.is_authenticated or request.resolver_match.url_name == 'index' or request.resolver_match.url_name == 'escolher_assunto' %}
+        {% if not user.is_authenticated or request.resolver_match.url_name == 'index' %}
         <div class="breadcrumb">
             <div class="header-container">
                 <nav class="breadcrumb-nav">

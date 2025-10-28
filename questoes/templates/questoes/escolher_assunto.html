@@ -3,20 +3,49 @@
 
 {% block title %}Escolher Conteúdo{% endblock %}
 
+{% block breadcrumb %}
+<!-- Breadcrumb Navigation -->
+<div class="breadcrumb">
+    <div class="header-container">
+        <nav class="breadcrumb-nav">
+            <a href="{% url 'questoes:index' %}" class="breadcrumb-link">🏠 Início</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <span class="breadcrumb-current">📚 Conteúdos</span>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_header %}
+<!-- Page Title Section -->
+<div class="page-header">
+    <div class="header-container">
+        <h1 class="page-title">Escolha um Conteúdo</h1>
+        <p class="page-subtitle">Selecione o assunto que deseja estudar</p>
+    </div>
+</div>
+{% endblock %}
+
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/modern-style.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-    body.subjects-page {
+    body {
         background-image: linear-gradient(to top, #00C6FF, #0072FF);
-        background-attachment: fixed;
         min-height: 100vh;
+        margin: 0;
     }
     
-    .assuntos-container {
+    .main-container {
         max-width: 1100px;
         margin: 0 auto;
-        padding: 24px 20px;
+        background: #FFFFFF;
+        border-radius: 16px;
+        border: 1px solid transparent;
+        background-image: linear-gradient(#FFFFFF, #FFFFFF), linear-gradient(to top, #00C6FF, #0072FF);
+        background-origin: border-box;
+        background-clip: padding-box, border-box;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        padding: 0 30px 30px 30px;
     }
     
     .subjects-toolbar {
@@ -181,14 +210,9 @@
 {% endblock %}
 
 {% block content %}
-<div class="assuntos-container">
-    <a href="{% url 'questoes:index' %}" class="voltar-btn">
-        <span>←</span> Voltar
-    </a>
-    
-    <div class="subjects-toolbar">
-        <input id="search-assunto" class="search-input" type="text" placeholder="Buscar conteúdo...">
-    </div>
+<div class="subjects-toolbar">
+    <input id="search-assunto" class="search-input" type="text" placeholder="Buscar conteúdo...">
+</div>
     
     {% if categorias.temas or categorias.concursos or categorias.profissionais %}
         <div class="categorias-container">
@@ -266,7 +290,6 @@
     </div>
 </div>
 {% endif %}
-</div>
 
 <script>
     // Filtro de conteúdos
