@@ -68,20 +68,3 @@ urlpatterns = [
     # Login administrativo
     path('admin/login/', views.admin_login_view, name='admin_login'),
 ]
-# No final do arquivo questoes/views.py
-
-from django.shortcuts import redirect, render # Garanta que estas importações estão no topo do arquivo
-
-# 1. Função que resolve o último erro mostrado: validar_resposta_view
-def validar_resposta_view(request):
-    """Placeholder para a view que processa a resposta do quiz."""
-    # Sua lógica de validação deve ir aqui
-    if request.method == 'POST':
-        pass 
-    return redirect('questoes:index') # Redireciona para o índice ou outra página
-
-# 2. Função mencionada que precisa existir: quiz_view
-def quiz_view(request, assunto_id):
-    """Placeholder para a view que carrega a página do quiz."""
-    # Sua lógica para carregar as questões do assunto_id deve ir aqui
-    return render(request, 'questoes/quiz.html', {}) # Retorna a página do quiz

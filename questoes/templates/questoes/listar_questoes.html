@@ -274,35 +274,35 @@
     <h2 class="filters-title">🔍 Filtrar Questões</h2>
     <div class="filters-grid">
         <a href="?filtro=todas" class="filter-btn {% if filtro == 'todas' %}active{% endif %}">
-            <span class="filter-label">📋 Todas</span>
+            <span class="filter-label">Todas</span>
             <span class="filter-count">{{ stats.todas }}</span>
         </a>
         
         <a href="?filtro=nao-respondidas" class="filter-btn {% if filtro == 'nao-respondidas' %}active{% endif %}">
-            <span class="filter-label">❓ Não Respondidas</span>
+            <span class="filter-label">Não Respondidas</span>
             <span class="filter-count">{{ stats.nao_respondidas }}</span>
         </a>
         
         <a href="?filtro=respondidas" class="filter-btn {% if filtro == 'respondidas' %}active{% endif %}">
-            <span class="filter-label">✅ Respondidas</span>
+            <span class="filter-label">Respondidas</span>
             <span class="filter-count">{{ stats.respondidas }}</span>
         </a>
         
-        <a href="?filtro=acertadas" class="filter-btn {% if filtro == 'acertadas' %}active{% endif %}">
-            <span class="filter-label">🎯 Certas</span>
+        <a href="?filtro=certas" class="filter-btn {% if filtro == 'certas' %}active{% endif %}">
+            <span class="filter-label">Certas</span>
             <span class="filter-count">{{ stats.acertadas }}</span>
         </a>
         
         <a href="?filtro=erradas" class="filter-btn {% if filtro == 'erradas' %}active{% endif %}">
-            <span class="filter-label">❌ Erradas</span>
+            <span class="filter-label">Erradas</span>
             <span class="filter-count">{{ stats.erradas }}</span>
-                    </a>
+        </a>
                 </div>
             </div>
             
 <!-- Lista de Questões -->
 <div class="questions-section">
-    {% if not questoes %}
+    {% if not questoes_com_status %}
         <div class="empty-state">
             <div class="empty-state-icon">📭</div>
             <h3 class="empty-state-title">Nenhuma questão encontrada</h3>
@@ -313,31 +313,31 @@
         </div>
     {% else %}
         <div class="questions-grid">
-                {% for questao in questoes %}
+                {% for item in questoes_com_status %}
                 <div class="question-card">
                     <div class="question-header">
                         <div class="question-number">
-                            🎯 Questão #{{ questao.id }}
+                            🎯 Questão #{{ item.questao.id }}
                         </div>
-                        <div class="question-status status-{{ questao.classe_status }}">
-                            {% if questao.status == 'nao-respondida' %}
-                                ❓ Não Respondida
-                            {% elif questao.status == 'acertada' %}
-                                ✅ Acertou
-                            {% elif questao.status == 'errada' %}
-                                ❌ Errou
+                        <div class="question-status status-{{ item.classe_status }}">
+                            {% if item.status == 'nao-respondida' %}
+                                NÃO RESPONDIDA
+                            {% elif item.status == 'certa' %}
+                                ACERTOU
+                            {% elif item.status == 'errada' %}
+                                ERROU
                             {% else %}
-                                ✅ Respondida
+                                RESPONDIDA
                             {% endif %}
                         </div>
                     </div>
                     
                     <div class="question-text">
-                        {{ questao.texto }}
+                        {{ item.questao.texto }}
                     </div>
                     
                     <div class="question-actions">
-                        <a href="{% url 'questoes:quiz' assunto.id %}?questao={{ questao.id }}" 
+                        <a href="{% url 'questoes:quiz' assunto.pk %}?questao={{ item.questao.id }}" 
                            class="btn-action btn-primary">
                             🎯 Responder
                         </a>

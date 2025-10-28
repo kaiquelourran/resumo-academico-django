@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.db.models import Count, Q, Sum, Avg, Case, When, IntegerField, FloatField, F, ExpressionWrapper
+from django.db.models import Count, Q, Sum, Avg, Case, When, IntegerField, FloatField, F, ExpressionWrapper, Max
 from django.utils import timezone
 from django.core.paginator import Paginator
 from datetime import timedelta
@@ -129,12 +129,133 @@ def quiz_view(request, assunto_id):
 def listar_questoes_view(request, assunto_id):
     """Lista questões de um assunto com filtros"""
     assunto = get_object_or_404(Assunto, pk=assunto_id)
-    questoes = Questao.objects.filter(id_assunto=assunto).prefetch_related('alternativas')
     
-    return render(request, 'questoes/listar_questoes.html', {
+    # Captura o filtro da URL
+    filtro = request.GET.get('filtro', 'todas')
+    
+    # Busca o usuário logado
+    user_id = request.user.id if request.user.is_authenticated else None
+    
+    # Busca as questões do assunto
+    questoes = Questao.objects.filter(id_assunto=assunto).select_related('id_assunto')
+    questoes_ids = list(questoes.values_list('id', flat=True))
+    
+    # Prepara lista de questões com status
+    questoes_com_status = []
+    
+    if user_id:
+        # Busca todas as respostas do usuário para este assunto
+        respostas_usuario = RespostaUsuario.objects.filter(
+            id_usuario_id=user_id,
+            id_questao_id__in=questoes_ids
+        ).order_by('id_questao_id', '-data_resposta')
+        
+        # Agrupa por questão e pega apenas a última resposta de cada
+        respostas_por_questao = {}
+        for resposta in respostas_usuario:
+            if resposta.id_questao_id not in respostas_por_questao:
+                respostas_por_questao[resposta.id_questao_id] = resposta
+        
+        # Monta lista de questões com status
+        for questao in questoes:
+            status = 'nao-respondida'
+            classe_status = 'nao-respondida'
+            
+            if questao.id in respostas_por_questao:
+                resposta = respostas_por_questao[questao.id]
+                if resposta.acertou:
+                    status = 'certa'
+                    classe_status = 'certa'
+                else:
+                    status = 'errada'
+                    classe_status = 'errada'
+            
+            # Aplica filtro
+            if filtro == 'todas':
+                questoes_com_status.append({
+                    'questao': questao,
+                    'status': status,
+                    'classe_status': classe_status
+                })
+            elif filtro == 'respondidas' and questao.id in respostas_por_questao:
+                questoes_com_status.append({
+                    'questao': questao,
+                    'status': status,
+                    'classe_status': classe_status
+                })
+            elif filtro == 'nao-respondidas' and questao.id not in respostas_por_questao:
+                questoes_com_status.append({
+                    'questao': questao,
+                    'status': 'nao-respondida',
+                    'classe_status': 'nao-respondida'
+                })
+            elif filtro == 'certas' and questao.id in respostas_por_questao and respostas_por_questao[questao.id].acertou:
+                questoes_com_status.append({
+                    'questao': questao,
+                    'status': 'certa',
+                    'classe_status': 'certa'
+                })
+            elif filtro == 'erradas' and questao.id in respostas_por_questao and not respostas_por_questao[questao.id].acertou:
+                questoes_com_status.append({
+                    'questao': questao,
+                    'status': 'errada',
+                    'classe_status': 'errada'
+                })
+    else:
+        # Sem usuário logado, mostra todas como não respondidas
+        for questao in questoes:
+            if filtro == 'todas' or filtro == 'nao-respondidas':
+                questoes_com_status.append({
+                    'questao': questao,
+                    'status': 'nao-respondida',
+                    'classe_status': 'nao-respondida'
+                })
+    
+    # Calcula contadores
+    total_todas = questoes.count()
+    
+    if user_id:
+        # Conta questões respondidas (pelo menos uma vez)
+        respondidas_ids = RespostaUsuario.objects.filter(
+            id_usuario_id=user_id,
+            id_questao_id__in=questoes_ids
+        ).values_list('id_questao_id', flat=True).distinct()
+        total_respondidas = len(respondidas_ids)
+        total_nao_respondidas = total_todas - total_respondidas
+        
+        # Conta questões certas (última resposta foi correta)
+        total_certas = 0
+        total_erradas = 0
+        
+        for questao_id in questoes_ids:
+            if questao_id in respostas_por_questao:
+                resposta = respostas_por_questao[questao_id]
+                if resposta.acertou:
+                    total_certas += 1
+                else:
+                    total_erradas += 1
+    else:
+        total_respondidas = 0
+        total_nao_respondidas = total_todas
+        total_certas = 0
+        total_erradas = 0
+    
+    stats = {
+        'todas': total_todas,
+        'respondidas': total_respondidas,
+        'nao_respondidas': total_nao_respondidas,
+        'acertadas': total_certas,
+        'erradas': total_erradas
+    }
+    
+    context = {
         'assunto': assunto,
-        'questoes': questoes
-    })
+        'questoes_com_status': questoes_com_status,
+        'filtro': filtro,
+        'stats': stats
+    }
+    
+    return render(request, 'questoes/listar_questoes.html', context)
 
 
 # ===== VIEWS DE AUTENTICAÇÃO =====
@@ -1103,17 +1224,66 @@ def responder_relatorio_view(request):
 # ==============================================================================
 
 # Adicionar se não existirem
+@csrf_exempt
 def validar_resposta_view(request):
     """View que processa a resposta do quiz."""
     if request.method == 'POST':
-        # Lógica da API de validação
-        pass 
-    return JsonResponse({'status': 'ok', 'message': 'Resposta processada'}, status=200)
+        try:
+            import json
+            data = json.loads(request.body)
+            
+            questao_id = data.get('id_questao')
+            alternativa_id = data.get('id_alternativa')
+            
+            if not questao_id or not alternativa_id:
+                return JsonResponse({'sucesso': False, 'erro': 'Dados inválidos'}, status=400)
+            
+            # Busca a questão e alternativa
+            questao = get_object_or_404(Questao, id=questao_id)
+            alternativa = get_object_or_404(Alternativa, id=alternativa_id)
+            
+            # Verifica se a alternativa pertence à questão
+            if alternativa.id_questao != questao:
+                return JsonResponse({'sucesso': False, 'erro': 'Alternativa inválida'}, status=400)
+            
+            # Verifica se acertou
+            acertou = alternativa.eh_correta
+            
+            # Salva a resposta do usuário (se estiver logado)
+            if request.user.is_authenticated:
+                # Remove resposta anterior se existir (unique_together)
+                RespostaUsuario.objects.filter(
+                    id_usuario=request.user,
+                    id_questao=questao
+                ).delete()
+                
+                # Cria nova resposta
+                RespostaUsuario.objects.create(
+                    id_usuario=request.user,
+                    id_questao=questao,
+                    id_alternativa=alternativa,
+                    acertou=acertou
+                )
+            
+            # Busca a alternativa correta para retornar
+            alternativa_correta = questao.alternativas.filter(eh_correta=True).first()
+            
+            return JsonResponse({
+                'sucesso': True,
+                'acertou': acertou,
+                'id_alternativa_selecionada': alternativa_id,
+                'id_alternativa_correta': alternativa_correta.id if alternativa_correta else None,
+                'explicacao': questao.explicacao or ''
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'sucesso': False, 'erro': 'JSON inválido'}, status=400)
+        except Exception as e:
+            return JsonResponse({'sucesso': False, 'erro': str(e)}, status=500)
+    
+    return JsonResponse({'sucesso': False, 'erro': 'Método não permitido'}, status=405)
 
-# Adicionar se não existir
-def quiz_view(request, assunto_id):
-    """Placeholder para a view que carrega a página do quiz."""
-    return render(request, 'questoes/quiz.html', {})
+# REMOVIDO: Função duplicada, a original está na linha 111
 
 # IMPORTANTE: Se outras funções do urls.py também estiverem faltando, 
 # você precisará adicioná-las manualmente ou me enviar o código para revisar.

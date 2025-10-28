@@ -12,7 +12,7 @@
             <i class="fas fa-chevron-right breadcrumb-separator"></i>
             <a href="{% url 'questoes:escolher_assunto' %}" class="breadcrumb-link">📚 Conteúdos</a>
             <i class="fas fa-chevron-right breadcrumb-separator"></i>
-            <a href="{% url 'questoes:listar_questoes' assunto.id %}" class="breadcrumb-link">📋 Lista de Questões</a>
+            <a href="{% url 'questoes:listar_questoes' assunto.pk %}" class="breadcrumb-link">📋 Lista de Questões</a>
             <i class="fas fa-chevron-right breadcrumb-separator"></i>
             <span class="breadcrumb-current">🎯 Quiz</span>
         </nav>
@@ -292,7 +292,22 @@
                         id_alternativa: parseInt(alternativaId)
                     })
                 })
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Status da resposta:', response.status);
+                    console.log('Headers da resposta:', response.headers);
+                    
+                    // Verifica se a resposta é JSON
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        return response.json();
+                    } else {
+                        // Se não for JSON, retorna o texto para debug
+                        return response.text().then(text => {
+                            console.error('Resposta não é JSON:', text.substring(0, 200));
+                            throw new Error('Resposta não é JSON');
+                        });
+                    }
+                })
                 .then(data => {
                     console.log('Resposta recebida:', data);
                     
