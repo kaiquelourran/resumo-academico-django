@@ -363,32 +363,68 @@ def quiz_vertical_filtros_view(request, assunto_id):
     
     respostas_dict = {}
     if user_id:
-        max_data_subquery = RespostaUsuario.objects.filter(
+        # Busca a ÚLTIMA resposta de cada questão do usuário (otimizado)
+        questoes_ids_quiz = list(questoes_query.values_list('id', flat=True))
+        
+        # Primeiro, pega a data máxima de resposta para cada questão
+        respostas_agrupadas = RespostaUsuario.objects.filter(
             id_usuario_id=user_id,
-            id_questao=OuterRef('id')
+            id_questao__in=questoes_ids_quiz
         ).values('id_questao').annotate(
             max_data=Max('data_resposta')
-        ).values('max_data')
+        )
         
-        ultimas_respostas = RespostaUsuario.objects.filter(
-            id_usuario_id=user_id,
-            id_questao__in=questoes_query.values_list('id', flat=True),
-            data_resposta=Subquery(max_data_subquery)
-        ).values('id_questao', 'acertou')
+        # Monta um dicionário com questão_id -> max_data
+        questoes_com_data_maxima = {}
+        for item in respostas_agrupadas:
+            questoes_com_data_maxima[item['id_questao']] = item['max_data']
         
-        for resposta in ultimas_respostas:
-            respostas_dict[resposta['id_questao']] = resposta['acertou']
+        # Busca todas as últimas respostas de uma vez (otimizado)
+        if questoes_com_data_maxima:
+            conditions = Q()
+            for questao_id, max_data in questoes_com_data_maxima.items():
+                conditions |= Q(id_questao_id=questao_id, data_resposta=max_data)
+            
+            ultimas_respostas_query = RespostaUsuario.objects.filter(
+                id_usuario_id=user_id
+            ).filter(conditions).order_by('id_questao_id', '-id')
+            
+            # Popula o dicionário (pega apenas a primeira resposta de cada questão)
+            questoes_processadas = set()
+            for resposta in ultimas_respostas_query:
+                questao_id = resposta.id_questao.id
+                if questao_id not in questoes_processadas:
+                    respostas_dict[questao_id] = bool(resposta.acertou)
+                    questoes_processadas.add(questao_id)
     
-    # Monta lista de questões com status (INCLUINDO TODAS)
+    # Monta lista de questões com status e aplica filtro
     for questao in questoes_query:
         status = 'nao-respondida'
         if questao.id in respostas_dict:
             status = 'certa' if respostas_dict[questao.id] else 'errada'
         
-        questoes_com_status.append({
-            'questao': questao,
-            'status': status
-        })
+        # Aplicar filtro baseado no filtro_ativo
+        incluir_questao = False
+        
+        if filtro_ativo == 'todas':
+            incluir_questao = True
+        elif filtro_ativo == 'respondidas':
+            incluir_questao = (status == 'certa' or status == 'errada')
+        elif filtro_ativo == 'nao-respondidas':
+            incluir_questao = (status == 'nao-respondida')
+        elif filtro_ativo == 'certas':
+            incluir_questao = (status == 'certa')
+        elif filtro_ativo == 'erradas':
+            incluir_questao = (status == 'errada')
+        else:
+            incluir_questao = True  # Por padrão, mostra todas
+        
+        # Adiciona apenas se passar pelo filtro
+        if incluir_questao:
+            questoes_com_status.append({
+                'questao': questao,
+                'status': status
+            })
     
     # Ordena questões (questão inicial primeiro se especificada)
     if questao_inicial > 0:
