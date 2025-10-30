@@ -134,12 +134,12 @@ function mostrarFeedback(questaoId, data) {
         }, 500);
     }
     
-    // Exibir feedback de toast
-    if (data.acertou) {
-        exibirFeedback("Correto! 😄", true);
-    } else {
-        exibirFeedback("Incorreto! 😥", false);
-    }
+    // Toast de feedback removido conforme solicitado
+    // if (data.acertou) {
+    //     exibirFeedback("Correto! 😄", true);
+    // } else {
+    //     exibirFeedback("Incorreto! 😥", false);
+    // }
 
     // 🌟 LÓGICA DE FILTRO: ATUALIZAÇÃO E APLICAÇÃO 🌟
     // 1. Marca o card da questão com o novo status (CONSISTENTE: 'certa'/'errada')
@@ -327,7 +327,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
       // Verificar se já foi respondida
       if (questaoCard && questaoCard.dataset.statusResposta) {
-        exibirFeedback('Questão já respondida!', false);
+        // Toast de feedback removido conforme solicitado
+        // exibirFeedback('Questão já respondida!', false);
         return;
       }
 
@@ -373,12 +374,14 @@ document.addEventListener('DOMContentLoaded', function () {
           } else if (data && data.error) {
             const card = document.querySelector(`#questao-${questaoId}`);
             if (card) card.dataset.statusResposta = '';
-            exibirFeedback(`Erro: ${data.error}`, false);
+            // Toast de feedback removido conforme solicitado
+            // exibirFeedback(`Erro: ${data.error}`, false);
           }
         })
         .catch(error => {
           console.error('Erro na requisição:', error);
-          exibirFeedback(`Erro ao salvar resposta: ${error.message}`, false);
+          // Toast de feedback removido conforme solicitado
+          // exibirFeedback(`Erro ao salvar resposta: ${error.message}`, false);
           const card = document.querySelector(`#questao-${questaoId}`);
           if (card) {
             card.dataset.statusResposta = '';

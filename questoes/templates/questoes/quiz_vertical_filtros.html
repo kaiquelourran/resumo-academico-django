@@ -94,19 +94,46 @@
         try{
           const card = elemento.closest('.question-card');
           const alternativas = card ? card.querySelectorAll('.alternative-item') : [];
-alternativas.forEach(alt=>{ alt.classList.remove('alternative-correct','alternative-incorrect-chosen'); alt.style.pointerEvents='none'; alt.style.cursor='default'; });
+          // Limpar TODAS as classes de feedback e desativar cliques
+          alternativas.forEach(alt=>{ 
+            alt.classList.remove('alternative-correct','alternative-correct-chosen','alternative-incorrect-chosen'); 
+            alt.style.pointerEvents='none'; 
+            alt.style.cursor='default'; 
+          });
           const dados = (window.questoesList||[]).find(q=>q.questao.id===questaoId);
           const correta = dados ? (dados.alternativas||[]).find(a=>isTrue(a.eh_correta)) : null;
-          const corretaId = correta ? Number(correta.id) : NaN;
+          let corretaId = correta ? Number(correta.id) : NaN;
+          
+          // Se não encontrou no array, buscar no DOM
+          if (isNaN(corretaId) || !corretaId){
+            const corretaDom = card.querySelector('.alternative-item[data-resposta-correta="1"]');
+            if (corretaDom) corretaId = Number(corretaDom.getAttribute('data-alternativa-id'));
+          }
+          
           const selId = Number(alternativaId);
+          const acertouLocal = !isNaN(corretaId) && (selId === corretaId);
+          
+          // Aplicar feedback visual INICIAL (será sobrescrito pela resposta do backend)
           alternativas.forEach(alt=>{
             const id=Number(alt.getAttribute('data-alternativa-id'));
-if(id===corretaId){ alt.classList.add('alternative-correct'); }
-else if(id===selId){ alt.classList.add('alternative-incorrect-chosen'); }
+            // PRIMEIRO verificar se é a alternativa clicada e se é correta
+            if(id === selId && acertouLocal){
+              alt.classList.add('alternative-correct-chosen'); // Verde com animação
+            }
+            // Se é a alternativa CORRETA mas não foi clicada
+            else if(id === corretaId && !isNaN(corretaId)){
+              alt.classList.add('alternative-correct'); // Verde simples
+            }
+            // Se foi clicada na ERRADA
+            else if(id === selId && !acertouLocal){
+              alt.classList.add('alternative-incorrect-chosen'); // Vermelho
+            }
           });
-          const ok = selId===corretaId;
+          
+          const ok = acertouLocal;
           if (card){ card.dataset.statusResposta = ok?'certa':'errada'; const st=card.querySelector('.question-status'); if(st){ st.textContent = ok?'Certa':'Errada'; st.className='question-status '+(ok?'certa':'errada'); } }
-          if (typeof window.exibirFeedback==='function'){ window.exibirFeedback(ok?'Correto! 😄':'Incorreto! 😥', ok); }
+          // Toast de feedback removido conforme solicitado
+          // if (typeof window.exibirFeedback==='function'){ window.exibirFeedback(ok?'Correto! 😄':'Incorreto! 😥', ok); }
           try{ (window.respostas||(window.respostas={}))[questaoId]=selId; }catch(_){ }
           if (typeof window.atualizarProgresso==='function'){ try{ window.atualizarProgresso(); }catch(_){}}
           try{
@@ -150,10 +177,10 @@ else if(id===selId){ alt.classList.add('alternative-incorrect-chosen'); }
                   } 
                 }
                 
-                // Atualizar feedback
-                if (typeof window.exibirFeedback==='function'){ 
-                  window.exibirFeedback(acertouBackend?'Correto! 😄':'Incorreto! 😥', acertouBackend); 
-                }
+                // Toast de feedback removido conforme solicitado
+                // if (typeof window.exibirFeedback==='function'){ 
+                //   window.exibirFeedback(acertouBackend?'Correto! 😄':'Incorreto! 😥', acertouBackend); 
+                // }
               })
               .catch(e=>console.error('❌ Erro:', e));
           }catch(_){ }
@@ -321,7 +348,12 @@ function responderQuestao(questaoId,alternativaId,elemento){
   const isTrue = (v)=> (v===true||v===1||v==='1'||v==='true'||v==='True');
   const card=elemento.closest('.question-card'); const alternativas=card.querySelectorAll('.alternative-item');
   try { console.log('[responderQuestao] qid=', questaoId, 'aid=', alternativaId); } catch(_) {}
-alternativas.forEach(alt=>{ alt.classList.remove('alternative-correct','alternative-incorrect-chosen'); alt.style.pointerEvents='none'; alt.style.cursor='default'; });
+  // Limpar TODAS as classes de feedback e desativar cliques
+  alternativas.forEach(alt=>{ 
+    alt.classList.remove('alternative-correct','alternative-correct-chosen','alternative-incorrect-chosen'); 
+    alt.style.pointerEvents='none'; 
+    alt.style.cursor='default'; 
+  });
   const dados=(window.questoesList||[]).find(q=>q.questao.id===questaoId);
   let corretaId = NaN;
   if (dados && Array.isArray(dados.alternativas)){
@@ -358,8 +390,8 @@ alternativas.forEach(alt=>{ alt.classList.remove('alternative-correct','alternat
     }
   });
   const idx=questoesList.findIndex(q=>q.questao.id===questaoId); if(idx>-1){ const ok=selId===corretaId; questoesList[idx].status=ok?'certa':'errada'; card.dataset.statusResposta=ok?'certa':'errada'; const st=card.querySelector('.question-status'); if(st){ st.textContent=ok?'Certa':'Errada'; st.className=`question-status ${ok?'certa':'errada'}`; } }
-  // feedback visual adicional (toast) se disponível
-  try { if (typeof exibirFeedback==='function') exibirFeedback((selId===corretaId)?'Correto! 😄':'Incorreto! 😥', (selId===corretaId)); } catch(_) {}
+  // Toast de feedback removido conforme solicitado
+  // try { if (typeof exibirFeedback==='function') exibirFeedback((selId===corretaId)?'Correto! 😄':'Incorreto! 😥', (selId===corretaId)); } catch(_) {}
   atualizarProgresso();
   const token=document.querySelector('[name=csrfmiddlewaretoken]').value;
   fetch('/questoes/quiz/validar/',{
@@ -404,9 +436,10 @@ alternativas.forEach(alt=>{ alt.classList.remove('alternative-correct','alternat
         st.textContent=acertouBackend?'Certa':'Errada'; 
         st.className='question-status '+(acertouBackend?'certa':'errada'); 
       }
-      if (typeof exibirFeedback==='function'){ 
-        exibirFeedback(acertouBackend?'Correto! 😄':'Incorreto! 😥', acertouBackend); 
-      }
+      // Toast de feedback removido conforme solicitado
+      // if (typeof exibirFeedback==='function'){ 
+      //   exibirFeedback(acertouBackend?'Correto! 😄':'Incorreto! 😥', acertouBackend); 
+      // }
     }catch(e){ 
       console.error('Erro ao processar resposta do backend:', e); 
     }
