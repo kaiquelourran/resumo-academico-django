@@ -81,7 +81,7 @@
         border: 2px solid #e1e5e9;
         border-radius: 25px;
         background: #ffffff;
-        color: #333;
+            color: #333;
         font-weight: 600;
         font-size: 14px;
         cursor: pointer;
@@ -99,7 +99,7 @@
 
     .filter-simple-btn.active {
         background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
-        color: white;
+            color: white;
         border-color: #0072FF;
         box-shadow: 0 4px 15px rgba(0,114,255,0.3);
     }
@@ -134,36 +134,7 @@
         color: white;
     }
 
-    .stats-simple {
-        display: flex;
-        gap: 20px;
-        justify-content: center;
-        margin-top: 20px;
-        flex-wrap: wrap;
-    }
-
-    .stat-simple {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px 20px;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border-radius: 20px;
-        border: 1px solid #dee2e6;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .stat-label {
-        font-size: 14px;
-        font-weight: 600;
-        color: #6c757d;
-    }
-
-    .stat-value {
-        font-size: 16px;
-        font-weight: 700;
-        color: #0072FF;
-    }
+    /* removido resumo de estatísticas */
 
     .questions-section {
         margin-top: 30px;
@@ -228,6 +199,15 @@
         color: #721c24;
     }
 
+    /* Empilha status acima do coração e alinha à direita */
+    .question-header-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+    }
+    .question-header-right .fav-btn { margin-left: 0; }
+
     .question-text {
         font-size: 16px;
         line-height: 1.6;
@@ -236,10 +216,10 @@
         background: #f8f9fa;
         border-radius: 8px;
         border-left: 4px solid #0072FF;
-    }
-
+        }
+        
     .question-actions {
-        display: flex;
+            display: flex;
         gap: 10px;
         justify-content: flex-end;
     }
@@ -253,7 +233,7 @@
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s ease;
-        text-decoration: none;
+            text-decoration: none;
         display: inline-flex;
         align-items: center;
         gap: 5px;
@@ -264,10 +244,10 @@
         box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
         color: white;
         text-decoration: none;
-    }
-
-    .empty-state {
-        text-align: center;
+        }
+        
+        .empty-state {
+            text-align: center;
         padding: 60px 20px;
         color: #6c757d;
     }
@@ -299,7 +279,7 @@
             margin: 10px;
             padding: 0 15px 15px 15px;
         }
-    }
+        }
     </style>
 
 <!-- Filtros Simplificados e Dinâmicos -->
@@ -342,37 +322,54 @@
         </button>
     </div>
     
-    <!-- Resumo simplificado -->
-    <div class="stats-simple">
-        <div class="stat-simple">
-            <span class="stat-label">Taxa de Acerto:</span>
-            <span class="stat-value">{{ stats.porcentagens.taxa_acerto|default:0 }}%</span>
-        </div>
-        <div class="stat-simple">
-            <span class="stat-label">Progresso:</span>
-            <span class="stat-value">{{ stats.porcentagens.progresso_geral|default:0 }}%</span>
-        </div>
-    </div>
+    <!-- Resumo simplificado REMOVIDO -->
+    
 </div>
+    
+<!-- Formulário de Filtros do django-filter (estilizado) -->
+<style>
+.advanced-filters-card{ margin:20px 0; padding:16px; background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 6px 18px rgba(2,6,23,.06); }
+.advanced-filters-header{ display:flex; align-items:center; gap:10px; margin:0 0 12px 0; color:#0f172a; font-weight:800; }
+.advanced-filters-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap:12px; align-items:end; }
+.advanced-filters-actions{ display:flex; gap:10px; margin-top:12px; align-items:center; flex-wrap:wrap; }
+.btn-primary-adv{ padding:8px 12px; border-radius:10px; background:linear-gradient(135deg,#00C6FF 0%,#0072FF 100%); color:#fff; border:1px solid #0b5ed7; font-weight:800; box-shadow:0 6px 16px rgba(0,114,255,.18); }
+.btn-secondary-adv{ padding:8px 12px; border-radius:10px; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1; font-weight:800; }
+.pill-counter{ margin-left:auto; font-weight:800; color:#0f172a; background:#f8fafc; border:1px solid #e2e8f0; padding:8px 12px; border-radius:999px; }
+.fav-toggle{ display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; border:1px solid #e2e8f0; background:#f8fafc; cursor:pointer; font-weight:700; color:#0f172a; }
+.fav-toggle input{ accent-color:#0072FF; }
+.fav-toggle .heart{ color:#e03131; }
+</style>
 
-<!-- Formulário de Filtros do django-filter -->
-<div class="filtros-form-section" style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 12px; border: 1px solid #dee2e6;">
-    <h3 style="margin-bottom: 15px; color: #0072FF; font-size: 18px;">
-        <i class="fas fa-filter"></i> Filtros de Busca Avançada
-    </h3>
-    <form method="get" class="filtros-form" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: end;">
-        {{ filter.form.as_p }}
-        <button type="submit" class="btn-filtrar" style="padding: 10px 20px; background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
-            <i class="fas fa-search"></i> Filtrar
-        </button>
-        <a href="?" style="padding: 10px 20px; background: #6c757d; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">
-            <i class="fas fa-times"></i> Limpar
-        </a>
+<div class="advanced-filters-card">
+    <div class="advanced-filters-header">
+        <i class="fas fa-search"></i>
+        Filtros de Busca Avançada
+    </div>
+    <form method="get" id="filtro-form" class="advanced-filters-grid">
+        <div>
+            <label for="id_texto"><strong>Buscar na Questão (conteúdo):</strong></label>
+            {{ filter.form.texto }}
+        </div>
     </form>
-    <p style="margin-top: 15px; color: #6c757d; font-weight: 600;">
-        <i class="fas fa-info-circle"></i> Total de questões encontradas: <span style="color: #0072FF;">{{ num_questoes }}</span>
-    </p>
-</div>
+    <div class="advanced-filters-actions">
+        <button type="submit" form="filtro-form" class="btn-primary-adv">
+            <i class="fas fa-filter"></i>
+            Filtrar
+        </button>
+        <a href="?" class="btn-secondary-adv">
+            <i class="fas fa-undo"></i>
+            Limpar
+        </a>
+        <label class="fav-toggle" title="Mostrar apenas favoritas">
+            <input type="checkbox" id="toggle-favoritas" />
+            <span class="heart">❤</span>
+            Somente Favoritas
+        </label>
+        <div class="pill-counter">
+            Total: <span id="total-encontradas">{{ num_questoes|default:stats.todas }}</span>
+        </div>
+                </div>
+            </div>
 
 <hr style="margin: 30px 0; border: none; border-top: 2px solid #dee2e6;">
             
@@ -386,30 +383,33 @@
     {% else %}
         {% for item in questoes_com_status %}
             <div class="question-card" data-status-resposta="{{ item.status }}" data-questao-id="{{ item.questao.id }}">
-                <div class="question-header">
+                    <div class="question-header">
                     <span class="question-number">
                         <i class="fas fa-question-circle"></i>
-                        Questão {{ forloop.counter }} de {{ questoes_com_status|length }}
+                        Questão <span class="q-index">{{ forloop.counter }}</span> de <span class="q-total">{{ questoes_com_status|length }}</span>
                     </span>
-                    <span class="question-status {{ item.classe_status }}">
-                        {{ item.status|title }} (ID: {{ item.questao.id }})
-                    </span>
-                </div>
-                
-                <div class="question-text">
+                    <div class="question-header-right">
+                        <span class="question-status {{ item.classe_status }}">
+                            {{ item.status|title }} (ID: {{ item.questao.id }})
+                        </span>
+                        <button class="fav-btn" aria-label="Favoritar" title="Favoritar" data-questao-id="{{ item.questao.id }}" style="display:none">❤</button>
+                        </div>
+                    </div>
+                    
+                    <div class="question-text">
                     {{ item.questao.texto }}
-                </div>
-                
-                <div class="question-actions">
+                    </div>
+                    
+                    <div class="question-actions">
                     <a href="{% url 'questoes:quiz_vertical_filtros' assunto.pk %}?filtro={{ filtro }}&questao_inicial={{ item.questao.id }}" 
                        class="btn-responder">
                         <i class="fas fa-play"></i>
                         Responder
-                    </a>
+                        </a>
+                    </div>
                 </div>
-            </div>
-        {% endfor %}
-    {% endif %}
+            {% endfor %}
+            {% endif %}
 </div>
 
 <!-- JavaScript Simplificado -->
@@ -501,5 +501,145 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Ajuste: renumera os cards e atualiza o total conforme o filtro ativo
+function renumerarCards() {
+    const cards = Array.from(document.querySelectorAll('.question-card'));
+    const visiveis = cards.filter(c => c.style.display !== 'none');
+    const totalVisiveis = visiveis.length;
+    visiveis.forEach((card, idx) => {
+        const idxEl = card.querySelector('.q-index');
+        const totalEl = card.querySelector('.q-total');
+        if (idxEl) idxEl.textContent = (idx + 1);
+        if (totalEl) totalEl.textContent = totalVisiveis;
+    });
+}
+
+// Calcula contagens reais a partir dos cards (status do dataset)
+function calcularContagens() {
+    const cards = Array.from(document.querySelectorAll('.question-card'));
+    const stats = { todas: 0, respondidas: 0, nao_respondidas: 0, certas: 0, erradas: 0 };
+    cards.forEach(card => {
+        const st = (card.dataset.statusResposta || '').trim();
+        stats.todas += 1;
+        if (st === 'certa') { stats.respondidas += 1; stats.certas += 1; }
+        else if (st === 'errada') { stats.respondidas += 1; stats.erradas += 1; }
+        else { stats.nao_respondidas += 1; }
+    });
+    return stats;
+}
+
+// Atualiza os chips (contadores) dos filtros simples
+function atualizarChips() {
+    const s = calcularContagens();
+    document.querySelectorAll('.filter-simple-btn').forEach(btn => {
+        const tipo = btn.getAttribute('data-filter');
+        const cnt = btn.querySelector('.filter-count');
+        if (!cnt) return;
+        switch (tipo) {
+            case 'todas': cnt.textContent = s.todas; break;
+            case 'respondidas': cnt.textContent = s.respondidas; break;
+            case 'nao-respondidas': cnt.textContent = s.nao_respondidas; break;
+            case 'certas': cnt.textContent = s.certas; break;
+            case 'erradas': cnt.textContent = s.erradas; break;
+        }
+    });
+}
+
+// Intercepta a aplicação do filtro visual para renumerar e atualizar chips em seguida
+(function wrapFiltro(){
+    if (typeof window.aplicarFiltroVisual === 'function') {
+        const original = window.aplicarFiltroVisual;
+        window.aplicarFiltroVisual = function(filtro){
+            original(filtro);
+            // aguarda repaint curto e aplica ajustes
+            setTimeout(() => { renumerarCards(); atualizarChips(); }, 0);
+        };
+    }
+})();
+
+// Também renumera/atualiza ao carregar
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(() => { renumerarCards(); atualizarChips(); }, 60); });
+
+// FILTRO COM RENUMERAÇÃO FORTE (garante "Questão X de Y" correto)
+function aplicarFiltroVisualForte(filtro) {
+    const cards = document.querySelectorAll('.question-card');
+    const favOnly = !!(document.getElementById('toggle-favoritas') && document.getElementById('toggle-favoritas').checked);
+    let visiveis = 0;
+    cards.forEach(card => {
+        const status = card.getAttribute('data-status-resposta');
+        let mostrar = false;
+        switch (filtro) {
+            case 'todas': mostrar = true; break;
+            case 'respondidas': mostrar = (status === 'certa' || status === 'errada'); break;
+            case 'nao-respondidas': mostrar = (status === 'nao-respondida'); break;
+            case 'certas': mostrar = (status === 'certa'); break;
+            case 'erradas': mostrar = (status === 'errada'); break;
+        }
+        // Se marcar "Somente Favoritas", exige o atributo data-favorito
+        if (mostrar && favOnly) {
+            mostrar = card.hasAttribute('data-favorito');
+        }
+        if (mostrar) {
+            visiveis += 1;
+            card.style.display = 'block';
+            card.style.opacity = '1';
+            const idxEl = card.querySelector('.q-index');
+            if (idxEl) idxEl.textContent = visiveis;
+        } else {
+            card.style.display = 'none';
+            card.style.opacity = '0';
+        }
+    });
+    // Atualiza todos os totais exibidos
+    document.querySelectorAll('.q-total').forEach(el => { el.textContent = visiveis; });
+}
+
+// Substitui a função anterior (se existir) e aplica no carregamento
+(function initFiltroNumerado(){
+    window.aplicarFiltroVisual = aplicarFiltroVisualForte;
+    const params = new URL(window.location).searchParams;
+    const filtroAtivo = params.get('filtro') || 'todas';
+    // aguarda o DOM montar os cards
+    window.addEventListener('load', () => aplicarFiltroVisualForte(filtroAtivo));
+    document.addEventListener('DOMContentLoaded', () => setTimeout(() => aplicarFiltroVisualForte(filtroAtivo), 60));
+    // Reaplica quando alternar favoritas
+    document.addEventListener('change', function(e){
+        if (e.target && e.target.id === 'toggle-favoritas') {
+            aplicarFiltroVisualForte(filtroAtivo);
+        }
+    });
+})();
+
 </script>
+
+<style>
+/* botão favorito na lista */
+.fav-btn{ margin-left:8px; background:#e9ecef; border:1px solid #dee2e6; color:#e03131; font-weight:900; border-radius:999px; width:28px; height:24px; display:none; align-items:center; justify-content:center; cursor:pointer; transition:transform .2s ease, background .2s ease; }
+.fav-btn:hover{ transform:translateY(-1px); background:#f1f3f5; }
+.fav-btn.is-fav{ background:#ff3860; border-color:#ff3860; color:#fff; box-shadow:0 0 0 3px rgba(255,56,96,.15); }
+</style>
+
+<script>
+// ===== Favoritos via localStorage (Lista) =====
+function lsFavKey(){ return 'rq_favoritos'; }
+function lsGetFavs(){ try{ return new Set(JSON.parse(localStorage.getItem(lsFavKey())||'[]')); }catch(e){ return new Set(); } }
+function lsSaveFavs(set){ localStorage.setItem(lsFavKey(), JSON.stringify(Array.from(set))); }
+function lsSyncFavButtons(){ const favs=lsGetFavs(); document.querySelectorAll('.fav-btn').forEach(btn=>{ const id=Number(btn.dataset.questaoId); const isFav=favs.has(id); btn.classList.toggle('is-fav', isFav); btn.style.display = isFav ? 'inline-flex' : 'none'; const card=btn.closest('.question-card'); if(card){ if(isFav) card.setAttribute('data-favorito','1'); else card.removeAttribute('data-favorito'); } }); }
+
+document.addEventListener('DOMContentLoaded', function(){
+  lsSyncFavButtons();
+  // retries para garantir sincronização após renderizações/retorno de página
+  setTimeout(lsSyncFavButtons, 100);
+  setTimeout(lsSyncFavButtons, 300);
+  setTimeout(lsSyncFavButtons, 800);
+  window.addEventListener('load', lsSyncFavButtons);
+  document.querySelectorAll('.fav-btn').forEach(btn=>{
+    btn.addEventListener('click', function(e){ e.stopPropagation(); const favs=lsGetFavs(); const id=Number(this.dataset.questaoId); if(favs.has(id)) favs.delete(id); else favs.add(id); lsSaveFavs(favs); lsSyncFavButtons(); });
+  });
+});
+// Sincroniza ao voltar do Quiz (bfcache) e ao mudar de aba
+window.addEventListener('pageshow', lsSyncFavButtons);
+document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible') lsSyncFavButtons(); });
+    </script>
 {% endblock %}
