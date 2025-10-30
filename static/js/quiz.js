@@ -85,6 +85,14 @@ function desativarAlternativas(questaoId) {
     const questaoCard = document.querySelector(`#questao-${questaoId}`);
     if (!questaoCard) return;
     
+    // GARANTIR que o botão de favorito SEMPRE fique clicável (CRÍTICO!)
+    const favBtn = questaoCard.querySelector('.fav-btn');
+    if (favBtn) {
+        favBtn.style.pointerEvents = 'auto';
+        favBtn.style.cursor = 'pointer';
+        favBtn.style.zIndex = '100';
+    }
+    
     // Desativa apenas as alternativas do card específico
     const alternativas = questaoCard.querySelectorAll('.alternative-item');
     alternativas.forEach(alt => {
