@@ -1,0 +1,69 @@
+{% extends 'questoes/base.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="main-container" style="max-width: 1100px; margin: 20px auto; background:#fff; border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.08);">
+    <h2 style="margin:0 0 10px 0;">Estatísticas da Questão: {{ questao.id }}</h2>
+    <p style="margin:0 0 16px 0; color:#334155;">{{ questao.texto }}</p>
+
+    <div class="card" style="padding:16px; border:1px solid #e2e8f0; border-radius:12px; margin-bottom:16px;">
+        <h4 style="margin:0 0 10px 0;">Resumo de Performance</h4>
+        <p style="margin:4px 0;">Total de Respostas: <strong>{{ total_respostas }}</strong></p>
+        <p style="margin:4px 0;">Taxa de Acerto Geral: <strong>{{ percentual_acerto }}%</strong></p>
+    </div>
+
+    <div class="row" style="display:flex; gap:16px; flex-wrap:wrap;">
+        <div class="col" style="flex:1 1 380px; min-width:280px;">
+            <div class="card" style="padding:16px; border:1px solid #e2e8f0; border-radius:12px;">
+                <h4 class="card-title" style="margin:0 0 10px 0;">Distribuição de Respostas por Alternativa</h4>
+                <canvas id="graficoAlternativas" width="400" height="400"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+<script>
+    // Recebe os dados convertendo de JSON seguro
+    const labels = JSON.parse('{{ labels_json|escapejs }}');
+    const data = JSON.parse('{{ data_json|escapejs }}');
+
+    const cores = [
+        'rgba(255, 99, 132, 0.8)', // A
+        'rgba(54, 162, 235, 0.8)', // B
+        'rgba(255, 206, 86, 0.8)', // C
+        'rgba(75, 192, 192, 0.8)', // D
+        'rgba(153, 102, 255, 0.8)'  // E
+    ];
+
+    const ctx = document.getElementById('graficoAlternativas').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Número de Respostas',
+                data: data,
+                backgroundColor: cores.slice(0, labels.length),
+                borderColor: '#ffffff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top' },
+                title: {
+                    display: true,
+                    text: 'Contagem Total de Cliques por Alternativa'
+                }
+            }
+        }
+    });
+</script>
+
+{% endblock content %}
+
+

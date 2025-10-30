@@ -34,6 +34,8 @@ urlpatterns = [
     
     # Simulado online com todas as questões em uma página
     path('simulado/<int:assunto_id>/', views.simulado_online_view, name='simulado_online'),
+    # Estatísticas por questão
+    path('<int:questao_id>/estatisticas/', views.estatisticas_questao, name='estatisticas'),
     
     # Rota para validar as respostas (endpoint de API)
     path('quiz/validar/', views.validar_resposta_view, name='validar_resposta'),

@@ -89,6 +89,120 @@ def index_view(request):
 # ---
 ## ===== VIEWS DE QUIZ/QUESTÕES =====
 
+def estatisticas_questao(request, questao_id):
+    """
+    Estatísticas de uma questão específica:
+    - Contagem de respostas por alternativa
+    - Taxa de acerto geral
+    """
+    questao = get_object_or_404(Questao, pk=questao_id)
+
+    # Mapeia alternativas (ordem -> letra)
+    alternativas = list(Alternativa.objects.filter(id_questao=questao).order_by('ordem', 'id'))
+    letras = ['A', 'B', 'C', 'D', 'E']
+    alt_id_para_label = {}
+    for idx, alt in enumerate(alternativas):
+        letra = letras[idx] if idx < len(letras) else chr(65 + idx)
+        alt_id_para_label[alt.id] = f"Alternativa {letra}"
+
+    # Parâmetros
+    scope = request.GET.get('scope', 'user')
+    try:
+        days = int(request.GET.get('days', '14'))
+    except ValueError:
+        days = 14
+    days = max(1, min(days, 90))
+
+    base_qs = RespostaUsuario.objects.filter(id_questao=questao)
+    if scope == 'user' and request.user.is_authenticated:
+        base_qs = base_qs.filter(id_usuario=request.user)
+
+    # Contagem por alternativa selecionada
+    contagem_respostas = (
+        base_qs
+        .values('id_alternativa')
+        .annotate(total=Count('id'))
+        .order_by('-total')
+    )
+
+    labels, data = [], []
+    for item in contagem_respostas:
+        alt_id = item.get('id_alternativa')
+        labels.append(alt_id_para_label.get(alt_id, 'Alternativa'))
+        data.append(item.get('total', 0))
+
+    total_respostas = base_qs.count()
+    total_acertos = base_qs.filter(acertou=True).count()
+    percentual_acerto = round((total_acertos / total_respostas) * 100, 2) if total_respostas > 0 else 0
+
+    # Timeline diária dos últimos N dias
+    from datetime import date, timedelta
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days-1)
+    # Agrupa por dia
+    timeline_qs = (
+        base_qs
+        .filter(data_resposta__date__gte=start_date)
+        .values('data_resposta__date')
+        .annotate(qty=Count('id'))
+        .order_by('data_resposta__date')
+    )
+    # Preenche zeros
+    labels_tl = []
+    counts_tl = []
+    idx = {}
+    cur = start_date
+    while cur <= end_date:
+        labels_tl.append(cur.isoformat())
+        counts_tl.append(0)
+        idx[cur] = len(counts_tl)-1
+        cur += timedelta(days=1)
+    for row in timeline_qs:
+        d = row['data_resposta__date']
+        if d in idx:
+            counts_tl[idx[d]] = row['qty']
+
+    # Se requisitado como JSON (para render inline via AJAX ou modal)
+    if request.GET.get('format') == 'json' or request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        assunto_nome = getattr(questao.id_assunto, 'nome', '')
+        by_alt = { 'A':0,'B':0,'C':0,'D':0,'E':0 }
+        # Map id_alternativa -> letra usando ordem
+        alt_id_to_letter = {}
+        for idxa, alt in enumerate(alternativas):
+            letra = letras[idxa] if idxa < len(letras) else chr(65+idxa)
+            alt_id_to_letter[alt.id] = letra
+        for item in contagem_respostas:
+            letra = alt_id_to_letter.get(item['id_alternativa'])
+            if letra:
+                by_alt[letra] = int(item['total'])
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'id_questao': questao.id,
+                'assunto': assunto_nome,
+                'scope': 'user' if (scope=='user' and request.user.is_authenticated) else 'global',
+                'period_days': days,
+                'totals': {
+                    'total_attempts': total_respostas,
+                    'correct_attempts': total_acertos,
+                    'wrong_attempts': max(0, total_respostas-total_acertos),
+                    'accuracy_percent': percentual_acerto,
+                },
+                'by_alternative': by_alt,
+                'timeline': { 'labels': labels_tl, 'counts': counts_tl },
+            }
+        })
+
+    context = {
+        'questao': questao,
+        'labels_json': json.dumps(labels),
+        'data_json': json.dumps(data),
+        'total_respostas': total_respostas,
+        'percentual_acerto': percentual_acerto,
+    }
+
+    return render(request, 'questoes/estatisticas_detalhe.html', context)
+
 def escolher_assunto_view(request):
     """View para escolher o assunto antes de iniciar o quiz"""
     assuntos = Assunto.objects.annotate(
@@ -453,29 +567,39 @@ def quiz_vertical_filtros_view(request, assunto_id):
                 'letra': letra
             })
     
-    # Adiciona alternativas às questões e prepara para JSON
+    # Adiciona alternativas às questões: lista Python para render HTML e JSON para JS
+    questoes_para_renderizar = []
     questoes_js = []
     for item in questoes_com_status:
         questao_id = item['questao'].id
         alternativas = alternativas_dict.get(questao_id, [])
-        
+
+        # lista Python para o template (inclui alternativas)
+        questoes_para_renderizar.append({
+            'questao': item['questao'],
+            'status': item['status'],
+            'alternativas': alternativas,
+        })
+
+        # versão serializada para JS
         questoes_js.append({
             'questao': {
                 'id': item['questao'].id,
                 'enunciado': item['questao'].texto,
-                'texto': item['questao'].texto
+                'texto': item['questao'].texto,
             },
             'status': item['status'],
-            'alternativas': alternativas
+            'alternativas': alternativas,
         })
     
     context = {
         'assunto': assunto,
-        'questoes': json.dumps(questoes_js),
+        'questoes_json_seguro': json.dumps(questoes_js),
+        'questoes_para_renderizar': questoes_para_renderizar,
         'filtro_ativo': filtro_ativo,
         'questao_inicial': questao_inicial,
         'total_questoes': len(questoes_js),
-        'user_authenticated': request.user.is_authenticated
+        'user_authenticated': request.user.is_authenticated,
     }
     
     return render(request, 'questoes/quiz_vertical_filtros.html', context)
@@ -1042,9 +1166,9 @@ def editar_questao_view(request, questao_id):
     if not request.user.is_staff:
         messages.error(request, 'Acesso negado. Apenas administradores.')
         return redirect('questoes:index')
-    
+
     questao = get_object_or_404(Questao, id=questao_id)
-    
+
     # Por enquanto, apenas redireciona para a página de gerenciamento
     # TODO: Implementar lógica de edição completa
     messages.info(request, f'Edição da questão #{questao_id} será implementada em breve.')

@@ -302,102 +302,90 @@ function atualizarContadores() {
 
 // --- INICIALIZAÇÃO E EVENT LISTENERS ---
 
-document.addEventListener('DOMContentLoaded', function() {
-    const alternativas = document.querySelectorAll('.alternative');
-    
-    // --- 1. Event Listeners das Alternativas (Lógica AJAX) ---
-    alternativas.forEach(alternativa => {
-        alternativa.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const questaoId = this.dataset.questaoId;
-            const alternativaId = this.dataset.alternativaId;
-            const questaoCard = this.closest('.question-card');
-            
-            // Verificar se já foi respondida 
-            if (questaoCard.dataset.statusResposta) {
-                exibirFeedback("Questão já respondida!", false);
-                return;
-            }
-            
-            // Desativar alternativas para evitar cliques duplos
-            desativarAlternativas(questaoId);
-            
-            // Enviar resposta via AJAX
-            fetch('/questoes/quiz/validar/', { 
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    // Usamos id_questao e id_alternativa para coincidir com a configuração do Django
-                    id_questao: parseInt(questaoId), 
-                    id_alternativa: parseInt(alternativaId) 
-                })
-            })
-            .then(response => {
-                // Tratamento de erro 400 Bad Request e outros erros de rede/servidor
-                if (!response.ok) {
-                    // Tenta ler a mensagem de erro do backend para o console
-                    return response.json().then(data => {
-                        throw new Error(`Erro ${response.status}: ${data.error || 'Requisição falhou.'}`);
-                    }).catch(() => {
-                        throw new Error(`Erro de rede ou servidor: ${response.status}`);
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success !== undefined && data.success) {
-                    mostrarFeedback(questaoId, data);
-                } else if (data.error) {
-                    // Reativa alternativas se o backend falhou após o salvamento
-                    const card = document.querySelector(`#questao-${questaoId}`);
-                    card.dataset.statusResposta = ''; 
-                    exibirFeedback(`Erro: ${data.error}`, false);
-                }
-            })
-            .catch(error => {
-                console.error('Erro na requisição:', error);
-                exibirFeedback(`Erro ao salvar resposta: ${error.message}`, false);
-                // Em caso de erro, reativar as alternativas
-                const card = document.querySelector(`#questao-${questaoId}`);
-                if (card) {
-                    card.dataset.statusResposta = ''; 
-                    // Se o card não tiver sido marcado, reativa
-                    if (!card.dataset.statusResposta) {
-                       const alternativasDoCard = card.querySelectorAll('.alternative');
-                       alternativasDoCard.forEach(alt => {
-                           alt.style.pointerEvents = 'auto';
-                           alt.style.cursor = 'pointer';
-                           alt.style.opacity = '1';
-                       });
-                    }
-                }
-            });
-        });
-    });
-    
-    // --- 2. Event Listeners dos Filtros ---
-    
-    // Inicializa os filtros com base no que foi salvo ou 'todas'
-    const filtroInicial = localStorage.getItem('filtro_ativo') || 'todas';
-    aplicarFiltro(filtroInicial);
-    
-    // Adiciona o listener para os botões de filtro (class="filter-btn" data-filtro="...")
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const filtro = this.dataset.filtro;
-            aplicarFiltro(filtro);
-        });
-    });
-    
-    // Atualiza os contadores ao carregar a página
-    atualizarContadores();
+// Se estiver na página de Quiz Vertical (usa #questions-container), não executar este script
+const __IS_QUIZ_VERTICAL__ = !!document.querySelector('#questions-container');
 
-    console.log('✅ Sistema de Quiz Vertical inicializado com sucesso');
-    console.log('✅ Filtros dinâmicos ativos');
-    console.log('✅ Status consistente: certa/errada/nao-respondida');
+document.addEventListener('DOMContentLoaded', function () {
+  /* Guard desativado para permitir execução também no Quiz Vertical
+  if (__IS_QUIZ_VERTICAL__) {
+    console.log('quiz.js: ignorado no Quiz Vertical (lógica própria da página).');
+    return;
+  }
+  */
+
+  const alternativas = document.querySelectorAll('.alternative');
+
+  // --- 1. Event Listeners das Alternativas (Lógica AJAX) ---
+  alternativas.forEach(alternativa => {
+    alternativa.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const questaoId = this.dataset.questaoId;
+      const alternativaId = this.dataset.alternativaId;
+      const questaoCard = this.closest('.question-card');
+
+      // Verificar se já foi respondida
+      if (questaoCard && questaoCard.dataset.statusResposta) {
+        exibirFeedback('Questão já respondida!', false);
+        return;
+      }
+
+      // Desativar alternativas para evitar cliques duplos
+      desativarAlternativas(questaoId);
+
+      // Enviar resposta via AJAX
+      fetch('/questoes/quiz/validar/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+          id_questao: parseInt(questaoId),
+          id_alternativa: parseInt(alternativaId)
+        })
+      })
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(data => {
+              throw new Error(`Erro ${response.status}: ${data.error || 'Requisição falhou.'}`);
+            }).catch(() => {
+              throw new Error(`Erro de rede ou servidor: ${response.status}`);
+            });
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data && data.success) {
+            mostrarFeedback(questaoId, data);
+          } else if (data && data.error) {
+            const card = document.querySelector(`#questao-${questaoId}`);
+            if (card) card.dataset.statusResposta = '';
+            exibirFeedback(`Erro: ${data.error}`, false);
+          }
+        })
+        .catch(error => {
+          console.error('Erro na requisição:', error);
+          exibirFeedback(`Erro ao salvar resposta: ${error.message}`, false);
+          const card = document.querySelector(`#questao-${questaoId}`);
+          if (card) {
+            card.dataset.statusResposta = '';
+            const alternativasDoCard = card.querySelectorAll('.alternative');
+            alternativasDoCard.forEach(alt => {
+              alt.style.pointerEvents = 'auto';
+              alt.style.cursor = 'pointer';
+              alt.style.opacity = '1';
+            });
+          }
+        });
+    });
+  });
+
+  // --- 2. Restante da inicialização específica desta página (filtros/contadores) ---
+  const filtroInicial = localStorage.getItem('filtro_ativo') || 'todas';
+  if (typeof aplicarFiltro === 'function') aplicarFiltro(filtroInicial);
+  if (typeof atualizarContadores === 'function') atualizarContadores();
+
+  console.log('✅ Sistema de Quiz (template de lista) inicializado');
 });

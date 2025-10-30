@@ -58,7 +58,33 @@
     </div>
 
     <!-- Lista de questões -->
-    <div class="questions-vertical-container" id="questions-container"></div>
+    <div class="questions-vertical-container" id="questions-container">
+        {% for item in questoes_para_renderizar %}
+        <div class="question-card" data-questao-id="{{ item.questao.id }}" data-status-resposta="{{ item.status }}">
+            <div class="question-header">
+                <span class="question-number">ID: {{ item.questao.id }}</span>
+                <div class="question-header-right">
+                    <span class="question-status {{ item.status }}">{{ item.status|capfirst }}</span>
+                    <button class="fav-btn" aria-label="Favoritar" title="Favoritar" data-action="toggle-favorito" data-questao-id="{{ item.questao.id }}">❤</button>
+                </div>
+            </div>
+            <div class="question-text">{{ item.questao.texto }}</div>
+            <div class="alternatives">
+                {% for alternativa in item.alternativas %}
+                <div class="alternative-item" role="button" tabindex="0" data-questao-id="{{ item.questao.id }}" data-alternativa-id="{{ alternativa.id }}">
+                    <div class="alternative-letter">{{ alternativa.letra }}</div>
+                    <div class="alternative-text">{{ alternativa.texto }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="stats-actions">
+                <button type="button" class="btn-stats" data-action="ver-estatisticas" data-questao-id="{{ item.questao.id }}"><i class="fas fa-chart-pie"></i> Ver Estatísticas</button>
+            </div>
+        </div>
+        {% empty %}
+        <p>Nenhuma questão encontrada com o filtro atual. Tente mudar o filtro ou o conteúdo.</p>
+        {% endfor %}
+    </div>
 
     <!-- Navegação -->
     <div class="navigation">
@@ -71,8 +97,11 @@
     </div>
 </div>
 
+{{ questoes_json_seguro|json_script:"questoes-data" }}
 <script>
-    const questoesData = JSON.parse('{{ questoes|escapejs }}');
+    // Ler dados de forma segura do <script type="application/json">
+    const dataElement = document.getElementById('questoes-data');
+    const questoesData = dataElement ? JSON.parse(dataElement.textContent) : [];
     const assuntoId = {{ assunto.pk }};
     const filtroAtivo = '{{ filtro_ativo|escapejs }}';
     const questaoInicial = {{ questao_inicial }};
@@ -140,20 +169,65 @@
 .question-header-right .fav-btn.is-fav{ background:#ff3860; border-color:#ff3860; color:#fff; box-shadow:0 0 0 3px rgba(255,56,96,.25); }
 /* remove posicionamento absoluto para evitar sobreposição */
 .question-header-right .question-status{ position:static; right:auto; top:auto; }
+
+/* Botão Ver Estatísticas no card */
+.stats-actions{ margin-top:12px; }
+.btn-stats{ display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:10px; background:linear-gradient(135deg,#00C6FF 0%, #0072FF 100%); color:#fff; text-decoration:none; font-weight:800; border:1px solid rgba(0,114,255,.6); box-shadow:0 6px 16px rgba(0,114,255,.18); }
+.btn-stats:hover{ filter:brightness(1.05); }
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 
 <script>
 let questoesList = []; let respostas = {};
+let currentCardIndex = 0;
+
+// Navegação básica entre cards (scroll suave)
+function questaoAnterior(){
+  try{
+    const cards = Array.from(document.querySelectorAll('.question-card'));
+    if (!cards.length) return;
+    currentCardIndex = Math.max(0, currentCardIndex - 1);
+    const target = cards[currentCardIndex];
+    if (target) target.scrollIntoView({ behavior:'smooth', block:'start' });
+  }catch(e){ console.warn('questaoAnterior falhou:', e); }
+}
+function proximaQuestao(){
+  try{
+    const cards = Array.from(document.querySelectorAll('.question-card'));
+    if (!cards.length) return;
+    currentCardIndex = Math.min(cards.length - 1, currentCardIndex + 1);
+    const target = cards[currentCardIndex];
+    if (target) target.scrollIntoView({ behavior:'smooth', block:'start' });
+  }catch(e){ console.warn('proximaQuestao falhou:', e); }
+}
+
+// Atualiza índice atual baseado no primeiro card visível
+function atualizarIndiceAtual(){
+  const cards = Array.from(document.querySelectorAll('.question-card'));
+  const top = window.scrollY || document.documentElement.scrollTop || 0;
+  let idx = 0;
+  for (let i=0;i<cards.length;i++){
+    if (cards[i].getBoundingClientRect().top + top >= top - 4){ idx = i; break; }
+  }
+  currentCardIndex = idx;
+}
+window.addEventListener('scroll', ()=>{ try{ atualizarIndiceAtual(); }catch(_){} }, { passive:true });
 
 document.addEventListener('DOMContentLoaded', function(){
   try {
-    questoesList = JSON.parse('{{ questoes|escapejs }}');
+    questoesList = (Array.isArray(questoesData)) ? questoesData : [];
   } catch (e) {
-    console.error('Falha ao parsear questoes JSON:', e);
+    console.error('Falha ao obter questoes JSON:', e);
     questoesList = [];
   }
   if(!questoesList || !questoesList.length){ mostrarMensagemVazia(); return; }
   renderizarTodasQuestoes(); atualizarProgresso(); inicializarFiltros();
+  // Garante delegação mesmo em renderização inicial server-side
+  try { bindAlternativas(); } catch(_) {}
+  try { bindFavoritos(); } catch(_) {}
+  try { bindStatsButtons(); } catch(_) {}
+  currentCardIndex = 0;
 });
 
 function renderizarTodasQuestoes(){ const c=document.getElementById('questions-container'); c.innerHTML=''; questoesList.forEach((q,i)=>c.appendChild(criarCardQuestao(q,i))); }
@@ -162,7 +236,7 @@ function criarCardQuestao(questaoData,index){
   const card=document.createElement('div'); card.className='question-card';
   card.dataset.questaoId=questaoData.questao.id; card.dataset.questaoIndex=index; card.dataset.statusResposta=questaoData.status;
   card.innerHTML=`
-    <div class=\"question-header\">\n      <span class=\"question-number\">Questão ${index+1} de ${questoesList.length} (ID: ${questaoData.questao.id})</span>\n      <div class=\"question-header-right\">\n        <span class=\"question-status ${questaoData.status}\">${formatarStatus(questaoData.status)}</span>\n        <button class=\"fav-btn\" aria-label=\"Favoritar\" title=\"Favoritar\" data-questao-id=\"${questaoData.questao.id}\" onclick=\"toggleFavorito(${questaoData.questao.id}, this)\">❤</button>\n      </div>\n    </div>\n    <div class=\"question-text\">${questaoData.questao.texto}</div>\n    <div class=\"alternatives\">\n      ${questaoData.alternativas.map(alt=>`\n        <div class=\"alternative-item\" role=\"button\" tabindex=\"0\" data-alternativa-id=\"${alt.id}\" onclick=\"responderQuestao(${questaoData.questao.id}, ${alt.id}, this)\">\n          <div class=\"alternative-letter\">${alt.letra}</div>\n          <div class=\"alternative-text\">${alt.texto}</div>\n        </div>`).join('')}\n    </div>`; return card; }
+    <div class="question-header">\n      <span class="question-number">Questão ${index+1} de ${questoesList.length} (ID: ${questaoData.questao.id})</span>\n      <div class="question-header-right">\n        <span class="question-status ${questaoData.status}">${formatarStatus(questaoData.status)}</span>\n        <button class="fav-btn" aria-label="Favoritar" title="Favoritar" data-action="toggle-favorito" data-questao-id="${questaoData.questao.id}">❤</button>\n      </div>\n    </div>\n    <div class="question-text">${questaoData.questao.texto}</div>\n    <div class="alternatives">\n      ${questaoData.alternativas.map(alt=>`\n        <div class="alternative-item" role="button" tabindex="0" data-questao-id="${questaoData.questao.id}" data-alternativa-id="${alt.id}">\n          <div class="alternative-letter">${alt.letra}</div>\n          <div class="alternative-text">${alt.texto}</div>\n        </div>`).join('')}\n    </div>\n    <div class="stats-actions">\n      <button type="button" class="btn-stats" data-action="ver-estatisticas" data-questao-id="${questaoData.questao.id}"><i class="fas fa-chart-pie"></i> Ver Estatísticas</button>\n    </div>`; return card; }
 
 function formatarStatus(s){ const m={'nao-respondida':'Não Respondida','respondida':'Respondida','certa':'Certa','errada':'Errada'}; return m[s]||s; }
 
@@ -178,7 +252,9 @@ function responderQuestao(questaoId,alternativaId,elemento){
     else if(id===corretaId){ alt.classList.add('resposta-correta'); alt.style.background='linear-gradient(135deg,#28a745 0%, #20c997 100%)'; alt.style.borderColor='#28a745'; alt.style.color='#fff'; }
     else if(id===selId){ alt.classList.add('incorreta'); alt.style.background='linear-gradient(135deg,#dc3545 0%, #e74c3c 100%)'; alt.style.borderColor='#dc3545'; alt.style.color='#fff'; }
   });
-  const idx=questoesList.findIndex(q=>q.questao.id===questaoId); if(idx>-1){ const ok=selId===corretaId; questoesList[idx].status=ok?'certa':'errada'; card.dataset.statusResposta=ok?'certa':'errada'; const st=card.querySelector('.question-status'); if(st){ st.textContent=ok?'CERTA':'ERRADA'; st.className=`question-status ${ok?'certa':'errada'}`; } }
+  const idx=questoesList.findIndex(q=>q.questao.id===questaoId); if(idx>-1){ const ok=selId===corretaId; questoesList[idx].status=ok?'certa':'errada'; card.dataset.statusResposta=ok?'certa':'errada'; const st=card.querySelector('.question-status'); if(st){ st.textContent=ok?'Certa':'Errada'; st.className=`question-status ${ok?'certa':'errada'}`; } }
+  // feedback visual adicional (toast) se disponível
+  try { if (typeof exibirFeedback==='function') exibirFeedback((selId===corretaId)?'Correto! 😄':'Incorreto! 😥', (selId===corretaId)); } catch(_) {}
   atualizarProgresso();
   const token=document.querySelector('[name=csrfmiddlewaretoken]').value; fetch('/questoes/quiz/validar/',{method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':token}, body:JSON.stringify({id_questao:questaoId,id_alternativa:selId})}).catch(()=>{});
 }
@@ -201,8 +277,184 @@ function toggleFavorito(id, btn){ const favs=getFavoritos(); id=Number(id); if(f
 // Após renderização, aplicar estado do favorito
 function aplicarFavoritosNosCards(){ const favs=getFavoritos(); document.querySelectorAll('.fav-btn').forEach(btn=>{ const id=Number(btn.dataset.questaoId); btn.classList.toggle('is-fav', favs.has(id)); const card=btn.closest('.question-card'); if(card){ if(favs.has(id)) card.setAttribute('data-favorito','1'); else card.removeAttribute('data-favorito'); } }); }
 
+// Delegação: abrir modal ao clicar no botão de estatísticas
+function bindStatsButtons(){
+  const qc = document.getElementById('questions-container');
+  if (!qc) return;
+  qc.addEventListener('click', function(e){
+    const btn = e.target.closest('[data-action="ver-estatisticas"]');
+    if (!btn) return;
+    const id = Number(btn.getAttribute('data-questao-id'));
+    if (id) { openStatsModal(id, 'user', 14); }
+  });
+}
+
+// Delegação: clicar em alternativas sem inline onclick
+function bindAlternativas(){
+  const qc = document.getElementById('questions-container');
+  if (!qc) return;
+  qc.addEventListener('click', function(e){
+    const item = e.target.closest('.alternative-item');
+    if (!item) return;
+    const qid = Number(item.getAttribute('data-questao-id'));
+    const aid = Number(item.getAttribute('data-alternativa-id'));
+    if (qid && aid) responderQuestao(qid, aid, item);
+  });
+}
+
+function bindFavoritos(){
+  const qc = document.getElementById('questions-container');
+  if (!qc) return;
+  qc.addEventListener('click', function(e){
+    const btn = e.target.closest('[data-action="toggle-favorito"]');
+    if (!btn) return;
+    const id = Number(btn.getAttribute('data-questao-id'));
+    if (id) toggleFavorito(id, btn);
+  });
+}
+
 // Ajusta chamadas existentes
-const _renderizarTodas = renderizarTodasQuestoes; renderizarTodasQuestoes = function(){ _renderizarTodas(); setTimeout(aplicarFavoritosNosCards, 0); };
+const _renderizarTodas = renderizarTodasQuestoes; renderizarTodasQuestoes = function(){ _renderizarTodas(); setTimeout(()=>{ aplicarFavoritosNosCards(); bindStatsButtons(); bindAlternativas(); bindFavoritos(); }, 0); };
+
+// Expose helpers on window to be callable from inline onclick
+window.openStatsModal = function(idQuestao, defaultScope = 'user', days = 14) {
+  document.getElementById('statsQuestionId').textContent = '#' + idQuestao;
+  document.getElementById('statsAssunto').textContent = '';
+  document.getElementById('statsScope').textContent = defaultScope === 'user' ? 'Minhas' : 'Geral';
+  document.getElementById('statsPeriod').textContent = String(days);
+
+  const modal = document.getElementById('statsModal');
+  modal.style.display = 'block';
+  modal.setAttribute('aria-hidden', 'false');
+
+  document.querySelectorAll('.scope-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.scope === defaultScope);
+    btn.onclick = () => window.fetchAndRenderStats(idQuestao, btn.dataset.scope, days);
+  });
+
+  // Fechamento
+  modal.querySelector('[data-close]').onclick = () => window.closeStatsModal();
+  modal.onclick = (e) => { if (e.target === modal) window.closeStatsModal(); };
+
+  window.fetchAndRenderStats(idQuestao, defaultScope, days);
+  return false; // evita navegação do <a href="#">
+};
+
+window.closeStatsModal = function() {
+  const modal = document.getElementById('statsModal');
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden', 'true');
+  if (window.chartAccuracy) { window.chartAccuracy.destroy(); window.chartAccuracy = null; }
+  if (window.chartAlternatives) { window.chartAlternatives.destroy(); window.chartAlternatives = null; }
+  if (window.chartTimeline) { window.chartTimeline.destroy(); window.chartTimeline = null; }
+};
+
+window.fetchAndRenderStats = async function(idQuestao, scope, days) {
+  try {
+    const url = `/questoes/${idQuestao}/estatisticas/?format=json&scope=${encodeURIComponent(scope)}&days=${encodeURIComponent(days)}`;
+    const res = await fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' }, credentials: 'same-origin' });
+    const json = await res.json();
+    if (!json.success && json.data === undefined) throw new Error(json.message || 'Erro ao obter estatísticas');
+    const d = (json.data !== undefined) ? json.data : json; // compat fallback
+    document.getElementById('statsAssunto').textContent = d.assunto || '';
+    document.getElementById('statsScope').textContent = d.scope === 'user' ? 'Minhas' : 'Geral';
+    document.getElementById('statsPeriod').textContent = String(d.period_days || days);
+    document.getElementById('kpiAttempts').textContent = d.totals.total_attempts;
+    document.getElementById('kpiCorrect').textContent = d.totals.correct_attempts;
+    document.getElementById('kpiWrong').textContent = d.totals.wrong_attempts;
+    document.getElementById('kpiAccuracy').textContent = (d.totals.accuracy_percent||0) + '%';
+    window.renderCharts(d);
+  } catch (err) {
+    console.error(err);
+    alert('Não foi possível carregar as estatísticas desta questão.');
+  }
+};
+
+window.renderCharts = function(d){
+  const acc = d.totals || { total_attempts:0, correct_attempts:0, wrong_attempts:0 };
+  const labels = ['A','B','C','D','E'];
+  const byAlt = d.by_alternative || {}; const values = labels.map(l=> byAlt[l]||0);
+  const tl = d.timeline || { labels:[], counts:[] };
+
+  const accCtx = document.getElementById('chartAccuracy').getContext('2d');
+  if (window.chartAccuracy) window.chartAccuracy.destroy();
+  window.chartAccuracy = new Chart(accCtx, { type:'doughnut', data:{ labels:['Acertos','Erros'], datasets:[{ data:[acc.correct_attempts||0, acc.wrong_attempts||0], backgroundColor:['#10B981','#EF4444'], borderWidth:0 }] }, options:{ plugins:{ legend:{ position:'bottom' }}, cutout:'60%' } });
+
+  const altCtx = document.getElementById('chartAlternatives').getContext('2d');
+  if (window.chartAlternatives) window.chartAlternatives.destroy();
+  window.chartAlternatives = new Chart(altCtx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Respostas por alternativa',
+        data: values,
+        backgroundColor: '#3B82F6'
+      }]
+    },
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { precision: 0 }
+        }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  const timeCtx = document.getElementById('chartTimeline').getContext('2d');
+  if (window.chartTimeline) window.chartTimeline.destroy();
+  window.chartTimeline = new Chart(timeCtx, { type:'line', data:{ labels: tl.labels||[], datasets:[{ label:'Tentativas', data: tl.counts||[], borderColor:'#14B8A6', backgroundColor:'rgba(20,184,166,.15)', tension:.3, fill:true, pointRadius:3, pointHoverRadius:5 }] }, options:{ plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } } });
+};
+
 </script>
+
+<div id="statsModal" class="stats-modal" aria-hidden="true" style="display:none;">
+  <div class="stats-dialog" role="dialog" aria-modal="true" aria-labelledby="statsTitle">
+    <button type="button" class="stats-close" data-close>&times;</button>
+    <h2 id="statsTitle">Estatísticas da Questão <span id="statsQuestionId"></span></h2>
+    <p class="stats-subtitle"><span id="statsAssunto"></span> · Escopo: <span id="statsScope"></span> · Período: <span id="statsPeriod"></span>d</p>
+    <div class="stats-kpis">
+      <div class="kpi"><span class="kpi-label">Tentativas</span><span class="kpi-value" id="kpiAttempts">0</span></div>
+      <div class="kpi"><span class="kpi-label">Acertos</span><span class="kpi-value" id="kpiCorrect">0</span></div>
+      <div class="kpi"><span class="kpi-label">Erros</span><span class="kpi-value" id="kpiWrong">0</span></div>
+      <div class="kpi"><span class="kpi-label">Taxa de Acerto</span><span class="kpi-value" id="kpiAccuracy">0%</span></div>
+    </div>
+    <div class="stats-charts">
+      <div class="chart-box">
+        <h3>Precisão</h3>
+        <canvas id="chartAccuracy" height="140"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>Distribuição por Alternativa</h3>
+        <canvas id="chartAlternatives" height="160"></canvas>
+      </div>
+      <div class="chart-box full">
+        <h3>Tentativas nos últimos dias</h3>
+        <canvas id="chartTimeline" height="180"></canvas>
+      </div>
+    </div>
+    <div class="stats-scope">
+      <button type="button" class="scope-btn" data-scope="user">Minhas estatísticas</button>
+      <button type="button" class="scope-btn" data-scope="global">Geral (todos)</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.stats-modal{ position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9999; }
+.stats-dialog{ max-width:900px; margin:40px auto; background:#fff; border-radius:12px; padding:20px; }
+.stats-close{ float:right; background:transparent; border:0; font-size:24px; cursor:pointer; }
+.stats-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:12px 0 20px; }
+.kpi{ background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px; padding:12px; text-align:center; }
+.kpi-label{ display:block; color:#64748b; font-weight:600; font-size:.85rem; }
+.kpi-value{ display:block; color:#0f172a; font-weight:800; font-size:1.4rem; margin-top:4px; }
+.stats-charts{ display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+.chart-box.full{ grid-column:1 / -1; }
+.stats-scope{ margin-top:12px; display:flex; gap:8px; justify-content:flex-end; }
+.scope-btn{ border:1px solid #cbd5e1; background:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; }
+.scope-btn.active{ border-color:#0072FF; color:#0072FF; font-weight:700; }
+</style>
 {% endblock %}
 

@@ -406,6 +406,11 @@
                         <i class="fas fa-play"></i>
                         Responder
                         </a>
+                    <a href="{% url 'questoes:estatisticas' item.questao.id %}" 
+                       class="btn-responder" style="background:linear-gradient(135deg,#00C6FF 0%, #0072FF 100%); box-shadow:0 4px 15px rgba(0,114,255,.3);">
+                        <i class="fas fa-chart-pie"></i>
+                        Ver estatísticas
+                        </a>
                     </div>
                 </div>
             {% endfor %}
