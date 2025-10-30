@@ -86,7 +86,7 @@ function desativarAlternativas(questaoId) {
     if (!questaoCard) return;
     
     // Desativa apenas as alternativas do card específico
-    const alternativas = questaoCard.querySelectorAll('.alternative');
+    const alternativas = questaoCard.querySelectorAll('.alternative-item');
     alternativas.forEach(alt => {
         alt.style.pointerEvents = 'none';
         alt.style.cursor = 'default';
@@ -105,7 +105,7 @@ function mostrarFeedback(questaoId, data) {
         return;
     }
     
-    const alternativas = questaoCard.querySelectorAll('.alternative');
+    const alternativas = questaoCard.querySelectorAll('.alternative-item');
     
     // Limpar feedback anterior
     alternativas.forEach(alt => {
@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   */
 
-  const alternativas = document.querySelectorAll('.alternative');
+  const alternativas = document.querySelectorAll('.alternative-item');
 
   // --- 1. Event Listeners das Alternativas (Lógica AJAX) ---
   alternativas.forEach(alternativa => {
@@ -335,6 +335,11 @@ document.addEventListener('DOMContentLoaded', function () {
       desativarAlternativas(questaoId);
 
       // Enviar resposta via AJAX
+      console.log('🚀 Enviando resposta:', {
+        questao_id: questaoId,
+        alternativa_id: alternativaId
+      });
+      
       fetch('/questoes/quiz/validar/', {
         method: 'POST',
         headers: {
@@ -347,6 +352,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
       })
         .then(response => {
+          console.log('📡 Resposta recebida (Status):', response.status, response.statusText);
           if (!response.ok) {
             return response.json().then(data => {
               throw new Error(`Erro ${response.status}: ${data.error || 'Requisição falhou.'}`);
@@ -357,6 +363,11 @@ document.addEventListener('DOMContentLoaded', function () {
           return response.json();
         })
         .then(data => {
+          console.log('✅ JSON de Resposta Completo:', data);
+          console.log('🔍 DEBUG - selecionada_eh_correta:', data.debug?.selecionada_eh_correta);
+          console.log('🔍 DEBUG - acertou:', data.acertou);
+          console.log('🔍 DEBUG - Todas as alternativas:', data.debug?.alternativas);
+          
           if (data && data.success) {
             mostrarFeedback(questaoId, data);
           } else if (data && data.error) {
@@ -371,7 +382,7 @@ document.addEventListener('DOMContentLoaded', function () {
           const card = document.querySelector(`#questao-${questaoId}`);
           if (card) {
             card.dataset.statusResposta = '';
-            const alternativasDoCard = card.querySelectorAll('.alternative');
+            const alternativasDoCard = card.querySelectorAll('.alternative-item');
             alternativasDoCard.forEach(alt => {
               alt.style.pointerEvents = 'auto';
               alt.style.cursor = 'pointer';

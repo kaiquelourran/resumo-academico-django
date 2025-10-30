@@ -410,8 +410,8 @@ def validar_resposta_view(request):
         except json.JSONDecodeError:
             return JsonResponse({'success': False, 'error': 'JSON inválido no corpo da requisição.'}, status=400)
         
-        questao_id = data.get('id_questao')      
-        alternativa_id = data.get('id_alternativa')
+        questao_id = int(data.get('id_questao')) if data.get('id_questao') is not None else None
+        alternativa_id = int(data.get('id_alternativa')) if data.get('id_alternativa') is not None else None
         
         if not questao_id or not alternativa_id:
             return JsonResponse({'success': False, 'error': 'Dados inválidos (ID da Questão ou Alternativa faltando).'}, status=400)
@@ -424,8 +424,12 @@ def validar_resposta_view(request):
         if alternativa.id_questao.id != questao.id: 
             return JsonResponse({'success': False, 'error': 'Alternativa não pertence à questão.'}, status=400)
         
-        # Verifica se acertou
-        acertou = alternativa.eh_correta 
+        # --- NOVA LÓGICA DE VALIDAÇÃO ---
+        # Fonte de verdade do acerto: a própria alternativa clicada
+        alternativas_queryset = questao.alternativas.all()
+        acertou = bool(alternativa.eh_correta)
+        # Obter alternativa correta apenas para retornar ID ao frontend
+        alternativa_correta = alternativas_queryset.filter(eh_correta=True).first()
         
         # Salva a resposta do usuário (apenas se estiver logado)
         if request.user.is_authenticated:
@@ -443,8 +447,7 @@ def validar_resposta_view(request):
                 acertou=acertou
             )
 
-        # Busca a alternativa correta (para o feedback visual)
-        alternativa_correta = questao.alternativas.filter(eh_correta=True).first()
+        # alternativa_correta já obtida acima
         
         return JsonResponse({
             'success': True,
@@ -452,6 +455,17 @@ def validar_resposta_view(request):
             'id_alternativa_selecionada': alternativa_id,
             'id_alternativa_correta': alternativa_correta.id if alternativa_correta else None,
             'explicacao': questao.explicacao or '',
+            # campos de diagnóstico temporários
+            'debug': {
+                'questao_id': questao.id,
+                'selecionada_eh_correta': bool(alternativa.eh_correta),
+                'alternativas': [
+                    {
+                        'id': alt.id,
+                        'eh_correta': bool(alt.eh_correta)
+                    } for alt in alternativas_queryset
+                ]
+            }
         })
         
     except Exception as e:
@@ -594,7 +608,8 @@ def quiz_vertical_filtros_view(request, assunto_id):
     
     context = {
         'assunto': assunto,
-        'questoes_json_seguro': json.dumps(questoes_js),
+        # json_script espera um objeto Python serializável, NÃO string JSON
+        'questoes_json_seguro': questoes_js,
         'questoes_para_renderizar': questoes_para_renderizar,
         'filtro_ativo': filtro_ativo,
         'questao_inicial': questao_inicial,
@@ -1166,7 +1181,7 @@ def editar_questao_view(request, questao_id):
     if not request.user.is_staff:
         messages.error(request, 'Acesso negado. Apenas administradores.')
         return redirect('questoes:index')
-
+    
     questao = get_object_or_404(Questao, id=questao_id)
 
     # Por enquanto, apenas redireciona para a página de gerenciamento
@@ -1175,7 +1190,7 @@ def editar_questao_view(request, questao_id):
     return redirect('questoes:gerenciar_questoes')
 
 
-# ==============================================================================
+    # ==============================================================================
 # 🟢 VIEWS - APIs
 # ==============================================================================
 

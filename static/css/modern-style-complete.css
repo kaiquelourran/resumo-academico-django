@@ -1770,6 +1770,25 @@ body {
     gap: 8px;
 }
 
+/* ================= Quiz feedback (for JS classes) ================= */
+/* Correta (verde) */
+.alternative.alternative-correct,
+.alternative-item.alternative-correct {
+    background-color: #4CAF50 !important;
+    color: #ffffff !important;
+    border-color: #4CAF50 !important;
+    font-weight: 700;
+}
+
+/* Incorreta escolhida (vermelho) */
+.alternative.alternative-incorrect-chosen,
+.alternative-item.alternative-incorrect-chosen {
+    background-color: #F44336 !important;
+    color: #ffffff !important;
+    border-color: #F44336 !important;
+    font-weight: 700;
+}
+
 /* Responsividade (mobile) */
 @media (max-width: 768px) {
     .header-topbar {

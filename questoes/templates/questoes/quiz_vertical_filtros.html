@@ -60,7 +60,7 @@
     <!-- Lista de questões -->
     <div class="questions-vertical-container" id="questions-container">
         {% for item in questoes_para_renderizar %}
-        <div class="question-card" data-questao-id="{{ item.questao.id }}" data-status-resposta="{{ item.status }}">
+        <div class="question-card" id="questao-{{ item.questao.id }}" data-questao-id="{{ item.questao.id }}" data-status-resposta="{{ item.status }}">
             <div class="question-header">
                 <span class="question-number">ID: {{ item.questao.id }}</span>
                 <div class="question-header-right">
@@ -71,7 +71,7 @@
             <div class="question-text">{{ item.questao.texto }}</div>
             <div class="alternatives">
                 {% for alternativa in item.alternativas %}
-                <div class="alternative-item" role="button" tabindex="0" data-questao-id="{{ item.questao.id }}" data-alternativa-id="{{ alternativa.id }}">
+                <div class="alternative-item" id="alternative-{{ alternativa.id }}" role="button" tabindex="0" data-questao-id="{{ item.questao.id }}" data-alternativa-id="{{ alternativa.id }}" data-resposta-correta="{{ alternativa.eh_correta|yesno:'1,0' }}" onclick="responderQuestao({{ item.questao.id }}, {{ alternativa.id }}, this)">
                     <div class="alternative-letter">{{ alternativa.letra }}</div>
                     <div class="alternative-text">{{ alternativa.texto }}</div>
                 </div>
@@ -85,6 +85,82 @@
         <p>Nenhuma questão encontrada com o filtro atual. Tente mudar o filtro ou o conteúdo.</p>
         {% endfor %}
     </div>
+
+    <script>
+    (function(){
+      if (typeof window.responderQuestao === 'function') return;
+      window.responderQuestao = function(questaoId, alternativaId, elemento){
+        const isTrue = (v)=> (v===true||v===1||v==='1'||v==='true'||v==='True');
+        try{
+          const card = elemento.closest('.question-card');
+          const alternativas = card ? card.querySelectorAll('.alternative-item') : [];
+alternativas.forEach(alt=>{ alt.classList.remove('alternative-correct','alternative-incorrect-chosen'); alt.style.pointerEvents='none'; alt.style.cursor='default'; });
+          const dados = (window.questoesList||[]).find(q=>q.questao.id===questaoId);
+          const correta = dados ? (dados.alternativas||[]).find(a=>isTrue(a.eh_correta)) : null;
+          const corretaId = correta ? Number(correta.id) : NaN;
+          const selId = Number(alternativaId);
+          alternativas.forEach(alt=>{
+            const id=Number(alt.getAttribute('data-alternativa-id'));
+if(id===corretaId){ alt.classList.add('alternative-correct'); }
+else if(id===selId){ alt.classList.add('alternative-incorrect-chosen'); }
+          });
+          const ok = selId===corretaId;
+          if (card){ card.dataset.statusResposta = ok?'certa':'errada'; const st=card.querySelector('.question-status'); if(st){ st.textContent = ok?'Certa':'Errada'; st.className='question-status '+(ok?'certa':'errada'); } }
+          if (typeof window.exibirFeedback==='function'){ window.exibirFeedback(ok?'Correto! 😄':'Incorreto! 😥', ok); }
+          try{ (window.respostas||(window.respostas={}))[questaoId]=selId; }catch(_){ }
+          if (typeof window.atualizarProgresso==='function'){ try{ window.atualizarProgresso(); }catch(_){}}
+          try{
+            const token=document.querySelector('[name=csrfmiddlewaretoken]').value;
+            console.log('🚀 Enviando resposta (template inline):', {questaoId, selId});
+            fetch('/questoes/quiz/validar/',{method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':token}, body:JSON.stringify({id_questao:questaoId,id_alternativa:selId})})
+              .then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status)))
+              .then(data=>{
+                console.log('✅ Resposta backend (template inline):', data);
+                // Usar resposta do backend como autoritativa
+                const corretaBackend = Number(data.id_alternativa_correta);
+                const acertouBackend = !!data.acertou;
+                const selecionadaBackend = Number(data.id_alternativa_selecionada);
+                
+                // Limpar TODAS as classes
+                alternativas.forEach(alt=>{
+                  alt.classList.remove('alternative-correct','alternative-correct-chosen','alternative-incorrect-chosen');
+                });
+                
+                // Aplicar feedback baseado na resposta do backend
+                alternativas.forEach(alt=>{
+                  const id=Number(alt.getAttribute('data-alternativa-id'));
+                  if (id === corretaBackend) {
+                    if (id === selecionadaBackend && acertouBackend) {
+                      alt.classList.add('alternative-correct-chosen'); // Verde com animação
+                    } else {
+                      alt.classList.add('alternative-correct'); // Verde simples
+                    }
+                  } else if (id === selecionadaBackend && !acertouBackend) {
+                    alt.classList.add('alternative-incorrect-chosen'); // Vermelho
+                  }
+                });
+                
+                // Atualizar status do card
+                if (card){ 
+                  card.dataset.statusResposta = acertouBackend?'certa':'errada'; 
+                  const st=card.querySelector('.question-status'); 
+                  if(st){ 
+                    st.textContent = acertouBackend?'Certa':'Errada'; 
+                    st.className='question-status '+(acertouBackend?'certa':'errada'); 
+                  } 
+                }
+                
+                // Atualizar feedback
+                if (typeof window.exibirFeedback==='function'){ 
+                  window.exibirFeedback(acertouBackend?'Correto! 😄':'Incorreto! 😥', acertouBackend); 
+                }
+              })
+              .catch(e=>console.error('❌ Erro:', e));
+          }catch(_){ }
+        }catch(err){ console.warn('Falha ao responder:', err); }
+      };
+    })();
+    </script>
 
     <!-- Navegação -->
     <div class="navigation">
@@ -234,30 +310,112 @@ function renderizarTodasQuestoes(){ const c=document.getElementById('questions-c
 
 function criarCardQuestao(questaoData,index){
   const card=document.createElement('div'); card.className='question-card';
+  card.id = `questao-${questaoData.questao.id}`;
   card.dataset.questaoId=questaoData.questao.id; card.dataset.questaoIndex=index; card.dataset.statusResposta=questaoData.status;
   card.innerHTML=`
-    <div class="question-header">\n      <span class="question-number">Questão ${index+1} de ${questoesList.length} (ID: ${questaoData.questao.id})</span>\n      <div class="question-header-right">\n        <span class="question-status ${questaoData.status}">${formatarStatus(questaoData.status)}</span>\n        <button class="fav-btn" aria-label="Favoritar" title="Favoritar" data-action="toggle-favorito" data-questao-id="${questaoData.questao.id}">❤</button>\n      </div>\n    </div>\n    <div class="question-text">${questaoData.questao.texto}</div>\n    <div class="alternatives">\n      ${questaoData.alternativas.map(alt=>`\n        <div class="alternative-item" role="button" tabindex="0" data-questao-id="${questaoData.questao.id}" data-alternativa-id="${alt.id}">\n          <div class="alternative-letter">${alt.letra}</div>\n          <div class="alternative-text">${alt.texto}</div>\n        </div>`).join('')}\n    </div>\n    <div class="stats-actions">\n      <button type="button" class="btn-stats" data-action="ver-estatisticas" data-questao-id="${questaoData.questao.id}"><i class="fas fa-chart-pie"></i> Ver Estatísticas</button>\n    </div>`; return card; }
+    <div class="question-header">\n      <span class="question-number">Questão ${index+1} de ${questoesList.length} (ID: ${questaoData.questao.id})</span>\n      <div class="question-header-right">\n        <span class="question-status ${questaoData.status}">${formatarStatus(questaoData.status)}</span>\n        <button class="fav-btn" aria-label="Favoritar" title="Favoritar" data-action="toggle-favorito" data-questao-id="${questaoData.questao.id}">❤</button>\n      </div>\n    </div>\n    <div class="question-text">${questaoData.questao.texto}</div>\n    <div class="alternatives">\n      ${questaoData.alternativas.map(alt=>`\n        <div class=\"alternative-item\" id=\"alternative-${alt.id}\" role=\"button\" tabindex=\"0\" data-questao-id=\"${questaoData.questao.id}\" data-alternativa-id=\"${alt.id}\" data-resposta-correta=\"${(alt.eh_correta===true||alt.eh_correta===1||alt.eh_correta==='1'||alt.eh_correta==='true'||alt.eh_correta==='True')?'1':'0'}\">\n          <div class=\"alternative-letter\">${alt.letra}</div>\n          <div class=\"alternative-text\">${alt.texto}</div>\n        </div>`).join('')}\n    </div>\n    <div class="stats-actions">\n      <button type="button" class="btn-stats" data-action="ver-estatisticas" data-questao-id="${questaoData.questao.id}"><i class="fas fa-chart-pie"></i> Ver Estatísticas</button>\n    </div>`; return card; }
 
 function formatarStatus(s){ const m={'nao-respondida':'Não Respondida','respondida':'Respondida','certa':'Certa','errada':'Errada'}; return m[s]||s; }
 
 function responderQuestao(questaoId,alternativaId,elemento){
+  const isTrue = (v)=> (v===true||v===1||v==='1'||v==='true'||v==='True');
   const card=elemento.closest('.question-card'); const alternativas=card.querySelectorAll('.alternative-item');
-  alternativas.forEach(alt=>{ alt.classList.remove('resposta-correta','incorreta'); alt.style.pointerEvents='none'; alt.style.cursor='default'; alt.style.background=''; alt.style.borderColor=''; alt.style.color=''; });
-  const dados=questoesList.find(q=>q.questao.id===questaoId); const correta=dados?dados.alternativas.find(a=>a.eh_correta):null; if(!correta) return;
-  const corretaId=Number(correta.id); const selId=Number(alternativaId);
+  try { console.log('[responderQuestao] qid=', questaoId, 'aid=', alternativaId); } catch(_) {}
+alternativas.forEach(alt=>{ alt.classList.remove('alternative-correct','alternative-incorrect-chosen'); alt.style.pointerEvents='none'; alt.style.cursor='default'; });
+  const dados=(window.questoesList||[]).find(q=>q.questao.id===questaoId);
+  let corretaId = NaN;
+  if (dados && Array.isArray(dados.alternativas)){
+    const c = dados.alternativas.find(a=>isTrue(a.eh_correta));
+    if (c) corretaId = Number(c.id);
+  }
+  if (isNaN(corretaId)){
+    const corretaDom = card.querySelector('.alternative-item[data-resposta-correta="1"]');
+    if (corretaDom) corretaId = Number(corretaDom.getAttribute('data-alternativa-id'));
+  }
+  const selId=Number(alternativaId);
+  try { console.log('[responderQuestao] corretaId=', corretaId, 'selId=', selId); } catch(_) {}
   // registra resposta p/ progresso
   respostas[questaoId] = selId;
-  alternativas.forEach(alt=>{ const id=Number(alt.dataset.alternativaId);
-    if(id===corretaId && id===selId){ alt.classList.add('resposta-correta'); alt.style.background='linear-gradient(135deg,#28a745 0%, #20c997 100%)'; alt.style.borderColor='#28a745'; alt.style.color='#fff'; }
-    else if(id===corretaId){ alt.classList.add('resposta-correta'); alt.style.background='linear-gradient(135deg,#28a745 0%, #20c997 100%)'; alt.style.borderColor='#28a745'; alt.style.color='#fff'; }
-    else if(id===selId){ alt.classList.add('incorreta'); alt.style.background='linear-gradient(135deg,#dc3545 0%, #e74c3c 100%)'; alt.style.borderColor='#dc3545'; alt.style.color='#fff'; }
+  
+  // Feedback visual INICIAL (será sobrescrito pela resposta do backend)
+  // Limpar classes anteriores
+  alternativas.forEach(alt=>{
+    alt.classList.remove('alternative-correct','alternative-correct-chosen','alternative-incorrect-chosen');
+  });
+  
+  // Aplicar feedback baseado em lógica local (temporário até receber do backend)
+  const acertouLocal = (selId === corretaId);
+  alternativas.forEach(alt=>{ 
+    const id=Number(alt.dataset.alternativaId);
+    if(id === corretaId){
+      if(id === selId && acertouLocal){
+        alt.classList.add('alternative-correct-chosen'); // Verde com animação se clicou na certa
+      } else {
+        alt.classList.add('alternative-correct'); // Verde simples para a alternativa correta
+      }
+    } else if(id === selId && !acertouLocal){
+      alt.classList.add('alternative-incorrect-chosen'); // Vermelho se clicou na errada
+    }
   });
   const idx=questoesList.findIndex(q=>q.questao.id===questaoId); if(idx>-1){ const ok=selId===corretaId; questoesList[idx].status=ok?'certa':'errada'; card.dataset.statusResposta=ok?'certa':'errada'; const st=card.querySelector('.question-status'); if(st){ st.textContent=ok?'Certa':'Errada'; st.className=`question-status ${ok?'certa':'errada'}`; } }
   // feedback visual adicional (toast) se disponível
   try { if (typeof exibirFeedback==='function') exibirFeedback((selId===corretaId)?'Correto! 😄':'Incorreto! 😥', (selId===corretaId)); } catch(_) {}
   atualizarProgresso();
-  const token=document.querySelector('[name=csrfmiddlewaretoken]').value; fetch('/questoes/quiz/validar/',{method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':token}, body:JSON.stringify({id_questao:questaoId,id_alternativa:selId})}).catch(()=>{});
+  const token=document.querySelector('[name=csrfmiddlewaretoken]').value;
+  fetch('/questoes/quiz/validar/',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRFToken':token},
+    body:JSON.stringify({id_questao:questaoId,id_alternativa:selId})
+  })
+  .then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status)))
+  .then(data=>{
+    try{
+      // Autoritativo pelo backend
+      const corretaBackend = Number(data.id_alternativa_correta);
+      const acertouBackend = !!data.acertou;
+      const selecionadaBackend = Number(data.id_alternativa_selecionada);
+      
+      // Limpar TODAS as classes de feedback primeiro
+      alternativas.forEach(alt=>{
+        alt.classList.remove('alternative-correct','alternative-correct-chosen','alternative-incorrect-chosen');
+      });
+      
+      // Aplicar feedback baseado na resposta do backend
+      alternativas.forEach(alt=>{
+        const id=Number(alt.getAttribute('data-alternativa-id'));
+        
+        // Se é a alternativa CORRETA
+        if (id === corretaBackend) {
+          // Se foi a alternativa que o usuário clicou (e está correta)
+          if (id === selecionadaBackend && acertouBackend) {
+            alt.classList.add('alternative-correct-chosen'); // Verde com animação
+          } else {
+            alt.classList.add('alternative-correct'); // Verde simples
+          }
+        }
+        // Se foi a alternativa SELECIONADA e está INCORRETA
+        else if (id === selecionadaBackend && !acertouBackend) {
+          alt.classList.add('alternative-incorrect-chosen'); // Vermelho
+        }
+      });
+      
+      const st=card.querySelector('.question-status'); 
+      if(st){ 
+        st.textContent=acertouBackend?'Certa':'Errada'; 
+        st.className='question-status '+(acertouBackend?'certa':'errada'); 
+      }
+      if (typeof exibirFeedback==='function'){ 
+        exibirFeedback(acertouBackend?'Correto! 😄':'Incorreto! 😥', acertouBackend); 
+      }
+    }catch(e){ 
+      console.error('Erro ao processar resposta do backend:', e); 
+    }
+  })
+  .catch(()=>{});
 }
+
+// Expor no escopo global para suportar onclick inline
+try { window.responderQuestao = responderQuestao; } catch(_) {}
 
 function atualizarProgresso(){ const total=questoesList.length; const ans=Object.keys(respostas).length; const pct=Math.round((ans/total)*100); const pf=document.querySelector('.progress-fill'); const pt=document.querySelector('.progress-text'); if(pf) pf.style.width=`${pct}%`; if(pt) pt.textContent=`Progresso: ${ans}/${total} (${pct}%)`; }
 function inicializarFiltros(){ /* somente contadores já tratados em outra tela; nada aqui */ }
