@@ -48,732 +48,458 @@
         box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         padding: 0 30px 30px 30px;
     }
+
     .filters-section {
-        margin-bottom: 40px;
-        padding: 25px;
-        background: linear-gradient(135deg, rgba(0, 198, 255, 0.08) 0%, rgba(0, 114, 255, 0.08) 100%);
-        border-radius: 16px;
-        border: 1px solid rgba(0, 114, 255, 0.15);
-        box-shadow: 0 8px 32px rgba(0, 114, 255, 0.1);
+        margin-bottom: 30px;
     }
 
     .filters-title {
-        font-size: 1.9em;
+        font-size: 24px;
         font-weight: 700;
-        color: #2c3e50;
-        margin-bottom: 30px;
+        color: #0072FF;
+        margin-bottom: 20px;
         text-align: center;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 12px;
+        gap: 10px;
     }
 
-    .filters-title i {
-        color: #00C6FF;
-        font-size: 0.9em;
+    .filters-simple {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
     }
 
-    .filters-grid {
-            display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-        margin-bottom: 25px;
-    }
-
-    .filter-btn {
-        display: block;
-        padding: 0;
+    .filter-simple-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
         border: 2px solid #e1e5e9;
-            border-radius: 12px;
-        background: #FFFFFF;
-        text-decoration: none;
-            color: #333;
+        border-radius: 25px;
+        background: #ffffff;
+        color: #333;
         font-weight: 600;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.06);
-        overflow: hidden;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         position: relative;
-        min-height: 80px;
+        overflow: hidden;
     }
 
-    .filter-btn::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-        transition: left 0.6s ease;
-    }
-
-    .filter-btn:hover::before {
-        left: 100%;
-    }
-
-    .filter-btn:hover {
-        transform: translateY(-6px) scale(1.02);
-        box-shadow: 0 15px 40px rgba(0,114,255,0.2);
+    .filter-simple-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,114,255,0.2);
         border-color: #00C6FF;
     }
 
-    .filter-btn.active {
+    .filter-simple-btn.active {
         background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
-            color: white;
+        color: white;
         border-color: #0072FF;
-        box-shadow: 0 12px 35px rgba(0,114,255,0.4);
-        transform: translateY(-2px);
-    }
-
-    .filter-content {
-        display: flex;
-        align-items: center;
-        padding: 12px 16px;
-        position: relative;
-        z-index: 2;
+        box-shadow: 0 4px 15px rgba(0,114,255,0.3);
     }
 
     .filter-icon {
-        font-size: 1.4em;
-        margin-right: 10px;
+        font-size: 16px;
         transition: transform 0.3s ease;
     }
 
-    .filter-btn:hover .filter-icon {
-        transform: scale(1.1) rotate(5deg);
+    .filter-simple-btn:hover .filter-icon {
+        transform: scale(1.1);
     }
 
-    .filter-info {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .filter-label {
-        font-size: 0.95em;
-        font-weight: 700;
-        color: inherit;
+    .filter-text {
+        font-size: 14px;
+        font-weight: 600;
     }
 
     .filter-count {
-        font-size: 1.2em;
-        font-weight: 800;
-        color: inherit;
-        opacity: 0.8;
-    }
-
-    .filter-progress {
-        height: 4px;
-        background: rgba(0,0,0,0.1);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .filter-btn.active .filter-progress {
-        background: rgba(255,255,255,0.2);
-    }
-
-    .progress-bar {
-        height: 100%;
-        background: linear-gradient(90deg, #00C6FF, #0072FF);
-        transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-    }
-
-    .filter-btn.active .progress-bar {
-        background: rgba(255,255,255,0.6);
-    }
-
-    .progress-bar::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-        animation: shimmer 2s infinite;
-    }
-
-    @keyframes shimmer {
-        0% { transform: translateX(-100%); }
-        100% { transform: translateX(100%); }
-    }
-
-    .stats-summary {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        padding: 20px;
-        background: rgba(255,255,255,0.7);
+        background: rgba(0,114,255,0.1);
+        color: #0072FF;
+        padding: 4px 8px;
         border-radius: 12px;
-        border: 1px solid rgba(0,114,255,0.1);
+        font-size: 12px;
+        font-weight: 700;
+        min-width: 24px;
+        text-align: center;
     }
 
-    .stat-item {
+    .filter-simple-btn.active .filter-count {
+        background: rgba(255,255,255,0.2);
+        color: white;
+    }
+
+    .stats-simple {
         display: flex;
-        flex-direction: column;
+        gap: 20px;
+        justify-content: center;
+        margin-top: 20px;
+        flex-wrap: wrap;
+    }
+
+    .stat-simple {
+        display: flex;
+        align-items: center;
         gap: 8px;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 20px;
+        border: 1px solid #dee2e6;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
     .stat-label {
-        font-size: 0.9em;
+        font-size: 14px;
         font-weight: 600;
-        color: #666;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        color: #6c757d;
     }
 
     .stat-value {
-        font-size: 1.3em;
-        font-weight: 800;
-        color: #2c3e50;
+        font-size: 16px;
+        font-weight: 700;
+        color: #0072FF;
     }
 
-    .stat-bar {
-        height: 6px;
-        background: #e1e5e9;
-        border-radius: 3px;
-        overflow: hidden;
-    }
-
-    .stat-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #00C6FF, #0072FF);
-        border-radius: 3px;
-        transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .stat-fill.accuracy {
-        background: linear-gradient(90deg, #4CAF50, #2E7D32);
-    }
-
-    .questions-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
-        margin-bottom: 40px;
+    .questions-section {
+        margin-top: 30px;
     }
 
     .question-card {
-        background: #FFFFFF !important;
-        border-radius: 14px;
-        padding: 0;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.06);
-        border: 1px solid #e1e5e9;
+        background: linear-gradient(145deg, #ffffff 0%, #f0f8ff 100%);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 114, 255, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(0, 114, 255, 0.1);
         transition: all 0.3s ease;
-        overflow: hidden;
     }
 
     .question-card:hover {
-        transform: translateY(-5px) scale(1.01);
-        box-shadow: 0 15px 35px rgba(0,114,255,0.2);
-        border-color: #00C6FF;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 114, 255, 0.2);
     }
 
     .question-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px 16px;
-        background: linear-gradient(to top, #00C6FF, #0072FF);
-        border-radius: 12px 12px 0 0;
+        margin-bottom: 15px;
+        padding: 10px 15px;
+        background: linear-gradient(135deg, rgba(0, 114, 255, 0.08) 0%, rgba(0, 198, 255, 0.05) 100%);
+        border-radius: 8px;
+        border: 1px solid rgba(0, 114, 255, 0.15);
     }
 
     .question-number {
-        font-weight: 700;
-        color: #FFFFFF;
-        font-size: 0.95em;
+        font-size: 16px;
+        font-weight: 600;
+        color: #0072FF;
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
 
     .question-status {
-        padding: 4px 10px;
-        border-radius: 16px;
-        font-size: 0.7em;
-        font-weight: 700;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 15px;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
-    .status-nao-respondida {
-        background: rgba(255, 255, 255, 0.95);
-        color: #333;
+    .question-status.nao-respondida {
+        background: #f8f9fa;
+        color: #6c757d;
     }
 
-    .status-certa {
-        background: rgba(76, 175, 80, 0.95);
-        color: #FFFFFF;
+    .question-status.certa {
+        background: #d4edda;
+        color: #155724;
     }
 
-    .status-errada {
-        background: rgba(244, 67, 54, 0.95);
-        color: #FFFFFF;
+    .question-status.errada {
+        background: #f8d7da;
+        color: #721c24;
     }
 
     .question-text {
-        padding: 16px 20px;
-        font-size: 0.95em;
-            line-height: 1.5;
-        }
-        
-    .question-actions {
-        padding: 12px 20px 16px;
-    }
-
-    .btn-action {
-        padding: 10px 18px;
+        font-size: 16px;
+        line-height: 1.6;
+        margin-bottom: 15px;
+        padding: 15px;
+        background: #f8f9fa;
         border-radius: 8px;
+        border-left: 4px solid #0072FF;
+    }
+
+    .question-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+    .btn-responder {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
         text-decoration: none;
-        font-weight: 700;
-        font-size: 0.9em;
-        transition: all 0.3s;
-            display: flex;
-            align-items: center;
-        justify-content: center;
-        width: 100%;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
     }
 
-    .btn-primary {
-        background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
-        color: #fff;
-        box-shadow: 0 6px 15px rgba(0,114,255,0.3);
+    .btn-responder:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        color: white;
+        text-decoration: none;
     }
 
-    .btn-primary:hover {
-        transform: translateY(-3px) scale(1.05);
-        box-shadow: 0 8px 20px rgba(0,114,255,0.45);
-    }
-
-        
-        .empty-state {
-            text-align: center;
-        padding: 80px 40px;
-        color: #666;
-        background: linear-gradient(135deg, rgba(0, 198, 255, 0.03) 0%, rgba(0, 114, 255, 0.03) 100%);
-        border-radius: 12px;
-        border: 2px dashed rgba(0, 114, 255, 0.2);
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
     }
 
     .empty-state-icon {
-        font-size: 5em;
+        font-size: 48px;
         margin-bottom: 20px;
     }
 
-    @media (max-width: 1200px) {
-        .questions-grid {
-            grid-template-columns: repeat(2, 1fr);
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .filters-simple {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .filter-simple-btn {
+            width: 100%;
+            max-width: 300px;
+            justify-content: center;
+        }
+        
+        .stats-simple {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .main-container {
+            margin: 10px;
+            padding: 0 15px 15px 15px;
         }
     }
-
-    @media (max-width: 768px) {
-        .questions-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .filters-grid {
-            grid-template-columns: 1fr;
-        }
-        }
     </style>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Animações dos filtros
-        const filterBtns = document.querySelectorAll('.filter-btn');
-        
-        filterBtns.forEach((btn, index) => {
-            // Animação de entrada escalonada
-            btn.style.opacity = '0';
-            btn.style.transform = 'translateY(20px)';
-            
-            setTimeout(() => {
-                btn.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
-                btn.style.opacity = '1';
-                btn.style.transform = 'translateY(0)';
-            }, index * 100);
-            
-            // Efeito de clique
-            btn.addEventListener('click', function(e) {
-                // Remove active de todos os botões
-                filterBtns.forEach(b => b.classList.remove('active'));
-                
-                // Adiciona active ao botão clicado
-                this.classList.add('active');
-                
-                // Efeito de ripple
-                const ripple = document.createElement('div');
-                ripple.style.position = 'absolute';
-                ripple.style.borderRadius = '50%';
-                ripple.style.background = 'rgba(255,255,255,0.6)';
-                ripple.style.transform = 'scale(0)';
-                ripple.style.animation = 'ripple 0.6s linear';
-                ripple.style.left = e.offsetX - 10 + 'px';
-                ripple.style.top = e.offsetY - 10 + 'px';
-                ripple.style.width = '20px';
-                ripple.style.height = '20px';
-                
-                this.appendChild(ripple);
-                
-                setTimeout(() => {
-                    ripple.remove();
-                }, 600);
-            });
-        });
-        
-        // Animações das barras de progresso
-        const progressBars = document.querySelectorAll('.progress-bar[data-width]');
-        progressBars.forEach(bar => {
-            const width = bar.getAttribute('data-width');
-            bar.style.width = '0%';
-            
-            setTimeout(() => {
-                bar.style.width = width + '%';
-            }, 500);
-        });
-        
-        // Animações das estatísticas
-        const statFills = document.querySelectorAll('.stat-fill[data-width]');
-        statFills.forEach(fill => {
-            const width = fill.getAttribute('data-width');
-            fill.style.width = '0%';
-            
-            setTimeout(() => {
-                fill.style.width = width + '%';
-            }, 800);
-        });
-        
-        // Contador animado
-        const statValues = document.querySelectorAll('.stat-value');
-        statValues.forEach(value => {
-            const text = value.textContent;
-            const number = parseFloat(text.replace('%', ''));
-            
-            if (!isNaN(number)) {
-                let current = 0;
-                const increment = number / 50;
-                const timer = setInterval(() => {
-                    current += increment;
-                    if (current >= number) {
-                        current = number;
-                        clearInterval(timer);
-                    }
-                    value.textContent = current.toFixed(1) + '%';
-                }, 20);
-            }
-        });
-        
-        // Efeito de hover nos ícones
-        const filterIcons = document.querySelectorAll('.filter-icon');
-        filterIcons.forEach(icon => {
-            icon.addEventListener('mouseenter', function() {
-                this.style.transform = 'scale(1.2) rotate(10deg)';
-            });
-            
-            icon.addEventListener('mouseleave', function() {
-                this.style.transform = 'scale(1) rotate(0deg)';
-            });
-        });
-    });
-    
-    // CSS para animação de ripple
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes ripple {
-            to {
-                transform: scale(4);
-                opacity: 0;
-            }
-        }
-        
-        .filter-btn {
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .filter-btn.active .filter-icon {
-            animation: bounce 0.6s ease;
-        }
-        
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% {
-                transform: translateY(0);
-            }
-            40% {
-                transform: translateY(-10px);
-            }
-            60% {
-                transform: translateY(-5px);
-            }
-        }
-    `;
-    document.head.appendChild(style);
-    </script>
-
-<!-- Filtros -->
+<!-- Filtros Simplificados e Dinâmicos -->
 <div class="filters-section">
     <h2 class="filters-title">
         <i class="fas fa-filter"></i>
         Filtrar Questões
     </h2>
-    <!-- ESTRUTURA HTML GERADA conforme documento PHP -->
-    <div class="filters-grid">
-        <!-- FILTRO: TODAS -->
-        <a href="?filtro=todas" class="filter-btn {% if filtro == 'todas' %}active{% endif %}">
-            <div class="filter-content">
-                <div class="filter-icon">📋</div>
-                <div class="filter-info">
-                    <div class="filter-label">Todas</div>
-                    <div class="filter-count">{{ stats.todas }}</div>
-                </div>
-            </div>
-            <div class="filter-progress">
-                <div class="progress-bar" style="width: 100%"></div>
-            </div>
-        </a>
+    
+    <!-- Filtros em formato mais simples -->
+    <div class="filters-simple">
+        <button class="filter-simple-btn {% if filtro == 'todas' %}active{% endif %}" data-filter="todas">
+            <span class="filter-icon">📋</span>
+            <span class="filter-text">Todas</span>
+            <span class="filter-count">{{ stats.todas }}</span>
+        </button>
         
-        <!-- FILTRO: RESPONDIDAS -->
-        <a href="?filtro=respondidas" class="filter-btn {% if filtro == 'respondidas' %}active{% endif %}">
-            <div class="filter-content">
-                <div class="filter-icon">✅</div>
-                <div class="filter-info">
-                    <div class="filter-label">Respondidas</div>
-                    <div class="filter-count">{{ stats.respondidas }}</div>
-                </div>
-            </div>
-            <div class="filter-progress">
-                <div class="progress-bar" data-width="{{ stats.porcentagens.respondidas|default:0 }}"></div>
-            </div>
-        </a>
+        <button class="filter-simple-btn {% if filtro == 'respondidas' %}active{% endif %}" data-filter="respondidas">
+            <span class="filter-icon">✅</span>
+            <span class="filter-text">Respondidas</span>
+            <span class="filter-count">{{ stats.respondidas }}</span>
+        </button>
         
-        <!-- FILTRO: NÃO RESPONDIDAS -->
-        <a href="?filtro=nao-respondidas" class="filter-btn {% if filtro == 'nao-respondidas' %}active{% endif %}">
-            <div class="filter-content">
-                <div class="filter-icon">❓</div>
-                <div class="filter-info">
-                    <div class="filter-label">Não Respondidas</div>
-                    <div class="filter-count">{{ stats.nao_respondidas }}</div>
-                </div>
-            </div>
-            <div class="filter-progress">
-                <div class="progress-bar" data-width="{{ stats.porcentagens.nao_respondidas|default:0 }}"></div>
-            </div>
-        </a>
+        <button class="filter-simple-btn {% if filtro == 'nao-respondidas' %}active{% endif %}" data-filter="nao-respondidas">
+            <span class="filter-icon">❓</span>
+            <span class="filter-text">Não Respondidas</span>
+            <span class="filter-count">{{ stats.nao_respondidas }}</span>
+        </button>
         
-        <!-- FILTRO: CERTAS -->
-        <a href="?filtro=certas" class="filter-btn {% if filtro == 'certas' %}active{% endif %}">
-            <div class="filter-content">
-                <div class="filter-icon">🎯</div>
-                <div class="filter-info">
-                    <div class="filter-label">Certas</div>
-                    <div class="filter-count">{{ stats.acertadas }}</div>
-                </div>
-            </div>
-            <div class="filter-progress">
-                <div class="progress-bar" data-width="{{ stats.porcentagens.certas|default:0 }}"></div>
-            </div>
-        </a>
+        <button class="filter-simple-btn {% if filtro == 'certas' %}active{% endif %}" data-filter="certas">
+            <span class="filter-icon">🎯</span>
+            <span class="filter-text">Certas</span>
+            <span class="filter-count">{{ stats.certas }}</span>
+        </button>
         
-        <!-- FILTRO: ERRADAS -->
-        <a href="?filtro=erradas" class="filter-btn {% if filtro == 'erradas' %}active{% endif %}">
-            <div class="filter-content">
-                <div class="filter-icon">❌</div>
-                <div class="filter-info">
-                    <div class="filter-label">Erradas</div>
-                    <div class="filter-count">{{ stats.erradas }}</div>
-                </div>
-            </div>
-            <div class="filter-progress">
-                <div class="progress-bar" data-width="{{ stats.porcentagens.erradas|default:0 }}"></div>
-            </div>
-        </a>
+        <button class="filter-simple-btn {% if filtro == 'erradas' %}active{% endif %}" data-filter="erradas">
+            <span class="filter-icon">❌</span>
+            <span class="filter-text">Erradas</span>
+            <span class="filter-count">{{ stats.erradas }}</span>
+        </button>
     </div>
     
-    <!-- Resumo de Estatísticas -->
-    <div class="stats-summary">
-        <div class="stat-item">
-            <div class="stat-label">Taxa de Acerto</div>
-            <div class="stat-value">{{ stats.porcentagens.taxa_acerto|default:0 }}%</div>
-            <div class="stat-bar">
-                <div class="stat-fill accuracy" data-width="{{ stats.porcentagens.taxa_acerto|default:0 }}"></div>
-            </div>
+    <!-- Resumo simplificado -->
+    <div class="stats-simple">
+        <div class="stat-simple">
+            <span class="stat-label">Taxa de Acerto:</span>
+            <span class="stat-value">{{ stats.porcentagens.taxa_acerto|default:0 }}%</span>
         </div>
-        
-        <div class="stat-item">
-            <div class="stat-label">Progresso Geral</div>
-            <div class="stat-value">{{ stats.porcentagens.progresso_geral|default:0 }}%</div>
-            <div class="stat-bar">
-                <div class="stat-fill" data-width="{{ stats.porcentagens.progresso_geral|default:0 }}"></div>
-            </div>
+        <div class="stat-simple">
+            <span class="stat-label">Progresso:</span>
+            <span class="stat-value">{{ stats.porcentagens.progresso_geral|default:0 }}%</span>
         </div>
-                </div>
-            </div>
+    </div>
+</div>
+
+<!-- Formulário de Filtros do django-filter -->
+<div class="filtros-form-section" style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 12px; border: 1px solid #dee2e6;">
+    <h3 style="margin-bottom: 15px; color: #0072FF; font-size: 18px;">
+        <i class="fas fa-filter"></i> Filtros de Busca Avançada
+    </h3>
+    <form method="get" class="filtros-form" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: end;">
+        {{ filter.form.as_p }}
+        <button type="submit" class="btn-filtrar" style="padding: 10px 20px; background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
+            <i class="fas fa-search"></i> Filtrar
+        </button>
+        <a href="?" style="padding: 10px 20px; background: #6c757d; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">
+            <i class="fas fa-times"></i> Limpar
+        </a>
+    </form>
+    <p style="margin-top: 15px; color: #6c757d; font-weight: 600;">
+        <i class="fas fa-info-circle"></i> Total de questões encontradas: <span style="color: #0072FF;">{{ num_questoes }}</span>
+    </p>
+</div>
+
+<hr style="margin: 30px 0; border: none; border-top: 2px solid #dee2e6;">
             
 <div class="questions-section">
     {% if not questoes_com_status %}
         <div class="empty-state">
             <div class="empty-state-icon">📭</div>
-            <h3 class="empty-state-title">Nenhuma questão encontrada</h3>
-            <p class="empty-state-text">
-                Não há questões disponíveis para o filtro selecionado.<br>
-                Tente selecionar um filtro diferente ou escolha outro assunto.
-            </p>
+            <h3>Nenhuma questão encontrada</h3>
+            <p>Não há questões disponíveis para este conteúdo.</p>
         </div>
     {% else %}
-        <div class="questions-grid">
-                {% for item in questoes_com_status %}
-                <div class="question-card">
-                    <div class="question-header">
-                        <div class="question-number">
-                            🎯 Questão #{{ item.questao.id }}
-                        </div>
-                        <div class="question-status status-{{ item.classe_status }}">
-                            {% if item.status == 'nao-respondida' %}
-                                NÃO RESPONDIDA
-                            {% elif item.status == 'certa' %}
-                                ACERTOU
-                            {% elif item.status == 'errada' %}
-                                ERROU
-                            {% else %}
-                                RESPONDIDA
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="question-text">
-                        {{ item.questao.texto }}
-                    </div>
-                    
-                    <div class="question-actions">
-            <a href="{% url 'questoes:quiz_vertical_filtros' assunto.pk %}?filtro={{ filtro }}&questao_inicial={{ item.questao.id }}" 
-                           class="btn-action btn-primary">
-                            🎯 Responder
-                        </a>
-                    </div>
+        {% for item in questoes_com_status %}
+            <div class="question-card" data-status-resposta="{{ item.status }}" data-questao-id="{{ item.questao.id }}">
+                <div class="question-header">
+                    <span class="question-number">
+                        <i class="fas fa-question-circle"></i>
+                        Questão {{ forloop.counter }} de {{ questoes_com_status|length }}
+                    </span>
+                    <span class="question-status {{ item.classe_status }}">
+                        {{ item.status|title }} (ID: {{ item.questao.id }})
+                    </span>
                 </div>
-            {% endfor %}
+                
+                <div class="question-text">
+                    {{ item.questao.texto }}
                 </div>
-            {% endif %}
-    </div>
+                
+                <div class="question-actions">
+                    <a href="{% url 'questoes:quiz_vertical_filtros' assunto.pk %}?filtro={{ filtro }}&questao_inicial={{ item.questao.id }}" 
+                       class="btn-responder">
+                        <i class="fas fa-play"></i>
+                        Responder
+                    </a>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+<!-- JavaScript Simplificado -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ Página carregada - Filtros funcionando');
     
-    <script>
-    // COMO O JAVASCRIPT PROCESSA O FILTRO conforme documento PHP
-    document.addEventListener('DOMContentLoaded', function() {
-        // A) SALVAR FILTRO ATIVO conforme documento
-        const filtroAtivo = '{{ filtro }}';
-        localStorage.setItem('filtro_ativo', filtroAtivo);
-        
-        // B) DESTACAR BOTÃO ATIVO conforme documento
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        const activeBtn = document.querySelector(`[href*="filtro=${filtroAtivo}"]`);
-        if (activeBtn) {
-            activeBtn.classList.add('active');
-        }
-        
-        // C) ANIMAR ENTRADA DOS CARDS conforme documento
-        const cards = document.querySelectorAll('.question-card');
-        cards.forEach((card, index) => {
-            card.style.opacity = '0';
-            card.style.transform = 'translateY(20px)';
-            setTimeout(() => {
-                card.style.transition = 'all 0.5s ease';
-                card.style.opacity = '1';
-                card.style.transform = 'translateY(0)';
-            }, index * 100);
-        });
-        
-        // Animações dos filtros
-        const filterBtns = document.querySelectorAll('.filter-btn');
-        
-        filterBtns.forEach((btn, index) => {
-            // Animação de entrada escalonada
-            btn.style.opacity = '0';
-            btn.style.transform = 'translateY(20px)';
+    // Aguarda um pequeno delay para garantir que todos os elementos foram renderizados
+    setTimeout(function() {
+        // Aplicar filtro visual baseado no filtro ativo
+        const filtroAtivo = '{{ filtro }}' || 'todas';
+        console.log(`Filtro ativo da URL: "${filtroAtivo}"`);
+        aplicarFiltroVisual(filtroAtivo);
+    }, 100);
+    
+    // Event listeners para filtros
+    document.querySelectorAll('.filter-simple-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
             
-            setTimeout(() => {
-                btn.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
-                btn.style.opacity = '1';
-                btn.style.transform = 'translateY(0)';
-            }, index * 100);
+            const filtro = this.getAttribute('data-filter');
+            console.log('Filtro clicado:', filtro);
             
-            // Efeito de clique
-            btn.addEventListener('click', function(e) {
-                // Remove active de todos os botões
-                filterBtns.forEach(b => b.classList.remove('active'));
-                
-                // Adiciona active ao botão clicado
-                this.classList.add('active');
-                
-                // Efeito de ripple
-                const ripple = document.createElement('div');
-                ripple.style.position = 'absolute';
-                ripple.style.borderRadius = '50%';
-                ripple.style.background = 'rgba(255,255,255,0.6)';
-                ripple.style.transform = 'scale(0)';
-                ripple.style.animation = 'ripple 0.6s linear';
-                ripple.style.left = e.offsetX - 10 + 'px';
-                ripple.style.top = e.offsetY - 10 + 'px';
-                ripple.style.width = '20px';
-                ripple.style.height = '20px';
-                
-                this.appendChild(ripple);
-                
-                setTimeout(() => {
-                    ripple.remove();
-                }, 600);
-            });
-        });
-        
-        // Animações das barras de progresso
-        const progressBars = document.querySelectorAll('.progress-bar[data-width]');
-        progressBars.forEach(bar => {
-            const width = bar.getAttribute('data-width');
-            bar.style.width = '0%';
-            setTimeout(() => {
-                bar.style.width = width + '%';
-            }, 500);
-        });
-        
-        // Animações das estatísticas
-        const statFills = document.querySelectorAll('.stat-fill[data-width]');
-        statFills.forEach(fill => {
-            const width = fill.getAttribute('data-width');
-            fill.style.width = '0%';
-            setTimeout(() => {
-                fill.style.width = width + '%';
-            }, 800);
-        });
-        
-        // Animações dos contadores
-        const counters = document.querySelectorAll('.filter-count');
-        counters.forEach(counter => {
-            const target = parseInt(counter.textContent);
-            let current = 0;
-            const increment = target / 30;
-            
-            const timer = setInterval(() => {
-                current += increment;
-                if (current >= target) {
-                    current = target;
-                    clearInterval(timer);
-                }
-                counter.textContent = Math.floor(current);
-            }, 50);
-        });
-        
-        // Efeitos de hover nos ícones
-        const icons = document.querySelectorAll('.filter-icon');
-        icons.forEach(icon => {
-            icon.addEventListener('mouseenter', function() {
-                this.style.transform = 'scale(1.2) rotate(10deg)';
-            });
-            
-            icon.addEventListener('mouseleave', function() {
-                this.style.transform = 'scale(1) rotate(0deg)';
-            });
+            // Atualizar URL
+            const url = new URL(window.location);
+            url.searchParams.set('filtro', filtro);
+            window.location.href = url.toString();
         });
     });
-    </script>
+    
+    // Função para aplicar filtro visual
+    function aplicarFiltroVisual(filtro) {
+        const cards = document.querySelectorAll('.question-card');
+        console.log(`=== APLICANDO FILTRO: ${filtro} ===`);
+        console.log(`Total de cards: ${cards.length}`);
+        
+        let cardsVisiveis = 0;
+        let cardsOcultos = 0;
+        
+        cards.forEach((card, index) => {
+            // Pega o status do atributo (tenta ambos os métodos)
+            const status = card.getAttribute('data-status-resposta') || card.dataset.statusResposta || 'nao-respondida';
+            let mostrar = false;
+            
+            console.log(`Card ${index + 1}: status="${status}", filtro="${filtro}"`);
+            
+            switch(filtro) {
+                case 'todas':
+                    mostrar = true;
+                    break;
+                case 'respondidas':
+                    mostrar = (status === 'certa' || status === 'errada');
+                    break;
+                case 'nao-respondidas':
+                    mostrar = (status === 'nao-respondida');
+                    break;
+                case 'certas':
+                    mostrar = (status === 'certa');
+                    break;
+                case 'erradas':
+                    mostrar = (status === 'errada');
+                    break;
+                default:
+                    mostrar = true; // Por padrão, mostra todas
+            }
+            
+            if (mostrar) {
+                card.style.display = 'block';
+                card.style.opacity = '1';
+                cardsVisiveis++;
+            } else {
+                card.style.display = 'none';
+                card.style.opacity = '0';
+                cardsOcultos++;
+            }
+        });
+        
+        console.log(`=== RESULTADO ===`);
+        console.log(`Visíveis: ${cardsVisiveis}, Ocultos: ${cardsOcultos}`);
+        
+        // Atualiza o estado visual dos botões
+        document.querySelectorAll('.filter-simple-btn').forEach(btn => {
+            const btnFiltro = btn.getAttribute('data-filter');
+            if (btnFiltro === filtro) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

@@ -241,12 +241,14 @@
             <a href="{% url 'questoes:admin_dashboard' %}" class="btn">Dashboard</a>
         </div>
 
+        {% comment %}
         <div class="card" style="background: linear-gradient(to top, #00C6FF, #0072FF); color: white;">
             <span class="card-icon">📝</span>
             <h3 class="card-title" style="color:#fff;">Adicionar Conteúdo</h3>
             <p class="card-description" style="color:#f8f9fa;">Crie novos conteúdos para organizar as questões.</p>
             <a href="{% url 'questoes:adicionar_assunto' %}" class="btn">Novo Conteúdo</a>
         </div>
+        {% endcomment %}
 
         <div class="card" style="background: linear-gradient(to top, #00C6FF, #0072FF); color: white;">
             <span class="card-icon">❓</span>
@@ -255,12 +257,15 @@
             <a href="{% url 'questoes:adicionar_questao' %}" class="btn">Nova Questão</a>
         </div>
 
+        {% comment %}
+        Rota não implementada ainda
         <div class="card" style="background: linear-gradient(to top, #FF6B6B, #FF8E53); color: white;">
             <span class="card-icon">🐛</span>
             <h3 class="card-title" style="color:#fff;">Gerenciar Relatórios</h3>
             <p class="card-description" style="color:#f8f9fa;">Visualize e responda relatórios de bugs e sugestões.</p>
             <a href="{% url 'questoes:gerenciar_relatorios' %}" class="btn">Gerenciar</a>
         </div>
+        {% endcomment %}
     </div>
 </div>
 {% else %}

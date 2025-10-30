@@ -1,10 +1,12 @@
 /**
- * Sistema de Quiz - Funcionalidades JavaScript
- * Versão: Vertical com Filtros (Gemini Consolidation)
+ * Sistema de Quiz Vertical - Versão Final de Consistência
+ * Filtros Dinâmicos com Status Consistente ('certa', 'errada', 'nao-respondida')
  */
 
-// Variáveis globais (se necessário, mas evite no sistema vertical)
-let pontuacaoTotal = 0;
+// Variáveis globais protegidas contra redeclaração
+if (typeof window.pontuacaoTotal === 'undefined') {
+    window.pontuacaoTotal = 0;
+}
 
 // --- FUNÇÕES DE UTILIDADE ---
 
@@ -140,8 +142,8 @@ function mostrarFeedback(questaoId, data) {
     }
 
     // 🌟 LÓGICA DE FILTRO: ATUALIZAÇÃO E APLICAÇÃO 🌟
-    // 1. Marca o card da questão com o novo status
-    questaoCard.dataset.statusResposta = data.acertou ? 'correta' : 'incorreta';
+    // 1. Marca o card da questão com o novo status (CONSISTENTE: 'certa'/'errada')
+    questaoCard.dataset.statusResposta = data.acertou ? 'certa' : 'errada';
 
     // 2. Atualiza os contadores no filtro
     atualizarContadores();
@@ -151,78 +153,152 @@ function mostrarFeedback(questaoId, data) {
     aplicarFiltro(filtroAtual);
 }
 
-// --- LÓGICA DE FILTRAGEM ---
+// --- LÓGICA DE FILTRAGEM DINÂMICA ---
 
 // Função que itera sobre todos os cards e aplica o filtro
 function aplicarFiltro(filtro) {
     const todosCards = document.querySelectorAll('.question-card');
     
+    console.log(`=== APLICANDO FILTRO DINÂMICO: ${filtro} ===`);
+    console.log(`Total de cards encontrados: ${todosCards.length}`);
+    
     // Salva o filtro no armazenamento local
     localStorage.setItem('filtro_ativo', filtro); 
 
-    todosCards.forEach(card => {
-        // Pega o status do atributo de dados. Se não existir, é 'nao-respondida'.
+    let cardsVisiveis = 0;
+    let cardsOcultos = 0;
+
+    todosCards.forEach((card, index) => {
+        // ✅ CONSISTÊNCIA: Pega o status do atributo de dados com padrão 'nao-respondida'
         const status = card.dataset.statusResposta || 'nao-respondida';
         let deveMostrar = false;
 
+        // ✅ LÓGICA DE FILTRAGEM BASEADA NO FLUXO DINÂMICO (CONSISTENTE)
         switch (filtro) {
             case 'todas':
-                deveMostrar = true;
+                deveMostrar = true; // SEMPRE mostra todas
                 break;
-            case 'corretas':
-                deveMostrar = (status === 'correta');
-                break;
-            case 'incorretas':
-                deveMostrar = (status === 'incorreta');
+            case 'respondidas':
+                deveMostrar = (status === 'certa' || status === 'errada'); // Questões respondidas
                 break;
             case 'nao-respondidas':
-                deveMostrar = (status === 'nao-respondida');
+                deveMostrar = (status === 'nao-respondida'); // Questões nunca respondidas
+                break;
+            case 'certas':
+                deveMostrar = (status === 'certa'); // Última resposta foi correta
+                break;
+            case 'erradas':
+                deveMostrar = (status === 'errada'); // Última resposta foi incorreta
                 break;
         }
 
-        // Se deve mostrar, usamos 'block' para o layout vertical padrão
-        card.style.display = deveMostrar ? 'block' : 'none'; 
+        // ✅ APLICAR FILTRO VISUAL COM DISPLAY BLOCK/NONE
+        if (deveMostrar) {
+            card.style.display = 'block';
+            card.style.opacity = '1';
+            cardsVisiveis++;
+            console.log(`Card ${index + 1} (ID: ${card.dataset.questaoId}): VISÍVEL (Status: ${status})`);
+        } else {
+            card.style.display = 'none';
+            card.style.opacity = '0';
+            cardsOcultos++;
+            console.log(`Card ${index + 1} (ID: ${card.dataset.questaoId}): OCULTO (Status: ${status})`);
+        }
     });
     
-    // Atualiza o estado visual dos botões de filtro
+    console.log(`=== RESULTADO DO FILTRO ===`);
+    console.log(`Cards visíveis: ${cardsVisiveis}`);
+    console.log(`Cards ocultos: ${cardsOcultos}`);
+    console.log(`Total: ${cardsVisiveis + cardsOcultos}`);
+    
+    // ✅ ATUALIZA O ESTADO VISUAL DOS BOTÕES DE FILTRO
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.filtro === filtro);
     });
+    
+    console.log(`=== FILTRO "${filtro}" APLICADO COM SUCESSO ===`);
 }
 
 // Função auxiliar para recalcular e atualizar os contadores 
 function atualizarContadores() {
     const todosCards = document.querySelectorAll('.question-card');
-    let contCorretas = 0;
-    let contIncorretas = 0;
+    let contTodas = 0;
+    let contRespondidas = 0;
     let contNaoRespondidas = 0;
+    let contCertas = 0;
+    let contErradas = 0;
     
-    todosCards.forEach(card => {
+    console.log('=== ATUALIZANDO CONTADORES DINÂMICOS ===');
+    console.log(`Total de cards encontrados: ${todosCards.length}`);
+    
+    todosCards.forEach((card, index) => {
+        // ✅ CONSISTÊNCIA: Pega o status do atributo de dados com padrão 'nao-respondida'
         const status = card.dataset.statusResposta || 'nao-respondida';
         
-        if (status === 'correta') {
-            contCorretas++;
-        } else if (status === 'incorreta') {
-            contIncorretas++;
+        contTodas++;
+        
+        // ✅ LÓGICA DE MIGRAÇÃO: Classificar por status (CONSISTENTE)
+        if (status === 'certa' || status === 'errada') {
+            contRespondidas++;
         } else {
             contNaoRespondidas++;
         }
+        
+        if (status === 'certa') {
+            contCertas++;
+        } else if (status === 'errada') {
+            contErradas++;
+        }
+        
+        console.log(`Card ${index + 1} (ID: ${card.dataset.questaoId}): Status = "${status}"`);
     });
     
-    // 🌟 ATUALIZE OS ELEMENTOS HTML AQUI (Certifique-se que estes IDs existem) 🌟
+    // ✅ VERIFICAÇÃO MATEMÁTICA: Todas = Respondidas + Não Respondidas
+    const somaRespondidas = contRespondidas + contNaoRespondidas;
+    if (contTodas !== somaRespondidas) {
+        console.error(`ERRO MATEMÁTICO: Todas (${contTodas}) ≠ Respondidas + Não Respondidas (${somaRespondidas})`);
+    }
+    
+    console.log('=== CONTADORES CALCULADOS ===');
+    console.log(`Todas: ${contTodas} (nunca muda)`);
+    console.log(`Respondidas: ${contRespondidas} (só aumenta)`);
+    console.log(`Não Respondidas: ${contNaoRespondidas} (só diminui)`);
+    console.log(`Certas: ${contCertas} (pode aumentar/diminuir)`);
+    console.log(`Erradas: ${contErradas} (pode aumentar/diminuir)`);
+    
+    // ✅ ATUALIZAR ELEMENTOS HTML COM IDs ESPECÍFICOS
     const totalElement = document.querySelector('#contador-total');
-    if (totalElement) totalElement.textContent = todosCards.length;
+    if (totalElement) {
+        totalElement.textContent = contTodas;
+        console.log(`Contador "Todas" atualizado: ${contTodas}`);
+    }
     
-    const corretasElement = document.querySelector('#contador-corretas');
-    if (corretasElement) corretasElement.textContent = contCorretas;
+    const respondidasElement = document.querySelector('#contador-respondidas');
+    if (respondidasElement) {
+        respondidasElement.textContent = contRespondidas;
+        console.log(`Contador "Respondidas" atualizado: ${contRespondidas}`);
+    }
 
-    const incorretasElement = document.querySelector('#contador-incorretas');
-    if (incorretasElement) incorretasElement.textContent = contIncorretas;
-    
     const naoRespondidasElement = document.querySelector('#contador-nao-respondidas');
-    if (naoRespondidasElement) naoRespondidasElement.textContent = contNaoRespondidas;
+    if (naoRespondidasElement) {
+        naoRespondidasElement.textContent = contNaoRespondidas;
+        console.log(`Contador "Não Respondidas" atualizado: ${contNaoRespondidas}`);
+    }
+    
+    const certasElement = document.querySelector('#contador-certas');
+    if (certasElement) {
+        certasElement.textContent = contCertas;
+        console.log(`Contador "Certas" atualizado: ${contCertas}`);
+    }
+    
+    const erradasElement = document.querySelector('#contador-erradas');
+    if (erradasElement) {
+        erradasElement.textContent = contErradas;
+        console.log(`Contador "Erradas" atualizado: ${contErradas}`);
+    }
+    
+    console.log('=== CONTADORES ATUALIZADOS COM SUCESSO ===');
 }
-
 
 // --- INICIALIZAÇÃO E EVENT LISTENERS ---
 
@@ -249,7 +325,6 @@ document.addEventListener('DOMContentLoaded', function() {
             desativarAlternativas(questaoId);
             
             // Enviar resposta via AJAX
-            // 🚨 AJUSTE DE URL AQUI! USAMOS A URL QUE APARECEU NO SEU LOG.
             fetch('/questoes/quiz/validar/', { 
                 method: 'POST',
                 headers: {
@@ -257,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-CSRFToken': getCookie('csrftoken')
                 },
                 body: JSON.stringify({
-                    // Usamos id_questao e id_alternativa para coincidir com a provável configuração do seu Django
+                    // Usamos id_questao e id_alternativa para coincidir com a configuração do Django
                     id_questao: parseInt(questaoId), 
                     id_alternativa: parseInt(alternativaId) 
                 })
@@ -267,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!response.ok) {
                     // Tenta ler a mensagem de erro do backend para o console
                     return response.json().then(data => {
-                        throw new Error(`Erro ${response.status}: ${data.erro || 'Requisição falhou.'}`);
+                        throw new Error(`Erro ${response.status}: ${data.error || 'Requisição falhou.'}`);
                     }).catch(() => {
                         throw new Error(`Erro de rede ou servidor: ${response.status}`);
                     });
@@ -275,13 +350,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(data => {
-                if (data.sucesso !== undefined && data.sucesso) {
+                if (data.success !== undefined && data.success) {
                     mostrarFeedback(questaoId, data);
-                } else if (data.erro) {
+                } else if (data.error) {
                     // Reativa alternativas se o backend falhou após o salvamento
                     const card = document.querySelector(`#questao-${questaoId}`);
                     card.dataset.statusResposta = ''; 
-                    exibirFeedback(`Erro: ${data.erro}`, false);
+                    exibirFeedback(`Erro: ${data.error}`, false);
                 }
             })
             .catch(error => {
@@ -322,4 +397,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Atualiza os contadores ao carregar a página
     atualizarContadores();
 
+    console.log('✅ Sistema de Quiz Vertical inicializado com sucesso');
+    console.log('✅ Filtros dinâmicos ativos');
+    console.log('✅ Status consistente: certa/errada/nao-respondida');
 });

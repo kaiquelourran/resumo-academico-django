@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_filters',  # Adicionar esta linha obrigatoriamente
     'questoes',  # App de questões
     'institucional',  # App de páginas institucionais
 ]
@@ -193,3 +194,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # SECURE_HSTS_PRELOAD = True
 
 # ==================== FIM CONFIGURAÇÕES DE SEGURANÇA ADICIONAL ====================
+
+# Configurações de Media Files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

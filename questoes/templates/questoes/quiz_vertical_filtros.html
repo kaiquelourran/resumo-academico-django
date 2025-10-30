@@ -892,7 +892,21 @@ let respostas = {};
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
+    // ✅ DEBUG: Verificar dados recebidos do backend
+    console.log('=== DADOS RECEBIDOS DO BACKEND ===');
+    console.log('questoesData:', questoesData);
+    console.log('Tipo de questoesData:', typeof questoesData);
+    console.log('Tamanho:', questoesData ? questoesData.length : 'undefined');
+    
     questoesList = questoesData;
+    
+    // ✅ DEBUG: Verificar status inicial de cada questão
+    if (questoesList && questoesList.length > 0) {
+        console.log('=== STATUS INICIAL DAS QUESTÕES ===');
+        questoesList.forEach((q, index) => {
+            console.log(`Questão ${index + 1} (ID: ${q.questao.id}): Status = "${q.status}"`);
+        });
+    }
     
     if (questoesList.length === 0) {
         mostrarMensagemVazia();
@@ -924,6 +938,10 @@ function criarCardQuestao(questaoData, index) {
     card.className = 'question-card';
     card.dataset.questaoId = questaoData.questao.id;
     card.dataset.questaoIndex = index;
+    card.dataset.statusResposta = questaoData.status; // ✅ CORREÇÃO: Adicionar status inicial
+    
+    // ✅ DEBUG: Log do status da questão
+    console.log(`DEBUG: Questão ${questaoData.questao.id} - Status: ${questaoData.status}`);
     
     card.innerHTML = `
         <div class="question-header">
@@ -1013,12 +1031,34 @@ function responderQuestao(questaoId, alternativaId, elemento) {
         }
     });
     
-    // Atualizar status da questão na lista
+    // ✅ FLUXO DINÂMICO: Atualizar status da questão na lista
     const questaoIndex = questoesList.findIndex(q => q.questao.id === questaoId);
     if (questaoIndex !== -1) {
-        questoesList[questaoIndex].status = respostaCorreta ? 'certa' : 'errada';
-        console.log(`Status atualizado: Questão ${questaoId} = ${questoesList[questaoIndex].status}`);
+        const statusAnterior = questoesList[questaoIndex].status;
+        const novoStatus = respostaCorreta ? 'certa' : 'errada';
+        
+        questoesList[questaoIndex].status = novoStatus;
+        
+        console.log(`=== MIGRAÇÃO DE FILTRO ===`);
+        console.log(`Questão ${questaoId}: ${statusAnterior} → ${novoStatus}`);
+        
+        // ✅ LOG DE MIGRAÇÃO DETALHADO
+        if (statusAnterior === 'nao-respondida') {
+            console.log(`  📈 MIGRAÇÃO: Não Respondidas → Respondidas`);
+            console.log(`  📈 MIGRAÇÃO: Não Respondidas → ${respostaCorreta ? 'Certas' : 'Erradas'}`);
+        } else if (statusAnterior === 'certa' && !respostaCorreta) {
+            console.log(`  📉 MIGRAÇÃO: Certas → Erradas`);
+        } else if (statusAnterior === 'errada' && respostaCorreta) {
+            console.log(`  📈 MIGRAÇÃO: Erradas → Certas`);
+        } else if (statusAnterior === 'certa' && respostaCorreta) {
+            console.log(`  ✅ MANTÉM: Certas (continua certa)`);
+        } else if (statusAnterior === 'errada' && !respostaCorreta) {
+            console.log(`  ✅ MANTÉM: Erradas (continua errada)`);
+        }
     }
+    
+    // ✅ CORREÇÃO: Atualizar data-status-resposta no card
+    card.dataset.statusResposta = respostaCorreta ? 'certa' : 'errada';
     
     // Atualizar status visual no card
     const statusElement = card.querySelector('.question-status');
@@ -1028,49 +1068,35 @@ function responderQuestao(questaoId, alternativaId, elemento) {
         console.log(`Status visual atualizado: ${respostaCorreta ? 'CERTA' : 'ERRADA'}`);
     }
     
-    // Atualizar filtros imediatamente
+    // ✅ CORREÇÃO: Atualizar filtros e contadores imediatamente
     setTimeout(() => {
         atualizarFiltros();
-    }, 100);
-    
-    // 🌟 CORREÇÃO: Chamar a função unificada de comunicação com o servidor
-    enviarResposta(questaoId, alternativaId);
-}
-    
-    // Atualizar status da questão na lista
-    const questaoIndex = questoesList.findIndex(q => q.questao.id === questaoId);
-    if (questaoIndex !== -1) {
-        questoesList[questaoIndex].status = respostaCorreta ? 'certa' : 'errada';
-        console.log(`Status atualizado: Questão ${questaoId} = ${questoesList[questaoIndex].status}`);
-    }
-    
-    // Atualizar status visual no card
-    const statusElement = card.querySelector('.question-status');
-    if (statusElement) {
-        statusElement.textContent = respostaCorreta ? 'CERTA' : 'ERRADA';
-        statusElement.className = `question-status ${respostaCorreta ? 'certa' : 'errada'}`;
-        console.log(`Status visual atualizado: ${respostaCorreta ? 'CERTA' : 'ERRADA'}`);
-    }
-    
-    // Atualizar filtros imediatamente
-    setTimeout(() => {
-        atualizarFiltros();
+        atualizarContadores();
     }, 100);
     
     // Salvar resposta no servidor
-    fetch('/questoes/validar-resposta/', {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    console.log('CSRF Token:', csrfToken);
+    
+    fetch('/questoes/quiz/validar/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            'X-CSRFToken': csrfToken
         },
         body: JSON.stringify({
-            questao_id: questaoId,
-            alternativa_id: alternativaId
+            id_questao: questaoId,
+            id_alternativa: alternativaId
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
     .then(data => {
+        console.log('Resposta recebida do servidor:', data);
         if (data.success) {
             console.log('Resposta salva com sucesso no servidor');
         } else {
@@ -1079,31 +1105,45 @@ function responderQuestao(questaoId, alternativaId, elemento) {
     })
     .catch(error => {
         console.error('Erro na requisição:', error);
+        console.error('Detalhes do erro:', error.message);
     });
+}
 
 
 // Função para atualizar os filtros dinamicamente
 function atualizarFiltros() {
-    console.log('=== ATUALIZANDO FILTROS ===');
+    console.log('=== ATUALIZANDO FILTROS DINÂMICOS ===');
     console.log('Questões na lista:', questoesList.length);
     
-    // Contar questões por status
+    // ✅ FLUXO DINÂMICO: Calcular estatísticas baseadas no status atual
     const stats = {
-        todas: questoesList.length,
+        todas: questoesList.length, // NUNCA muda
         respondidas: questoesList.filter(q => q.status === 'certa' || q.status === 'errada').length,
         nao_respondidas: questoesList.filter(q => q.status === 'nao-respondida').length,
         certas: questoesList.filter(q => q.status === 'certa').length,
         erradas: questoesList.filter(q => q.status === 'errada').length
     };
     
-    console.log('Estatísticas calculadas:', stats);
+    console.log('=== ESTATÍSTICAS CALCULADAS ===');
+    console.log(`Todas: ${stats.todas} (nunca muda)`);
+    console.log(`Respondidas: ${stats.respondidas} (só aumenta)`);
+    console.log(`Não Respondidas: ${stats.nao_respondidas} (só diminui)`);
+    console.log(`Certas: ${stats.certas} (pode aumentar/diminuir)`);
+    console.log(`Erradas: ${stats.erradas} (pode aumentar/diminuir)`);
     
-    // Debug: mostrar status de todas as questões
+    // ✅ VERIFICAÇÃO MATEMÁTICA: Todas = Respondidas + Não Respondidas
+    const somaRespondidas = stats.respondidas + stats.nao_respondidas;
+    if (stats.todas !== somaRespondidas) {
+        console.error(`ERRO MATEMÁTICO: Todas (${stats.todas}) ≠ Respondidas + Não Respondidas (${somaRespondidas})`);
+    }
+    
+    // ✅ DEBUG: Mostrar status de cada questão
+    console.log('=== STATUS DETALHADO DAS QUESTÕES ===');
     questoesList.forEach((q, index) => {
-        console.log(`Questão ${index + 1} (ID: ${q.questao.id}): ${q.status}`);
+        console.log(`Questão ${index + 1} (ID: ${q.questao.id}): Status = "${q.status}"`);
     });
     
-    // Atualizar contadores nos filtros (se existirem)
+    // ✅ ATUALIZAR CONTADORES NOS BOTÕES DE FILTRO
     const filterButtons = document.querySelectorAll('.filter-btn');
     console.log('Botões de filtro encontrados:', filterButtons.length);
     
@@ -1111,29 +1151,56 @@ function atualizarFiltros() {
         const href = btn.getAttribute('href');
         const countElement = btn.querySelector('.filter-count');
         
-        console.log(`Filtro ${index + 1}: href="${href}", countElement=${countElement}`);
-        
         if (countElement && href) {
             let newCount = 0;
+            let filterType = '';
+            
             if (href.includes('filtro=todas')) {
                 newCount = stats.todas;
+                filterType = 'Todas';
             } else if (href.includes('filtro=respondidas')) {
                 newCount = stats.respondidas;
+                filterType = 'Respondidas';
             } else if (href.includes('filtro=nao-respondidas')) {
                 newCount = stats.nao_respondidas;
+                filterType = 'Não Respondidas';
             } else if (href.includes('filtro=certas')) {
                 newCount = stats.certas;
+                filterType = 'Certas';
             } else if (href.includes('filtro=erradas')) {
                 newCount = stats.erradas;
+                filterType = 'Erradas';
             }
             
             const oldCount = countElement.textContent;
             countElement.textContent = newCount;
-            console.log(`Filtro atualizado: ${href} = ${oldCount} → ${newCount}`);
+            console.log(`Filtro "${filterType}": ${oldCount} → ${newCount}`);
         }
     });
     
-    console.log('=== FILTROS ATUALIZADOS ===');
+    console.log('=== FILTROS ATUALIZADOS COM SUCESSO ===');
+}
+
+// Função para aplicar filtro visual às questões
+function aplicarFiltroVisual(filtro) {
+    console.log(`Aplicando filtro visual: ${filtro}`);
+    
+    // NO SISTEMA VERTICAL, O BACKEND JÁ FILTRA AS QUESTÕES CORRETAMENTE
+    // O JavaScript não deve sobrescrever isso, apenas atualizar contadores
+    
+    const todasQuestoes = document.querySelectorAll('.question-card');
+    console.log(`Total de questões encontradas: ${todasQuestoes.length}`);
+    
+    // Apenas atualizar botões de filtro ativos
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        const href = btn.getAttribute('href');
+        if (href && href.includes(`filtro=${filtro}`)) {
+            btn.classList.add('active');
+        }
+    });
+    
+    console.log(`Filtro ${filtro} aplicado visualmente (apenas botões)`);
 }
 
 // Função para inicializar os filtros quando a página carrega
@@ -1144,6 +1211,21 @@ function inicializarFiltros() {
     // Aguardar um pouco para garantir que os elementos estão carregados
     setTimeout(() => {
         atualizarFiltros();
+        
+        // Adicionar event listeners para os botões de filtro
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        console.log('Adicionando event listeners para', filterButtons.length, 'botões de filtro');
+        
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                // NO SISTEMA VERTICAL, DEIXAR O BACKEND FAZER O FILTRO
+                // Não prevenir o comportamento padrão
+                const href = this.getAttribute('href');
+                console.log('Filtro clicado, navegando para:', href);
+                
+                // O navegador vai carregar a nova página com o filtro correto
+            });
+        });
     }, 500);
 }
 
@@ -1224,58 +1306,13 @@ function marcarAlternativaSelecionada(input) {
 }
 
 // Atualizar barra de progresso
-function atualizarProgresso() {
-    const total = questoesList.length;
-    const atual = questaoAtual + 1;
-    const percentual = (atual / total) * 100;
-    
-    document.querySelector('.progress-fill').style.width = `${percentual}%`;
-    document.querySelector('.progress-text').textContent = `Questão ${atual} de ${total}`;
-}
+// Função removida - estava duplicada e causando erro
 
-// Atualizar navegação
-function atualizarNavegacao() {
-    const btnAnterior = document.querySelector('#btn-anterior');
-    const btnProximo = document.querySelector('#btn-proximo');
-    
-    btnAnterior.disabled = questaoAtual === 0;
-    btnProximo.disabled = questaoAtual === questoesList.length - 1;
-    
-    if (questaoAtual === questoesList.length - 1) {
-        btnProximo.innerHTML = '<i class="fas fa-flag-checkered"></i> Finalizar';
-    } else {
-        btnProximo.innerHTML = 'Próximo <i class="fas fa-arrow-right"></i>';
-    }
-}
+// Função removida - não necessária no sistema vertical
 
 // ... [Código anterior]
 
-// Enviar resposta para servidor
-function enviarResposta(idQuestao, idAlternativa) { // Renomeado o segundo parâmetro para clareza
-    fetch('{% url "questoes:validar_resposta" %}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken // ✅ Usa a constante global do template HTML
-        },
-        body: JSON.stringify({
-            // ✅ Nomenclatura Padronizada
-            questao_id: idQuestao,
-            alternativa_id: idAlternativa 
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            console.log('Resposta salva com sucesso no servidor');
-        } else {
-            console.error('Erro ao salvar resposta:', data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Erro na requisição:', error);
-    });
-}
+// Função removida - estava duplicada e causando erro
 
 // ... [Código restante]
 
@@ -1390,3 +1427,4 @@ function mostrarMensagemVazia() {
 }
 </script>
 {% endblock %}
+

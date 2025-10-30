@@ -20,23 +20,14 @@ urlpatterns = [
     path('gerenciar/', views.gerenciar_questoes_view, name='gerenciar_questoes'),
     path('adicionar/', views.adicionar_questao_view, name='adicionar_questao'),
     path('editar/<int:questao_id>/', views.editar_questao_view, name='editar_questao'),
-    path('deletar/', views.deletar_questao_view, name='deletar_questao'),
-    
-    # Gerenciar assuntos (admin)
-    path('gerenciar-assuntos/', views.gerenciar_assuntos_view, name='gerenciar_assuntos'),
-    path('adicionar-assunto/', views.adicionar_assunto_view, name='adicionar_assunto'),
-    path('deletar-assunto/', views.deletar_assunto_view, name='deletar_assunto'),
-    
-    # Gerenciar comentários (admin)
-    path('gerenciar-comentarios/', views.gerenciar_comentarios_view, name='gerenciar_comentarios'),
-    path('toggle-comentario/<int:comentario_id>/', views.alternar_status_comentario_view, name='alternar_status_comentario'),
-    path('deletar-comentario/<int:comentario_id>/', views.deletar_comentario_view, name='deletar_comentario'),
     
     # Página inicial - escolher assunto
     path('', views.escolher_assunto_view, name='escolher_assunto'),
     
-    # Listar questões de um assunto com filtros
-    path('assunto/<int:assunto_id>/', views.listar_questoes_view, name='listar_questoes'),
+    # Rotas de Quiz
+    path('assunto/<int:assunto_id>/', views.quiz_view, name='quiz'),
+    # Rota Corrigida (Lista de questões com filtros via JS/Queryset)
+    path('listar/<int:assunto_id>/', views.listar_questoes_view, name='listar_questoes'),
     
     # Quiz vertical com filtros dinâmicos
     path('quiz-vertical/<int:assunto_id>/', views.quiz_vertical_filtros_view, name='quiz_vertical_filtros'),
@@ -59,14 +50,6 @@ urlpatterns = [
     
     # Dashboard de administração
     path('admin/', views.admin_dashboard_view, name='admin_dashboard'),
-    
-    # Gerenciar relatórios (admin)
-    path('gerenciar-relatorios/', views.gerenciar_relatorios_view, name='gerenciar_relatorios'),
-    path('atualizar-status-relatorio/<int:relatorio_id>/', views.atualizar_status_relatorio_view, name='atualizar_status_relatorio'),
-    path('responder-relatorio/', views.responder_relatorio_view, name='responder_relatorio'),
-    
-    # Gerenciar usuários (admin)
-    path('gerenciar-usuarios/', views.gerenciar_usuarios_view, name='gerenciar_usuarios'),
     
     # Login administrativo
     path('admin/login/', views.admin_login_view, name='admin_login'),

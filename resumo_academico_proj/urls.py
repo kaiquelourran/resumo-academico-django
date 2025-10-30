@@ -10,4 +10,8 @@ urlpatterns = [
     path('', include('institucional.urls')), 
     path('questoes/', include('questoes.urls')), 
 ]
+
+# Servir arquivos de media durante desenvolvimento
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 # ... (restante do código)

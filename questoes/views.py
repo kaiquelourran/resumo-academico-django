@@ -14,12 +14,15 @@ from collections import Counter
 import json
 import logging
 from django.views.decorators.http import require_POST
+# Importação necessária para transações (usada em adicionar_questao_view)
+from django.db import transaction 
 # Certifique-se de que get_object_or_404 e JsonResponse estão importados
 from .models import (
     Assunto, Questao, Alternativa, RespostaUsuario,
     ComentarioQuestao, CurtidaComentario, DenunciaComentario,
     RelatorioBug
 )
+from .filters import QuestaoFilter
 
 error_logger = logging.getLogger('questoes.errors')
 
@@ -47,7 +50,6 @@ def index_view(request):
     for item in respostas_semana:
         if item['id_usuario']:
             try:
-                # CORREÇÃO DE INDENTAÇÃO: O código abaixo deve estar dentro do 'try:'
                 # Otimização: buscar pelo ID. O Django User model tem 'id' como PK
                 usuario = User.objects.get(pk=item['id_usuario'])
                 ranking_semanal.append({
@@ -85,9 +87,7 @@ def index_view(request):
     return render(request, 'questoes/index.html', context)
 
 # ---
-## ===== ADICIONE OUTRAS VIEWS AQUI =====
-# Se você tinha outras views que não enviou, adicione-as aqui.
-# Lembre-se de corrigir a função processar_google_login se ela for usada em outras URLs.
+## ===== VIEWS DE QUIZ/QUESTÕES =====
 
 def escolher_assunto_view(request):
     """View para escolher o assunto antes de iniciar o quiz"""
@@ -128,111 +128,92 @@ def quiz_view(request, assunto_id):
 
 
 def listar_questoes_view(request, assunto_id):
-    """Lista questões de um assunto com filtros"""
+    """
+    Lista questões de um assunto. A filtragem de exibição é delegada ao JS.
+    O backend apenas calcula e associa o STATUS de cada questão.
+    """
     assunto = get_object_or_404(Assunto, pk=assunto_id)
     
-    # Captura o filtro da URL
+    # Captura o filtro da URL (apenas para fins de contexto, a lógica principal de filtro fica no JS)
     filtro = request.GET.get('filtro', 'todas')
     
     # Busca o usuário logado
     user_id = request.user.id if request.user.is_authenticated else None
     
-    # Busca as questões do assunto
-    questoes = Questao.objects.filter(id_assunto=assunto).select_related('id_assunto')
+    # Query inicial: questões relacionadas ao assunto selecionado
+    queryset = Questao.objects.filter(id_assunto=assunto).select_related('id_assunto')
+    
+    # Aplicar filtros de busca do django-filter (texto, tipo_assunto, assunto)
+    questao_filter = QuestaoFilter(request.GET, queryset=queryset)
+    questoes = questao_filter.qs
+    
     questoes_ids = list(questoes.values_list('id', flat=True))
     
     # Prepara lista de questões com status
     questoes_com_status = []
+    respostas_dict = {}
     
     if user_id:
-        # Busca a ÚLTIMA resposta de cada questão do usuário usando subquery
+        # Busca a ÚLTIMA resposta de cada questão do usuário
+        # Abordagem: Para cada questão, pega a resposta com a data mais recente
         
-        # Subquery para pegar a data máxima de resposta para cada questão
-        max_data_subquery = RespostaUsuario.objects.filter(
+        # Primeiro, pega a data máxima de resposta para cada questão
+        respostas_agrupadas = RespostaUsuario.objects.filter(
             id_usuario_id=user_id,
-            id_questao=OuterRef('id')
+            id_questao__in=questoes_ids
         ).values('id_questao').annotate(
             max_data=Max('data_resposta')
-        ).values('max_data')
+        )
         
-        # Busca a última resposta de cada questão
-        ultimas_respostas = RespostaUsuario.objects.filter(
-            id_usuario_id=user_id,
-            id_questao__in=questoes_ids,
-            data_resposta=Subquery(max_data_subquery)
-        ).values('id_questao', 'acertou')
+        # Monta um dicionário com questão_id -> max_data
+        questoes_com_data_maxima = {}
+        for item in respostas_agrupadas:
+            questoes_com_data_maxima[item['id_questao']] = item['max_data']
         
-        # Monta dicionário com a última resposta de cada questão
-        respostas_dict = {}
-        for resposta in ultimas_respostas:
-            respostas_dict[resposta['id_questao']] = resposta['acertou']
-        
-        # Monta lista de questões com status baseado na última resposta
-        for questao in questoes:
-            status = 'nao-respondida'
-            classe_status = 'nao-respondida'
+        # Busca a última resposta de cada questão usando a data máxima
+        # OTIMIZAÇÃO: Busca todas as respostas com as datas máximas em uma única query
+        if questoes_com_data_maxima:
+            # Monta lista de condições para busca eficiente
+            conditions = Q()
+            for questao_id, max_data in questoes_com_data_maxima.items():
+                conditions |= Q(id_questao_id=questao_id, data_resposta=max_data)
             
-            if questao.id in respostas_dict:
-                acertou = respostas_dict[questao.id]
-                if acertou:
-                    status = 'certa'
-                    classe_status = 'certa'
-                else:
-                    status = 'errada'
-                    classe_status = 'errada'
+            # Busca todas as últimas respostas de uma vez
+            ultimas_respostas_query = RespostaUsuario.objects.filter(
+                id_usuario_id=user_id
+            ).filter(conditions).order_by('id_questao_id', '-id')
             
-            # Aplica filtro conforme documentação
-            if filtro == 'todas':
-                # Mostra todas as questões
-                questoes_com_status.append({
-                    'questao': questao,
-                    'status': status,
-                    'classe_status': classe_status
-                })
-            elif filtro == 'respondidas' and questao.id in respostas_dict:
-                # Mostra apenas questões que foram respondidas pelo menos uma vez
-                questoes_com_status.append({
-                    'questao': questao,
-                    'status': status,
-                    'classe_status': classe_status
-                })
-            elif filtro == 'nao-respondidas' and questao.id not in respostas_dict:
-                # Mostra apenas questões nunca respondidas
-                questoes_com_status.append({
-                    'questao': questao,
-                    'status': 'nao-respondida',
-                    'classe_status': 'nao-respondida'
-                })
-            elif filtro == 'certas' and questao.id in respostas_dict and respostas_dict[questao.id]:
-                # Mostra apenas questões onde a última resposta foi correta
-                questoes_com_status.append({
-                    'questao': questao,
-                    'status': 'certa',
-                    'classe_status': 'certa'
-                })
-            elif filtro == 'erradas' and questao.id in respostas_dict and not respostas_dict[questao.id]:
-                # Mostra apenas questões onde a última resposta foi incorreta
-                questoes_com_status.append({
-                    'questao': questao,
-                    'status': 'errada',
-                    'classe_status': 'errada'
-                })
-    else:
-        # Sem usuário logado, mostra todas como não respondidas
-        for questao in questoes:
-            if filtro == 'todas' or filtro == 'nao-respondidas':
-                questoes_com_status.append({
-                    'questao': questao,
-                    'status': 'nao-respondida',
-                    'classe_status': 'nao-respondida'
-                })
+            # Popula o dicionário (pega apenas a primeira resposta de cada questão)
+            questoes_processadas = set()
+            for resposta in ultimas_respostas_query:
+                questao_id = resposta.id_questao.id
+                if questao_id not in questoes_processadas:
+                    respostas_dict[questao_id] = bool(resposta.acertou)
+                    questoes_processadas.add(questao_id)
     
-    # Calcula contadores conforme documentação
+    # Monta lista de questões com status baseado na última resposta (CORRIGIDO: SEM PRÉ-FILTRAGEM)
+    for questao in questoes:
+        status = 'nao-respondida'
+        classe_status = 'nao-respondida'
+        
+        if questao.id in respostas_dict:
+            acertou = bool(respostas_dict[questao.id])  # Garante booleano
+            if acertou:
+                status = 'certa'
+                classe_status = 'certa'
+            else:
+                status = 'errada'
+                classe_status = 'errada'
+        
+        # O objeto é adicionado INCONDICIONALMENTE
+        questoes_com_status.append({
+            'questao': questao,
+            'status': status,
+            'classe_status': classe_status
+        })
+
+    # Calcula contadores (Esta lógica deve permanecer, pois é a contagem real dos stats)
     total_todas = questoes.count()
-    
-    # DEBUG: Log para verificar contagem
-    print(f"DEBUG: Total de questões no assunto: {total_todas}")
-    print(f"DEBUG: IDs das questões: {questoes_ids}")
     
     if user_id:
         # Contador: Respondidas (questões respondidas pelo menos uma vez)
@@ -242,26 +223,20 @@ def listar_questoes_view(request, assunto_id):
         ).values_list('id_questao', flat=True).distinct()
         total_respondidas = len(respondidas_ids)
         
-        print(f"DEBUG: Questões respondidas IDs: {list(respondidas_ids)}")
-        print(f"DEBUG: Total respondidas: {total_respondidas}")
-        
         # Contador: Não Respondidas (diferença entre total e respondidas)
         total_nao_respondidas = total_todas - total_respondidas
         
-        # Contador: Certas (questões onde a última resposta foi correta)
+        # Contador: Certas e Erradas
         total_certas = 0
         total_erradas = 0
         
         for questao_id in questoes_ids:
             if questao_id in respostas_dict:
-                if respostas_dict[questao_id]:  # acertou = True
+                acertou = bool(respostas_dict[questao_id])  # Garante booleano
+                if acertou:  # acertou = True
                     total_certas += 1
                 else:  # acertou = False
                     total_erradas += 1
-        
-        print(f"DEBUG: Total certas: {total_certas}")
-        print(f"DEBUG: Total erradas: {total_erradas}")
-        print(f"DEBUG: Respostas dict: {respostas_dict}")
     else:
         total_respondidas = 0
         total_nao_respondidas = total_todas
@@ -280,7 +255,7 @@ def listar_questoes_view(request, assunto_id):
         'todas': total_todas,
         'respondidas': total_respondidas,
         'nao_respondidas': total_nao_respondidas,
-        'acertadas': total_certas,
+        'certas': total_certas,
         'erradas': total_erradas,
         'porcentagens': {
             'nao_respondidas': round(porcentagem_nao_respondidas, 1),
@@ -292,17 +267,265 @@ def listar_questoes_view(request, assunto_id):
         }
     }
     
+    # ATENÇÃO: Se estiver usando o código que eu gerei anteriormente, ele já tem a lógica de stats.
+    # Garantir que o retorno final seja:
     context = {
         'assunto': assunto,
-        'questoes_com_status': questoes_com_status,
+        'questoes_com_status': questoes_com_status, # Lista COMPLETA
         'filtro': filtro,
-        'stats': stats
+        'stats': stats, # Objeto de estatísticas
+        'filter': questao_filter,  # Formulário de filtros do django-filter
+        'num_questoes': questoes.count()  # Total de questões após filtros
     }
     
     return render(request, 'questoes/listar_questoes.html', context)
 
 
-# ===== VIEWS DE AUTENTICAÇÃO =====
+# ==============================================================================
+# 🟢 NOVAS VIEWS - QUIZ E SIMULADO
+# ==============================================================================
+
+@require_POST
+@csrf_exempt # Use apenas se a view não estiver autenticada ou for uma API
+def validar_resposta_view(request):
+    """View que processa a resposta do quiz via AJAX/POST."""
+    try:
+        # Tenta carregar o JSON do corpo da requisição
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'JSON inválido no corpo da requisição.'}, status=400)
+        
+        questao_id = data.get('id_questao')      
+        alternativa_id = data.get('id_alternativa')
+        
+        if not questao_id or not alternativa_id:
+            return JsonResponse({'success': False, 'error': 'Dados inválidos (ID da Questão ou Alternativa faltando).'}, status=400)
+        
+        # Busca a questão e alternativa
+        questao = get_object_or_404(Questao, id=questao_id)
+        alternativa = get_object_or_404(Alternativa, id=alternativa_id)
+        
+        # VERIFICAÇÃO DE SEGURANÇA: Garante que a alternativa pertence à questão
+        if alternativa.id_questao.id != questao.id: 
+            return JsonResponse({'success': False, 'error': 'Alternativa não pertence à questão.'}, status=400)
+        
+        # Verifica se acertou
+        acertou = alternativa.eh_correta 
+        
+        # Salva a resposta do usuário (apenas se estiver logado)
+        if request.user.is_authenticated:
+            # Apaga respostas anteriores para a mesma questão (se a intenção é salvar apenas a última)
+            RespostaUsuario.objects.filter(
+                id_usuario=request.user,
+                id_questao=questao
+            ).delete()
+            
+            # Cria nova resposta
+            RespostaUsuario.objects.create(
+                id_usuario=request.user,
+                id_questao=questao,
+                id_alternativa=alternativa,
+                acertou=acertou
+            )
+
+        # Busca a alternativa correta (para o feedback visual)
+        alternativa_correta = questao.alternativas.filter(eh_correta=True).first()
+        
+        return JsonResponse({
+            'success': True,
+            'acertou': acertou,
+            'id_alternativa_selecionada': alternativa_id,
+            'id_alternativa_correta': alternativa_correta.id if alternativa_correta else None,
+            'explicacao': questao.explicacao or '',
+        })
+        
+    except Exception as e:
+        error_logger.error(f"Erro inesperado na view validar_resposta_view: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Erro interno do servidor.'}, status=500)
+
+
+def quiz_vertical_filtros_view(request, assunto_id):
+    """Quiz vertical com filtros dinâmicos - envia todas as questões para o frontend."""
+    assunto = get_object_or_404(Assunto, pk=assunto_id)
+    
+    filtro_ativo = request.GET.get('filtro', 'todas')
+    questao_inicial = request.GET.get('questao_inicial', 0)
+    
+    try:
+        questao_inicial = int(questao_inicial)
+    except (ValueError, TypeError):
+        questao_inicial = 0
+    
+    user_id = request.user.id if request.user.is_authenticated else None
+    questoes_query = Questao.objects.filter(id_assunto=assunto).select_related('id_assunto')
+    questoes_com_status = []
+    
+    respostas_dict = {}
+    if user_id:
+        max_data_subquery = RespostaUsuario.objects.filter(
+            id_usuario_id=user_id,
+            id_questao=OuterRef('id')
+        ).values('id_questao').annotate(
+            max_data=Max('data_resposta')
+        ).values('max_data')
+        
+        ultimas_respostas = RespostaUsuario.objects.filter(
+            id_usuario_id=user_id,
+            id_questao__in=questoes_query.values_list('id', flat=True),
+            data_resposta=Subquery(max_data_subquery)
+        ).values('id_questao', 'acertou')
+        
+        for resposta in ultimas_respostas:
+            respostas_dict[resposta['id_questao']] = resposta['acertou']
+    
+    # Monta lista de questões com status (INCLUINDO TODAS)
+    for questao in questoes_query:
+        status = 'nao-respondida'
+        if questao.id in respostas_dict:
+            status = 'certa' if respostas_dict[questao.id] else 'errada'
+        
+        questoes_com_status.append({
+            'questao': questao,
+            'status': status
+        })
+    
+    # Ordena questões (questão inicial primeiro se especificada)
+    if questao_inicial > 0:
+        questoes_com_status.sort(key=lambda x: (x['questao'].id != questao_inicial, x['questao'].id))
+    else:
+        questoes_com_status.sort(key=lambda x: x['questao'].id)
+    
+    # Busca e associa alternativas
+    questoes_ids = [item['questao'].id for item in questoes_com_status]
+    alternativas_dict = {}
+    
+    if questoes_ids:
+        alternativas = Alternativa.objects.filter(id_questao__in=questoes_ids).select_related('id_questao').order_by('id_questao', 'ordem', 'id')
+        for alt in alternativas:
+            if alt.id_questao.id not in alternativas_dict:
+                alternativas_dict[alt.id_questao.id] = []
+            
+            letras = ['A', 'B', 'C', 'D', 'E']
+            ordem_index = len(alternativas_dict[alt.id_questao.id])
+            letra = letras[ordem_index] if ordem_index < len(letras) else chr(65 + ordem_index)
+            
+            alternativas_dict[alt.id_questao.id].append({
+                'id': alt.id,
+                'texto': alt.texto,
+                'eh_correta': alt.eh_correta,
+                'letra': letra
+            })
+    
+    # Adiciona alternativas às questões e prepara para JSON
+    questoes_js = []
+    for item in questoes_com_status:
+        questao_id = item['questao'].id
+        alternativas = alternativas_dict.get(questao_id, [])
+        
+        questoes_js.append({
+            'questao': {
+                'id': item['questao'].id,
+                'enunciado': item['questao'].texto,
+                'texto': item['questao'].texto
+            },
+            'status': item['status'],
+            'alternativas': alternativas
+        })
+    
+    context = {
+        'assunto': assunto,
+        'questoes': json.dumps(questoes_js),
+        'filtro_ativo': filtro_ativo,
+        'questao_inicial': questao_inicial,
+        'total_questoes': len(questoes_js),
+        'user_authenticated': request.user.is_authenticated
+    }
+    
+    return render(request, 'questoes/quiz_vertical_filtros.html', context)
+    
+def simulado_online_view(request, assunto_id):
+    """Simulado online com estrutura similar ao PHP - todas as questões em uma página."""
+    # A lógica é quase idêntica a quiz_vertical_filtros_view, mas sem foco na questão inicial
+    assunto = get_object_or_404(Assunto, pk=assunto_id)
+    filtro_ativo = request.GET.get('filtro', 'todas')
+    user_id = request.user.id if request.user.is_authenticated else None
+    questoes_query = Questao.objects.filter(id_assunto=assunto).select_related('id_assunto')
+    questoes_com_status = []
+    
+    respostas_dict = {}
+    if user_id:
+        max_data_subquery = RespostaUsuario.objects.filter(
+            id_usuario_id=user_id,
+            id_questao=OuterRef('id')
+        ).values('id_questao').annotate(
+            max_data=Max('data_resposta')
+        ).values('max_data')
+        
+        ultimas_respostas = RespostaUsuario.objects.filter(
+            id_usuario_id=user_id,
+            id_questao__in=questoes_query.values_list('id', flat=True),
+            data_resposta=Subquery(max_data_subquery)
+        ).values('id_questao', 'acertou')
+        
+        for resposta in ultimas_respostas:
+            respostas_dict[resposta['id_questao']] = resposta['acertou']
+    
+    # Monta lista de questões com status (INCLUINDO TODAS)
+    for questao in questoes_query:
+        status = 'nao-respondida'
+        if questao.id in respostas_dict:
+            status = 'certa' if respostas_dict[questao.id] else 'errada'
+        
+        questoes_com_status.append({
+            'questao': questao,
+            'status': status
+        })
+
+    # Busca e associa alternativas
+    questoes_ids = [item['questao'].id for item in questoes_com_status]
+    alternativas_dict = {}
+    
+    if questoes_ids:
+        alternativas = Alternativa.objects.filter(id_questao__in=questoes_ids).select_related('id_questao').order_by('id_questao', 'ordem', 'id')
+        for alt in alternativas:
+            if alt.id_questao.id not in alternativas_dict:
+                alternativas_dict[alt.id_questao.id] = []
+            
+            letras = ['A', 'B', 'C', 'D', 'E']
+            ordem_index = len(alternativas_dict[alt.id_questao.id])
+            letra = letras[ordem_index] if ordem_index < len(letras) else chr(65 + ordem_index)
+            
+            alternativas_dict[alt.id_questao.id].append({
+                'id': alt.id,
+                'texto': alt.texto,
+                'eh_correta': alt.eh_correta,
+                'letra': letra
+            })
+    
+    # Adiciona alternativas às questões
+    for item in questoes_com_status:
+        item['alternativas'] = alternativas_dict.get(item['questao'].id, [])
+    
+    # Cálculos de estatísticas para o simulado
+    total_questoes = len(questoes_com_status)
+    respondidas = len([q for q in questoes_com_status if q['status'] != 'nao-respondida'])
+    porcentagem_respondidas = round((respondidas / total_questoes * 100) if total_questoes > 0 else 0, 1)
+
+    context = {
+        'assunto': assunto,
+        # Passa a lista diretamente para ser renderizada no template
+        'questoes_com_status': questoes_com_status,
+        'filtro_ativo': filtro_ativo,
+        'total_questoes': total_questoes,
+        'porcentagem_respondidas': porcentagem_respondidas,
+        'user_authenticated': request.user.is_authenticated
+    }
+    
+    return render(request, 'questoes/simulado_online.html', context)
+
+
+# ===== VIEWS DE AUTENTICAÇÃO E PERFIL =====
 
 def login_view(request):
     """View de login"""
@@ -322,7 +545,6 @@ def login_view(request):
                 user = User.objects.get(email=email)
                 
                 # CORREÇÃO/MELHORIA: Autenticar usando o username encontrado.
-                # Se o email é usado para login, o username do User deve ser usado no authenticate.
                 user_auth = authenticate(request, username=user.username, password=password)
                 
                 if user_auth is not None:
@@ -365,8 +587,7 @@ def cadastro_view(request):
                 if User.objects.filter(email=email).exists():
                     messages.error(request, 'Este e-mail já está cadastrado.')
                 else:
-                    # MELHORIA: Usar o email como username para garantir unicidade, se for sua intenção.
-                    # Assumindo que o username não precisa ser visível publicamente e deve ser único:
+                    # MELHORIA: Usar o email como username para garantir unicidade.
                     user = User.objects.create_user(
                         username=email, 
                         email=email,
@@ -381,6 +602,7 @@ def cadastro_view(request):
                 messages.error(request, 'Erro ao criar conta. Por favor, tente novamente mais tarde.')
     
     return render(request, 'questoes/cadastro.html')
+
 def logout_view(request):
     """View de logout"""
     logout(request)
@@ -435,6 +657,16 @@ def desempenho_view(request):
     }
     
     return render(request, 'questoes/desempenho.html', context)
+
+
+# ==============================================================================
+# 🟢 NOVAS VIEWS - RELATÓRIOS (Usuário)
+# ==============================================================================
+
+def relatar_problema_view(request):
+    """View para o usuário relatar um problema."""
+    # A lógica para processar o POST do formulário deve ser adicionada aqui.
+    return render(request, 'questoes/relatar_problema.html', {})
 
 
 # ===== VIEWS ADMINISTRATIVAS =====
@@ -704,7 +936,6 @@ def adicionar_questao_view(request):
             messages.error(request, mensagem_texto) 
         else:
             try:
-                from django.db import transaction
                 
                 with transaction.atomic():
                     # Garante que o assunto existe
@@ -776,916 +1007,32 @@ def editar_questao_view(request, questao_id):
         messages.error(request, 'Acesso negado. Apenas administradores.')
         return redirect('questoes:index')
     
-    questao = get_object_or_404(Questao, pk=questao_id)
-    assuntos = Assunto.objects.order_by('nome')
-    # Otimização: prefetch do assunto
-    alternativas = questao.alternativas.all().order_by('id') 
+    questao = get_object_or_404(Questao, id=questao_id)
     
-    if request.method == 'POST':
-        enunciado = request.POST.get('enunciado', '').strip()
-        explicacao = request.POST.get('explicacao', '').strip()
-        id_assunto = request.POST.get('id_assunto')
-        correta_pk = request.POST.get('correta') # Guarda a PK da alternativa correta
-        
-        alternativas_dict = {}
-        
-        # Coleta as alternativas enviadas no POST
-        for key, value in request.POST.items():
-            if key.startswith('alternativas['):
-                alt_id = key[13:-1] # Ajustei o índice de corte se o campo for 'alternativas[ID]'
-                alternativas_dict[alt_id] = value.strip()
-        
-        if not enunciado or not id_assunto or not alternativas_dict:
-            messages.error(request, 'Por favor, preencha todos os campos obrigatórios (enunciado, assunto e alternativas).')
-    else:
-            try:
-                from django.db import transaction
-                with transaction.atomic():
-                    questao.texto = enunciado
-                    questao.explicacao = explicacao
-                    questao.id_assunto_id = id_assunto
-                    questao.save()
-                    
-                    # Atualiza alternativas existentes
-                    for alt_id, texto in alternativas_dict.items():
-                        # MELHORIA: Usa update_or_create ou get/save
-                        alternativa = Alternativa.objects.get(pk=alt_id, id_questao=questao)
-                        alternativa.texto = texto
-                        # A alternativa é correta se o PK dela for igual ao PK enviado no campo 'correta'
-                        alternativa.eh_correta = (str(alternativa.pk) == correta_pk)
-                        alternativa.save()
-                        
-                    # Não há lógica para adicionar novas alternativas, apenas atualizar as existentes
-                    
-                    messages.success(request, 'Questão atualizada com sucesso!')
-                return redirect('questoes:gerenciar_questoes')
-            except Exception as e:
-                error_logger.error(f'Erro ao editar questão {questao_id}: {e}', exc_info=True)
-                messages.error(request, f'Erro ao atualizar a questão: {str(e)}')
-    
-    context = {
-        'questao': questao,
-        'assuntos': assuntos,
-        'alternativas': alternativas,
-    }
-    
-    return render(request, 'questoes/editar_questao.html', context)
-
-
-@login_required
-def deletar_questao_view(request):
-    """Deleta uma questão e todos os dados relacionados"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
-    
-    if request.method == 'POST':
-        questao_id = request.POST.get('questao_id')
-        if questao_id:
-            try:
-                questao = get_object_or_404(Questao, pk=questao_id)
-                
-                from django.db import transaction
-                with transaction.atomic():
-                    # Se seus modelos têm on_delete=CASCADE, as próximas linhas são opcionais/redundantes,
-                    # mas garantem a ordem e o controle na transação.
-                    # RespostaUsuario.objects.filter(questao=questao).delete()
-                    # Alternativa.objects.filter(questao=questao).delete()
-                    
-                    questao.delete() # Deleta em cascata se configurado corretamente
-                
-                messages.success(request, f'Questão #{questao_id} deletada com sucesso!')
-            except Questao.DoesNotExist:
-                messages.error(request, 'Questão não encontrada.')
-            except Exception as e:
-                error_logger.error(f'Erro ao deletar questão {questao_id}: {e}', exc_info=True)
-                messages.error(request, f'Erro ao deletar questão: {str(e)}')
-    
+    # Por enquanto, apenas redireciona para a página de gerenciamento
+    # TODO: Implementar lógica de edição completa
+    messages.info(request, f'Edição da questão #{questao_id} será implementada em breve.')
     return redirect('questoes:gerenciar_questoes')
 
-@login_required
-def gerenciar_assuntos_view(request):
-    """Exibe a lista de assuntos para gerenciamento"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
-    
-    assuntos = Assunto.objects.annotate(
-        total_questoes=Count('questoes')
-    ).order_by('tipo_assunto', 'nome')
-    
-    total_questoes = Questao.objects.count()
-    
-    context = {
-        'assuntos': assuntos,
-        'total_assuntos': assuntos.count(),
-        'total_questoes': total_questoes
-    }
-    
-    return render(request, 'questoes/gerenciar_assuntos.html', context)
-
-
-@login_required
-def adicionar_assunto_view(request):
-    """View para adicionar novo assunto/conteúdo"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
-    
-    mensagem_status = ''
-    mensagem_texto = ''
-    
-    if request.method == 'POST':
-        tipo_assunto = request.POST.get('tipo_assunto', '').strip()
-        nome_assunto = request.POST.get('nome_assunto', '').strip()
-        
-        # Garante que os campos são strings vazias se não existirem
-        concurso_ano = request.POST.get('concurso_ano', '').strip()
-        concurso_banca = request.POST.get('concurso_banca', '').strip()
-        concurso_orgao = request.POST.get('concurso_orgao', '').strip()
-        concurso_prova = request.POST.get('concurso_prova', '').strip()
-        
-        errors = []
-        if not tipo_assunto:
-            errors.append('Por favor, selecione o tipo de conteúdo.')
-        elif tipo_assunto != 'concurso' and not nome_assunto:
-            errors.append('Por favor, digite o nome do conteúdo.')
-        elif tipo_assunto == 'concurso' and not all([concurso_ano, concurso_banca, concurso_orgao, concurso_prova]):
-            errors.append('Para concursos, preencha todos os campos obrigatórios (Ano, Banca, Órgão e Prova).')
-        
-        if errors:
-            mensagem_status = 'error'
-            mensagem_texto = '<br>'.join(errors)
-            messages.error(request, mensagem_texto)
-        else: # <--- AGORA CORRETAMENTE ALINHADO COM O 'IF ERRORS:'
-            try:
-                if tipo_assunto == 'concurso':
-                    nome_final = f"{concurso_ano} - {concurso_banca} - {concurso_orgao} - {concurso_prova}"
-                else:
-                    nome_final = nome_assunto
-                
-                if Assunto.objects.filter(nome=nome_final, tipo_assunto=tipo_assunto).exists():
-                    messages.error(request, 'Já existe um conteúdo com este nome para este tipo.')
-                else:
-                    assunto = Assunto.objects.create(
-                        nome=nome_final,
-                        tipo_assunto=tipo_assunto
-                    )
-                    
-                    if tipo_assunto == 'concurso':
-                        assunto.concurso_ano = concurso_ano
-                        assunto.concurso_banca = concurso_banca
-                        assunto.concurso_orgao = concurso_orgao
-                        assunto.concurso_prova = concurso_prova
-                        assunto.save()
-                    
-                    tipo_display = tipo_assunto.capitalize()
-                    messages.success(request, f'{tipo_display} "{nome_final}" adicionado com sucesso!')
-                    return redirect('questoes:adicionar_assunto') # Redireciona para evitar re-submit
-            
-            except Exception as e: # <--- AGORA CORRETAMENTE ALINHADO COM O 'TRY'
-                error_logger.error(f'Erro ao adicionar assunto: {e}', exc_info=True)
-                messages.error(request, f'Erro ao adicionar o conteúdo: {str(e)}')
-    
-    return render(request, 'questoes/adicionar_assunto.html', {
-        'mensagem_status': mensagem_status,
-        'mensagem_texto': mensagem_texto,
-    })
-
-
-@login_required
-def deletar_assunto_view(request):
-    """Deleta um assunto e todas as questões relacionadas"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
-    
-    if request.method == 'POST':
-        assunto_id = request.POST.get('id')
-        if assunto_id:
-            try:
-                assunto = get_object_or_404(Assunto, pk=assunto_id)
-                
-                from django.db import transaction
-                with transaction.atomic():
-                    # Otimização: A deleção em cascata (se configurada) é automática 
-                    # quando Assunto.delete() é chamado.
-                    # As questões e as respostas/alternativas delas serão deletadas.
-                    assunto.delete()
-                
-                messages.success(request, f'Conteúdo "{assunto.nome}" deletado com sucesso!')
-            except Assunto.DoesNotExist:
-                messages.error(request, 'Conteúdo não encontrado.')
-            except Exception as e:
-                error_logger.error(f'Erro ao deletar assunto {assunto_id}: {e}', exc_info=True)
-                messages.error(request, f'Erro ao deletar conteúdo: {str(e)}')
-    
-    return redirect('questoes:gerenciar_assuntos')
-
-
-@login_required
-def gerenciar_comentarios_view(request):
-    """Exibe lista de comentários reportados ou inativos"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
-    
-    comentarios = ComentarioQuestao.objects.filter(
-        # Filtra comentários inativos OU que tenham pelo menos 1 denúncia
-        Q(ativo=False) | Q(denuncias__isnull=False) 
-    ).annotate(
-        total_denuncias=Count('denuncias')
-    ).distinct().order_by('-data_comentario')
-    
-    context = {
-        'comentarios': comentarios
-    }
-    
-    return render(request, 'questoes/gerenciar_comentarios.html', context)
-# ASSUMIDO: Esta é a função que lida com a moderação/alternância de status
-@login_required
-def alternar_status_comentario_view(request, comentario_id):
-    """Alterna o status ativo/inativo de um comentário e remove denúncias"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
-    
-    if request.method == 'POST':
-        try:
-            comentario = get_object_or_404(ComentarioQuestao, pk=comentario_id)
-            comentario.ativo = not comentario.ativo
-            # CORRIGIDO: Recuo
-            comentario.save() 
-            
-            # CORRIGIDO: Recuo 
-            # Deleta as denúncias após a revisão (opcional, dependendo da sua regra de negócio)
-            if comentario.ativo:
-                DenunciaComentario.objects.filter(id_comentario=comentario).delete()
-            
-            messages.success(request, f'Comentário {"ativado (denúncias revisadas)" if comentario.ativo else "desativado"} com sucesso!')
-        except Exception as e:
-            # CORRIGIDO: Recuo para alinhar com o 'try'
-            error_logger.error(f'Erro ao alternar status do comentário {comentario_id}: {e}', exc_info=True)
-            messages.error(request, f'Erro ao atualizar o comentário: {str(e)}')
-    
-    return redirect('questoes:gerenciar_comentarios')
-
-
-@login_required
-def deletar_comentario_view(request, comentario_id):
-    """Deleta um comentário permanentemente"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
-    
-    if request.method == 'POST':
-        try:
-            comentario = get_object_or_404(ComentarioQuestao, pk=comentario_id)
-            comentario.delete() # Deleta em cascata curtidas e denúncias relacionadas
-            
-            messages.success(request, 'Comentário excluído permanentemente com sucesso!')
-        except Exception as e: # CORRIGIDO: Recuo para alinhar com o 'try'
-            error_logger.error(f'Erro ao deletar comentário {comentario_id}: {e}', exc_info=True)
-            messages.error(request, f'Erro ao excluir comentário: {str(e)}')
-    
-    return redirect('questoes:gerenciar_comentarios')
-
-
-@login_required
-def gerenciar_relatorios_view(request):
-    """Exibe lista de relatórios com filtros"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
-    
-    filtro_status = request.GET.get('status', 'todos')
-    filtro_prioridade = request.GET.get('prioridade', 'todos')
-    
-    relatorios = RelatorioBug.objects.all()
-    
-    if filtro_status != 'todos':
-        relatorios = relatorios.filter(status=filtro_status)
-    
-    if filtro_prioridade != 'todos':
-        relatorios = relatorios.filter(prioridade=filtro_prioridade)
-    
-    relatorios = relatorios.select_related('id_usuario').order_by('-data_relatorio')
-    
-    # MELHORIA: Uso de agregação para obter as estatísticas em uma query
-    stats_query = RelatorioBug.objects.values('status').annotate(count=Count('status'))
-    stats_dict = {item['status']: item['count'] for item in stats_query}
-
-    stats = {
-        'total': RelatorioBug.objects.count(),
-        'abertos': stats_dict.get('aberto', 0),
-        'em_andamento': stats_dict.get('em_andamento', 0),
-        'resolvidos': stats_dict.get('resolvido', 0),
-    }
-    
-    context = {
-        'relatorios': relatorios,
-        'stats': stats,
-        'filtro_status': filtro_status,
-        'filtro_prioridade': filtro_prioridade,
-    }
-    
-    return render(request, 'questoes/gerenciar_relatorios.html', context)
-
-
-@login_required
-def atualizar_status_relatorio_view(request, relatorio_id):
-    """Atualiza o status de um relatório"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
-    
-    if request.method == 'POST':
-        try:
-            relatorio = get_object_or_404(RelatorioBug, pk=relatorio_id)
-            novo_status = request.POST.get('novo_status')
-            
-            if novo_status and novo_status in ['aberto', 'em_andamento', 'resolvido']: # Validação do status
-                relatorio.status = novo_status
-                relatorio.data_atualizacao = timezone.now()
-                relatorio.save()
-                messages.success(request, f'Status do relatório #{relatorio_id} atualizado para "{novo_status.replace("_", " ").capitalize()}" com sucesso!')
-            else:
-                messages.error(request, 'Status inválido.')
-        except Exception as e:
-            error_logger.error(f'Erro ao atualizar status do relatório {relatorio_id}: {e}', exc_info=True)
-            messages.error(request, f'Erro ao atualizar status do relatório: {str(e)}')
-    
-    return redirect('questoes:gerenciar_relatorios')
-
-
-@login_required
-def responder_relatorio_view(request):
-    """Responde a um relatório"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
-    
-    if request.method == 'POST':
-        relatorio_id = request.POST.get('id_relatorio')
-        resposta = request.POST.get('resposta', '').strip()
-        
-        if resposta and relatorio_id:
-            try:
-                relatorio = get_object_or_404(RelatorioBug, pk=relatorio_id)
-                relatorio.resposta_admin = resposta
-                relatorio.usuario_viu_resposta = False  # Marca como nova resposta para o usuário
-                relatorio.data_atualizacao = timezone.now()
-                relatorio.save()
-                messages.success(request, f'Resposta enviada com sucesso para o relatório #{relatorio_id}.')
-            except Exception as e: # CORRIGIDO: Recuo para alinhar com o 'try'
-                error_logger.error(f'Erro ao responder relatório {relatorio_id}: {e}', exc_info=True)
-                messages.error(request, f'Erro ao enviar resposta: {str(e)}')
-        else:
-            messages.error(request, 'A resposta e o ID do relatório não podem estar vazios.')
-    
-    return redirect('questoes:gerenciar_relatorios')
-
-@login_required
-def deletar_comentario_view(request, comentario_id):
-    """Deleta um comentário permanentemente"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
-    
-    if request.method == 'POST':
-        try:
-            comentario = get_object_or_404(ComentarioQuestao, pk=comentario_id)
-            comentario.delete() # Deleta em cascata curtidas e denúncias relacionadas
-            
-            messages.success(request, 'Comentário excluído permanentemente com sucesso!')
-        # CORRIGIDO: O 'except' agora está alinhado com o 'try'
-        except Exception as e:
-            error_logger.error(f'Erro ao deletar comentário {comentario_id}: {e}', exc_info=True)
-            messages.error(request, f'Erro ao excluir comentário: {str(e)}')
-    
-    return redirect('questoes:gerenciar_comentarios')
-
-@login_required
-def gerenciar_relatorios_view(request):
-    """Exibe lista de relatórios com filtros"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
-    
-    filtro_status = request.GET.get('status', 'todos')
-    filtro_prioridade = request.GET.get('prioridade', 'todos')
-    
-    relatorios = RelatorioBug.objects.all()
-    
-    if filtro_status != 'todos':
-        relatorios = relatorios.filter(status=filtro_status)
-    
-    if filtro_prioridade != 'todos':
-        relatorios = relatorios.filter(prioridade=filtro_prioridade)
-    
-    relatorios = relatorios.select_related('id_usuario').order_by('-data_relatorio')
-    
-    # MELHORIA: Uso de agregação para obter as estatísticas em uma query
-    stats_query = RelatorioBug.objects.values('status').annotate(count=Count('status'))
-    stats_dict = {item['status']: item['count'] for item in stats_query}
-
-    stats = {
-        'total': RelatorioBug.objects.count(),
-        'abertos': stats_dict.get('aberto', 0),
-        'em_andamento': stats_dict.get('em_andamento', 0),
-        'resolvidos': stats_dict.get('resolvido', 0),
-    }
-    
-    context = {
-        'relatorios': relatorios,
-        'stats': stats,
-        'filtro_status': filtro_status,
-        'filtro_prioridade': filtro_prioridade,
-    }
-    
-    return render(request, 'questoes/gerenciar_relatorios.html', context)
-
-
-@login_required
-def atualizar_status_relatorio_view(request, relatorio_id):
-    """Atualiza o status de um relatório"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
-    
-    if request.method == 'POST':
-        try:
-            relatorio = get_object_or_404(RelatorioBug, pk=relatorio_id)
-            novo_status = request.POST.get('novo_status')
-            
-            if novo_status and novo_status in ['aberto', 'em_andamento', 'resolvido']: # Validação do status
-                relatorio.status = novo_status
-                relatorio.data_atualizacao = timezone.now()
-                relatorio.save()
-                messages.success(request, f'Status do relatório #{relatorio_id} atualizado para "{novo_status.replace("_", " ").capitalize()}" com sucesso!')
-            else:
-                messages.error(request, 'Status inválido.')
-        except Exception as e:
-            error_logger.error(f'Erro ao atualizar status do relatório {relatorio_id}: {e}', exc_info=True)
-            messages.error(request, f'Erro ao atualizar status do relatório: {str(e)}')
-    
-    return redirect('questoes:gerenciar_relatorios')
-
-@login_required
-def responder_relatorio_view(request):
-    """Responde a um relatório"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
-    
-    if request.method == 'POST':
-        relatorio_id = request.POST.get('id_relatorio')
-        resposta = request.POST.get('resposta', '').strip()
-        
-        # Este 'if' define o nível de indentação do try/except e do else
-        if resposta and relatorio_id: 
-            try:
-                # Nível de indentação correto dentro do try
-                relatorio = get_object_or_404(RelatorioBug, pk=relatorio_id)
-                relatorio.resposta_admin = resposta
-                relatorio.usuario_viu_resposta = False  # Marca como nova resposta para o usuário
-                relatorio.data_atualizacao = timezone.now()
-                relatorio.save()
-                messages.success(request, f'Resposta enviada com sucesso para o relatório #{relatorio_id}.')
-            # CORRIGIDO: O 'except' está alinhado com o 'try'
-            except Exception as e:
-                error_logger.error(f'Erro ao responder relatório {relatorio_id}: {e}', exc_info=True)
-                messages.error(request, f'Erro ao enviar resposta: {str(e)}')
-        # CORRIGIDO: O 'else' está alinhado com o 'if resposta and relatorio_id:'
-        else:
-            messages.error(request, 'A resposta e o ID do relatório não podem estar vazios.')
-    
-    return redirect('questoes:gerenciar_relatorios')  
-
-    # ==============================================================================
-# 🟢 PLACEHOLDERS FINAIS (Adicionar APENAS se as funções não existirem)
-# Estas duas funções estavam faltando e causaram os últimos erros.
-# ==============================================================================
-
-# Adicionar se não existirem
-# NO ARQUIVO: /app/questoes/views.py
-
-
-# Remova o @csrf_exempt se ele estiver aqui!
-
-from django.shortcuts import get_object_or_404
-from django.http import JsonResponse
-import json
-from django.views.decorators.http import require_POST
-# Importe aqui seus modelos (Questao, Alternativa, RespostaUsuario, etc.)
-# from .models import Questao, Alternativa, RespostaUsuario # Exemplo
-# NO ARQUIVO views.py, DEPOIS DOS IMPORTS
-
-@require_POST
-def validar_resposta_view(request):
-    """View que processa a resposta do quiz."""
-    try:
-        data = json.loads(request.body)
-        
-        questao_id = data.get('id_questao')      
-        alternativa_id = data.get('id_alternativa')
-        
-        if not questao_id or not alternativa_id:
-            return JsonResponse({'sucesso': False, 'erro': 'Dados inválidos (ID da Questão ou Alternativa faltando).'}, status=400)
-        
-        # Busca a questão e alternativa
-        # ASSUMIMOS QUE VOCÊ TEM: Questao, Alternativa
-        questao = get_object_or_404(Questao, id=questao_id)
-        alternativa = get_object_or_404(Alternativa, id=alternativa_id)
-        
-        # VERIFICAÇÃO DE SEGURANÇA: Garante que a alternativa pertence à questão
-        if alternativa.id_questao.id != questao.id: 
-            return JsonResponse({'sucesso': False, 'erro': 'Alternativa não pertence à questão.'}, status=400)
-        
-        # Verifica se acertou
-        acertou = alternativa.eh_correta 
-        
-        # Salva a resposta do usuário (apenas se estiver logado)
-        if request.user.is_authenticated:
-            # Apaga respostas anteriores para a mesma questão
-            # ASSUMIMOS QUE VOCÊ TEM: RespostaUsuario
-            RespostaUsuario.objects.filter(
-                id_usuario=request.user,
-                id_questao=questao
-            ).delete()
-            
-            # Cria nova resposta
-            RespostaUsuario.objects.create(
-                id_usuario=request.user,
-                id_questao=questao,
-                id_alternativa=alternativa,
-                acertou=acertou
-            )
-
-        # Busca a alternativa correta (para o feedback visual)
-        alternativa_correta = questao.alternativas.filter(eh_correta=True).first()
-        
-        return JsonResponse({
-            'sucesso': True,
-            'acertou': acertou,
-            'id_alternativa_selecionada': alternativa_id,
-            'id_alternativa_correta': alternativa_correta.id if alternativa_correta else None,
-            'explicacao': questao.explicacao or '',
-        })
-        
-    except json.JSONDecodeError:
-        return JsonResponse({'sucesso': False, 'erro': 'JSON inválido no corpo da requisição.'}, status=400)
-    except Questao.DoesNotExist:
-        return JsonResponse({'sucesso': False, 'erro': 'Questão não encontrada.'}, status=404)
-    except Alternativa.DoesNotExist:
-        return JsonResponse({'sucesso': False, 'erro': 'Alternativa não encontrada.'}, status=404)
-    except Exception as e:
-        print(f"Erro inesperado na view: {e}")
-        return JsonResponse({'sucesso': False, 'erro': 'Erro interno do servidor.'}, status=500)
-
-
-def quiz_vertical_filtros_view(request, assunto_id):
-    """Quiz vertical com filtros dinâmicos - equivalente ao quiz_vertical_filtros.php"""
-    assunto = get_object_or_404(Assunto, pk=assunto_id)
-    
-    # Captura parâmetros da URL
-    filtro_ativo = request.GET.get('filtro', 'todas')
-    questao_inicial = request.GET.get('questao_inicial', 0)
-    
-    try:
-        questao_inicial = int(questao_inicial)
-    except (ValueError, TypeError):
-        questao_inicial = 0
-    
-    user_id = request.user.id if request.user.is_authenticated else None
-    
-    # Query base para buscar questões com status
-    questoes_query = Questao.objects.filter(id_assunto=assunto).select_related('id_assunto')
-    
-    questoes_com_status = []
-    
-    if user_id:
-        # Busca última resposta de cada questão do usuário
-        from django.db.models import OuterRef, Subquery, Max
-        
-        max_data_subquery = RespostaUsuario.objects.filter(
-            id_usuario_id=user_id,
-            id_questao=OuterRef('id')
-        ).values('id_questao').annotate(
-            max_data=Max('data_resposta')
-        ).values('max_data')
-        
-        ultimas_respostas = RespostaUsuario.objects.filter(
-            id_usuario_id=user_id,
-            id_questao__in=questoes_query.values_list('id', flat=True),
-            data_resposta=Subquery(max_data_subquery)
-        ).values('id_questao', 'acertou')
-        
-        respostas_dict = {}
-        for resposta in ultimas_respostas:
-            respostas_dict[resposta['id_questao']] = resposta['acertou']
-        
-        # Aplica filtros
-        for questao in questoes_query:
-            status = 'nao-respondida'
-            
-            if questao.id in respostas_dict:
-                acertou = respostas_dict[questao.id]
-                if acertou:
-                    status = 'certa'
-                else:
-                    status = 'errada'
-            
-            # Aplica filtro específico
-            incluir_questao = False
-            
-            if filtro_ativo == 'todas':
-                incluir_questao = True
-            elif filtro_ativo == 'respondidas' and questao.id in respostas_dict:
-                incluir_questao = True
-            elif filtro_ativo == 'nao-respondidas' and questao.id not in respostas_dict:
-                incluir_questao = True
-            elif filtro_ativo == 'certas' and questao.id in respostas_dict and respostas_dict[questao.id]:
-                incluir_questao = True
-            elif filtro_ativo == 'erradas' and questao.id in respostas_dict and not respostas_dict[questao.id]:
-                incluir_questao = True
-            
-            if incluir_questao:
-                questoes_com_status.append({
-                    'questao': questao,
-                    'status': status
-                })
-    else:
-        # Usuário não logado - mostra apenas filtro 'todas' ou 'nao-respondidas'
-        if filtro_ativo in ['todas', 'nao-respondidas']:
-            for questao in questoes_query:
-                questoes_com_status.append({
-                    'questao': questao,
-                    'status': 'nao-respondida'
-                })
-    
-    # Ordena questões (questão inicial primeiro se especificada)
-    if questao_inicial > 0:
-        questoes_com_status.sort(key=lambda x: (x['questao'].id != questao_inicial, x['questao'].id))
-    else:
-        questoes_com_status.sort(key=lambda x: x['questao'].id)
-    
-    # Calcula estatísticas
-    total_questoes = len(questoes_com_status)
-    
-    # Busca alternativas para cada questão
-    questoes_ids = [item['questao'].id for item in questoes_com_status]
-    alternativas_dict = {}
-    
-    if questoes_ids:
-        alternativas = Alternativa.objects.filter(id_questao__in=questoes_ids).select_related('id_questao').order_by('id_questao', 'ordem', 'id')
-        for alt in alternativas:
-            if alt.id_questao.id not in alternativas_dict:
-                alternativas_dict[alt.id_questao.id] = []
-            
-            # Gerar letra baseada na ordem
-            letras = ['A', 'B', 'C', 'D', 'E']
-            ordem_index = len(alternativas_dict[alt.id_questao.id])
-            letra = letras[ordem_index] if ordem_index < len(letras) else chr(65 + ordem_index)
-            
-            alternativas_dict[alt.id_questao.id].append({
-                'id': alt.id,
-                'texto': alt.texto,
-                'eh_correta': alt.eh_correta,
-                'letra': letra
-            })
-    
-    # Adiciona alternativas às questões
-    for item in questoes_com_status:
-        questao_id = item['questao'].id
-        item['alternativas'] = alternativas_dict.get(questao_id, [])
-    
-    import json
-    
-    # Prepara dados para JavaScript
-    questoes_js = []
-    for item in questoes_com_status:
-        questoes_js.append({
-            'questao': {
-                'id': item['questao'].id,
-                'enunciado': item['questao'].texto,  # CORREÇÃO: usar 'texto' em vez de 'enunciado'
-                'texto': item['questao'].texto
-            },
-            'status': item['status'],
-            'alternativas': item['alternativas']
-        })
-    
-    context = {
-        'assunto': assunto,
-        'questoes': json.dumps(questoes_js),
-        'filtro_ativo': filtro_ativo,
-        'questao_inicial': questao_inicial,
-        'total_questoes': total_questoes,
-        'user_authenticated': request.user.is_authenticated
-    }
-    
-    return render(request, 'questoes/quiz_vertical_filtros.html', context)
-    
-def simulado_online_view(request, assunto_id):
-    """Simulado online com estrutura similar ao PHP - todas as questões em uma página"""
-    assunto = get_object_or_404(Assunto, pk=assunto_id)
-    
-    # Captura parâmetros da URL
-    filtro_ativo = request.GET.get('filtro', 'todas')
-    user_id = request.user.id if request.user.is_authenticated else None
-    
-    # Query base para buscar questões com status
-    questoes_query = Questao.objects.filter(id_assunto=assunto).select_related('id_assunto')
-    
-    questoes_com_status = []
-    
-    if user_id:
-        # Busca última resposta de cada questão do usuário
-        from django.db.models import OuterRef, Subquery, Max
-        
-        max_data_subquery = RespostaUsuario.objects.filter(
-            id_usuario_id=user_id,
-            id_questao=OuterRef('id')
-        ).values('id_questao').annotate(
-            max_data=Max('data_resposta')
-        ).values('max_data')
-        
-        ultimas_respostas = RespostaUsuario.objects.filter(
-            id_usuario_id=user_id,
-            id_questao__in=questoes_query.values_list('id', flat=True),
-            data_resposta=Subquery(max_data_subquery)
-        ).values('id_questao', 'acertou')
-        
-        respostas_dict = {}
-        for resposta in ultimas_respostas:
-            respostas_dict[resposta['id_questao']] = resposta['acertou']
-        
-        # Aplica filtros
-        for questao in questoes_query:
-            status = 'nao-respondida'
-            
-            if questao.id in respostas_dict:
-                acertou = respostas_dict[questao.id]
-                if acertou:
-                    status = 'certa'
-                else:
-                    status = 'errada'
-            
-            # Aplica filtro específico
-            incluir_questao = False
-            
-            if filtro_ativo == 'todas':
-                incluir_questao = True
-            elif filtro_ativo == 'respondidas' and questao.id in respostas_dict:
-                incluir_questao = True
-            elif filtro_ativo == 'nao-respondidas' and questao.id not in respostas_dict:
-                incluir_questao = True
-            elif filtro_ativo == 'certas' and questao.id in respostas_dict and respostas_dict[questao.id]:
-                incluir_questao = True
-            elif filtro_ativo == 'erradas' and questao.id in respostas_dict and not respostas_dict[questao.id]:
-                incluir_questao = True
-            
-            if incluir_questao:
-                questoes_com_status.append({
-                    'questao': questao,
-                    'status': status
-                })
-    else:
-        # Usuário não logado - mostra apenas filtro 'todas' ou 'nao-respondidas'
-        if filtro_ativo in ['todas', 'nao-respondidas']:
-            for questao in questoes_query:
-                questoes_com_status.append({
-                    'questao': questao,
-                    'status': 'nao-respondida'
-                })
-    
-    # Ordena questões por ID
-    questoes_com_status.sort(key=lambda x: x['questao'].id)
-    
-    # Calcula estatísticas
-    total_questoes = len(questoes_com_status)
-    respondidas = len([q for q in questoes_com_status if q['status'] != 'nao-respondida'])
-    porcentagem_respondidas = round((respondidas / total_questoes * 100) if total_questoes > 0 else 0, 1)
-    
-    # Busca alternativas para cada questão
-    questoes_ids = [item['questao'].id for item in questoes_com_status]
-    alternativas_dict = {}
-    
-    if questoes_ids:
-        alternativas = Alternativa.objects.filter(id_questao__in=questoes_ids).select_related('id_questao').order_by('id_questao', 'ordem', 'id')
-        for alt in alternativas:
-            if alt.id_questao.id not in alternativas_dict:
-                alternativas_dict[alt.id_questao.id] = []
-            
-            # Gerar letra baseada na ordem
-            letras = ['A', 'B', 'C', 'D', 'E']
-            ordem_index = len(alternativas_dict[alt.id_questao.id])
-            letra = letras[ordem_index] if ordem_index < len(letras) else chr(65 + ordem_index)
-            
-            alternativas_dict[alt.id_questao.id].append({
-                'id': alt.id,
-                'texto': alt.texto,
-                'eh_correta': alt.eh_correta,
-                'letra': letra
-            })
-    
-    # Adiciona alternativas às questões
-    for item in questoes_com_status:
-        questao_id = item['questao'].id
-        item['alternativas'] = alternativas_dict.get(questao_id, [])
-    
-    import json
-    
-    context = {
-        'assunto': assunto,
-        'questoes': json.dumps(questoes_com_status, default=str),
-        'questoes_com_status': questoes_com_status,
-        'filtro_ativo': filtro_ativo,
-        'total_questoes': total_questoes,
-        'porcentagem_respondidas': porcentagem_respondidas,
-        'user_authenticated': request.user.is_authenticated
-    }
-    
-    return render(request, 'questoes/simulado_online.html', context)
-
-# REMOVIDO: Função duplicada, a original está na linha 111
-
-# IMPORTANTE: Se outras funções do urls.py também estiverem faltando, 
-# você precisará adicioná-las manualmente ou me enviar o código para revisar.
-# Exemplo: index_view, login_view, api_comentarios, etc.
-# ==============================================================================
-
-# No final do arquivo questoes/views.py
-
-from django.http import JsonResponse # Garanta que este import está no topo do seu views.py
 
 # ==============================================================================
-# 🟢 PLACEHOLDERS - APIs
+# 🟢 VIEWS - APIs
 # ==============================================================================
 
-# Adicionar se não existir (resolve o erro atual)
+@csrf_exempt
 def api_comentarios(request):
     """Placeholder para a API que lida com comentários."""
+    # Lógica da API de comentários (ex: listar, adicionar, curtir)
     return JsonResponse({'status': 'ok', 'data': []}, status=200)
 
-# Adicionar se não existir (próximo erro provável no urls.py)
+@csrf_exempt
 def api_estatisticas(request):
     """Placeholder para a API que lida com estatísticas."""
+    # Lógica da API de estatísticas (ex: taxa de acerto por assunto, ranking)
     return JsonResponse({'status': 'ok', 'data': {}}, status=200)
 
-# Adicionar se não existir (próximo erro provável no urls.py)
+@csrf_exempt
 def api_notificacoes(request):
     """Placeholder para a API de notificações."""
+    # Lógica da API de notificações (ex: notificações do admin)
     return JsonResponse({'status': 'ok', 'notifications': []}, status=200)
-
-# ==============================================================================
-
-# No final do arquivo questoes/views.py
-from django.shortcuts import render, redirect # Garanta que estas importações estão no topo do seu views.py
-from django.contrib.auth.decorators import login_required # Garanta que este import está no topo
-
-# ==============================================================================
-# 🟢 PLACEHOLDERS - Views Administrativas e Relatórios
-# ==============================================================================
-
-# Adicionar se não existir (resolve o erro atual)
-def relatar_problema_view(request):
-    """Placeholder para a view de relatar problema."""
-    # Retorna o formulário de relatar problema
-    return render(request, 'questoes/relatar_problema.html', {})
-
-# Adicionar se não existir (próximo erro provável no urls.py)
-def api_notificacoes(request):
-    """Placeholder para a API de notificações."""
-    return JsonResponse({'status': 'ok', 'notifications': []}, status=200)
-
-# Adicionar se não existir (próximo erro provável no urls.py)
-@login_required
-def admin_dashboard_view(request):
-    """Placeholder para a view do dashboard do administrador."""
-    return render(request, 'questoes/admin_dashboard.html', {})
-
-# Adicionar se não existir
-@login_required
-def gerenciar_relatorios_view(request):
-    """Placeholder para a view de gerenciamento de relatórios."""
-    return render(request, 'questoes/gerenciar_relatorios.html', {})
-
-# Adicionar se não existir
-@login_required
-def atualizar_status_relatorio_view(request, relatorio_id):
-    """Placeholder para a view de atualização de status de relatório."""
-    return redirect('questoes:gerenciar_relatorios')
-
-# Adicionar se não existir
-@login_required
-def gerenciar_usuarios_view(request):
-    """Placeholder para a view de gerenciamento de usuários."""
-    return render(request, 'questoes/gerenciar_usuarios.html', {})
-
-# Adicionar se não existir
-def admin_login_view(request):
-    """Placeholder para a view de login administrativo."""
-    return render(request, 'questoes/admin_login.html', {})
-
-# ==============================================================================
