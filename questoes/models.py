@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.urls import reverse
 
 # Create your models here.
 
@@ -72,6 +73,15 @@ class Questao(models.Model):
     
     def __str__(self):
         return f"Questão {self.id}: {self.texto[:50]}..."
+    
+    def get_absolute_url(self):
+        """URL para a questão - necessário para django-comments-xtd"""
+        # Retorna a URL da página do quiz vertical com a questão específica
+        # Se houver uma view de detalhe, use: return reverse('questoes:detalhe_questao', args=[self.id])
+        # Por enquanto, retornamos a URL do quiz vertical filtrado por assunto
+        if self.id_assunto:
+            return reverse('questoes:quiz_vertical_filtros', args=[self.id_assunto.id]) + f'?questao_inicial={self.id}'
+        return reverse('questoes:index')
     
     def alternativas_count(self):
         """Retorna o total de alternativas"""
@@ -274,12 +284,12 @@ class CurtidaComentario(models.Model):
     )
     email_usuario = models.EmailField(blank=True, null=True, verbose_name="E-mail")
     ip_usuario = models.GenericIPAddressField(blank=True, null=True, verbose_name="IP")
+    ativo = models.BooleanField(default=True, verbose_name="Ativo?")
     data_curtida = models.DateTimeField(auto_now_add=True, verbose_name="Data da Curtida")
     
     class Meta:
         verbose_name = "Curtida"
         verbose_name_plural = "Curtidas"
-        unique_together = ['id_comentario', 'email_usuario']
         ordering = ['-data_curtida']
     
     def __str__(self):

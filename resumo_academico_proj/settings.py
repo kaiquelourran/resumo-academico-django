@@ -202,3 +202,12 @@ LOGIN_URL = '/questoes/login/'
 # Configurações de Media Files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# ==================== CONFIGURAÇÕES DE COMENTÁRIOS ====================
+# Configuração de Backend de E-mail (Obrigatório para o django-comments-xtd)
+# Usaremos o backend de console para evitar a configuração real de SMTP em desenvolvimento
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# ID do site Django
+SITE_ID = 1
+# ==================== FIM CONFIGURAÇÕES DE COMENTÁRIOS ====================

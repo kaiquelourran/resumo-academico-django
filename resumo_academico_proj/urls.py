@@ -8,7 +8,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('institucional.urls')), 
-    path('questoes/', include('questoes.urls')), 
+    path('questoes/', include('questoes.urls')),
 ]
 
 # Servir arquivos de media durante desenvolvimento

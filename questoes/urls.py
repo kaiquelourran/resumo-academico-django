@@ -44,7 +44,8 @@ urlpatterns = [
     path('quiz/validar/', views.validar_resposta_view, name='validar_resposta'),
     
     # APIs REST
-    path('api/comentarios/', views.api_comentarios, name='api_comentarios'),
+    path('comentarios/api/', views.api_comentarios, name='api_comentarios'),
+    path('comentarios/criar/', views.api_criar_comentario, name='api_criar_comentario'),
     path('api/estatisticas/', views.api_estatisticas, name='api_estatisticas'),
     
     # Relatar problema

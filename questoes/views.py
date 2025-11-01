@@ -14,6 +14,7 @@ from datetime import timedelta, datetime
 from collections import Counter
 import json
 import logging
+import traceback
 from django.views.decorators.http import require_POST
 # Importação necessária para transações (usada em adicionar_questao_view)
 from django.db import transaction 
@@ -1361,9 +1362,246 @@ def editar_questao_view(request, questao_id):
 
 @csrf_exempt
 def api_comentarios(request):
-    """Placeholder para a API que lida com comentários."""
-    # Lógica da API de comentários (ex: listar, adicionar, curtir)
-    return JsonResponse({'status': 'ok', 'data': []}, status=200)
+    """API para listar comentários de uma questão com ordenação"""
+    try:
+        if request.method != 'GET':
+            return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+        
+        questao_id = request.GET.get('questao_id')
+        ordenacao = request.GET.get('ordenacao', 'data')  # 'data' ou 'curtidas'
+        
+        error_logger.info(f'[api_comentarios] Requisição recebida: questao_id={questao_id} (tipo: {type(questao_id).__name__}), ordenacao={ordenacao}')
+        
+        if not questao_id:
+            return JsonResponse({'success': False, 'message': 'ID da questão não fornecido'}, status=400)
+        
+        # Converter para int se necessário
+        try:
+            questao_id_int = int(questao_id)
+        except (ValueError, TypeError):
+            error_logger.error(f'[api_comentarios] ID inválido: {questao_id}')
+            return JsonResponse({'success': False, 'message': 'ID da questão inválido'}, status=400)
+        
+        try:
+            questao = Questao.objects.get(id=questao_id_int)
+            error_logger.info(f'[api_comentarios] Questão encontrada: ID={questao.id}, Nome={questao.texto[:50]}...')
+        except Questao.DoesNotExist:
+            error_logger.error(f'[api_comentarios] Questão não encontrada: ID={questao_id_int}')
+            return JsonResponse({'success': False, 'message': 'Questão não encontrada'}, status=404)
+        
+        # Verificar TODOS os comentários desta questão (sem filtros) - PARA DEBUG
+        todos_comentarios_debug = ComentarioQuestao.objects.filter(id_questao=questao_id_int)
+        error_logger.info(f'[api_comentarios] Total de comentários na questão {questao_id_int} (sem filtros): {todos_comentarios_debug.count()}')
+        for c in todos_comentarios_debug[:10]:  # Limitar a 10 para não encher o log
+            error_logger.info(f'  - Comentário ID {c.id}: ativo={c.ativo}, aprovado={c.aprovado}, pai={c.id_comentario_pai_id}')
+        
+        # Buscar comentários principais (sem pai)
+        # IMPORTANTE: Comentários são públicos, visíveis para TODOS os usuários
+        # Usar questao_id_int para garantir consistência (testado e funcionando)
+        comentarios_qs = ComentarioQuestao.objects.filter(
+            id_questao=questao_id_int,
+            id_comentario_pai__isnull=True,
+            ativo=True,
+            aprovado=True
+        )
+        
+        # Log para debug - ANTES da ordenação
+        total_comentarios_antes = comentarios_qs.count()
+        error_logger.info(f'[api_comentarios] Questão ID: {questao_id_int}, Total de comentários encontrados (antes ordenação): {total_comentarios_antes}')
+        
+        # Log ANTES da ordenação
+        error_logger.info(f'[api_comentarios] QuerySet antes ordenação: {comentarios_qs.count()} comentários')
+        
+        # Ordenação
+        if ordenacao == 'curtidas':
+            # Annotate com total de curtidas e ordenar
+            try:
+                # Usar Count com related_name 'curtidas' e filtrar por ativo=True
+                # Remover distinct=True pois pode causar problemas
+                comentarios_qs = comentarios_qs.annotate(
+                    total_curtidas=Count('curtidas', filter=Q(curtidas__ativo=True))
+                ).order_by('-total_curtidas', '-data_comentario')
+                error_logger.info(f'[api_comentarios] Ordenação por curtidas aplicada: {comentarios_qs.count()} comentários')
+            except Exception as e:
+                error_logger.error(f'Erro ao ordenar por curtidas: {str(e)}', exc_info=True)
+                error_logger.error(f'Traceback: {traceback.format_exc()}')
+                # Fallback para ordenação por data
+                comentarios_qs = comentarios_qs.order_by('-data_comentario')
+        else:
+            # Ordenar por data (padrão)
+            comentarios_qs = comentarios_qs.order_by('-data_comentario')
+            error_logger.info(f'[api_comentarios] Ordenação por data aplicada: {comentarios_qs.count()} comentários')
+        
+        # Log DEPOIS da ordenação e ANTES do loop
+        error_logger.info(f'[api_comentarios] QuerySet depois ordenação (antes loop): {comentarios_qs.count()} comentários')
+        
+        # Converter QuerySet para lista para garantir que seja avaliado
+        comentarios_lista = list(comentarios_qs)
+        error_logger.info(f'[api_comentarios] Total de comentários convertidos para lista: {len(comentarios_lista)}')
+        
+        comentarios_data = []
+        for idx, comentario in enumerate(comentarios_lista):
+            error_logger.info(f'[api_comentarios] Processando comentário {idx+1}/{len(comentarios_lista)}: ID={comentario.id}')
+            try:
+                # Contar curtidas
+                total_curtidas = comentario.curtidas.filter(ativo=True).count() if hasattr(comentario, 'curtidas') else 0
+                
+                # Verificar se usuário atual curtiu
+                curtido_pelo_usuario = False
+                if request.user.is_authenticated and hasattr(comentario, 'curtidas'):
+                    try:
+                        curtido_pelo_usuario = comentario.curtidas.filter(
+                            id_usuario=request.user,
+                            ativo=True
+                        ).exists()
+                    except Exception as e:
+                        error_logger.error(f'Erro ao verificar curtida do usuário: {str(e)}')
+                
+                # Contar respostas
+                total_respostas = 0
+                respostas = []
+                if hasattr(comentario, 'respostas'):
+                    try:
+                        total_respostas = comentario.respostas.filter(
+                            ativo=True,
+                            aprovado=True
+                        ).count()
+                        
+                        # Buscar respostas
+                        respostas = comentario.respostas.filter(ativo=True, aprovado=True).order_by('-data_comentario')[:5]
+                    except Exception as e:
+                        error_logger.error(f'Erro ao buscar respostas: {str(e)}')
+                
+                # Buscar respostas
+                respostas_data = []
+                for resposta in respostas:
+                    try:
+                        resp_curtidas = resposta.curtidas.filter(ativo=True).count() if hasattr(resposta, 'curtidas') else 0
+                        resp_curtido_pelo_usuario = False
+                        if request.user.is_authenticated and hasattr(resposta, 'curtidas'):
+                            try:
+                                resp_curtido_pelo_usuario = resposta.curtidas.filter(
+                                    id_usuario=request.user,
+                                    ativo=True
+                                ).exists()
+                            except Exception:
+                                pass
+                        
+                        respostas_data.append({
+                            'id_comentario': resposta.id,
+                            'id': resposta.id,  # Fallback
+                            'nome_usuario': resposta.nome_usuario or 'Usuário',
+                            'comentario': resposta.comentario,
+                            'data_formatada': resposta.data_comentario.strftime('%d/%m/%Y às %H:%M') if resposta.data_comentario else '',
+                            'total_curtidas': resp_curtidas,
+                            'curtido_pelo_usuario': resp_curtido_pelo_usuario,
+                        })
+                    except Exception as e:
+                        error_logger.error(f'Erro ao processar resposta: {str(e)}')
+                        continue
+                
+                comentarios_data.append({
+                    'id_comentario': comentario.id,
+                    'id': comentario.id,  # Fallback
+                    'nome_usuario': comentario.nome_usuario or 'Usuário',
+                    'comentario': comentario.comentario,
+                    'data_formatada': comentario.data_comentario.strftime('%d/%m/%Y às %H:%M') if comentario.data_comentario else '',
+                    'total_curtidas': total_curtidas,
+                    'curtido_pelo_usuario': curtido_pelo_usuario,
+                    'total_respostas': total_respostas,
+                    'respostas': respostas_data,
+                })
+            except Exception as e:
+                error_logger.error(f'Erro ao processar comentário {comentario.id if hasattr(comentario, "id") else "desconhecido"}: {str(e)}')
+                continue
+        
+        error_logger.info(f'[api_comentarios] Total de comentários adicionados ao array de retorno: {len(comentarios_data)}')
+        
+        return JsonResponse({
+            'success': True,
+            'data': comentarios_data
+        }, status=200)
+    
+    except Exception as e:
+        error_logger.error(f'Erro geral em api_comentarios: {str(e)}', exc_info=True)
+        error_logger.error(f'Traceback: {traceback.format_exc()}')
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao carregar comentários: {str(e)}'
+        }, status=500)
+
+@csrf_exempt
+@login_required
+def api_criar_comentario(request):
+    """API para criar um novo comentário"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    
+    try:
+        questao_id = request.POST.get('questao_id')
+        comentario_texto = request.POST.get('comentario', '').strip()
+        
+        if not questao_id:
+            return JsonResponse({'success': False, 'message': 'ID da questão não fornecido'}, status=400)
+        
+        # Converter para int se necessário
+        try:
+            questao_id_int = int(questao_id)
+        except (ValueError, TypeError):
+            error_logger.error(f'[api_criar_comentario] ID inválido: {questao_id}')
+            return JsonResponse({'success': False, 'message': 'ID da questão inválido'}, status=400)
+        
+        if not comentario_texto:
+            return JsonResponse({'success': False, 'message': 'Comentário não pode estar vazio'}, status=400)
+        
+        if len(comentario_texto) < 10:
+            return JsonResponse({'success': False, 'message': 'Comentário deve ter pelo menos 10 caracteres'}, status=400)
+        
+        if len(comentario_texto) > 500:
+            return JsonResponse({'success': False, 'message': 'Comentário não pode ter mais de 500 caracteres'}, status=400)
+        
+        try:
+            questao = Questao.objects.get(id=questao_id_int)
+        except Questao.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Questão não encontrada'}, status=404)
+        
+        # Criar comentário
+        novo_comentario = ComentarioQuestao.objects.create(
+            id_questao=questao,
+            nome_usuario=request.user.first_name or request.user.username,
+            email_usuario=request.user.email if request.user.email else None,
+            id_usuario=request.user,
+            comentario=comentario_texto,
+            ativo=True,
+            aprovado=True
+        )
+        
+        # Forçar refresh do objeto do banco para garantir que está salvo
+        novo_comentario.refresh_from_db()
+        
+        error_logger.info(f'[api_criar_comentario] Comentário criado: ID={novo_comentario.id}, Questão={questao_id_int}, Ativo={novo_comentario.ativo}, Aprovado={novo_comentario.aprovado}')
+        
+        # Verificar se o comentário aparece na busca imediatamente após criação
+        comentarios_verificacao = ComentarioQuestao.objects.filter(
+            id_questao=questao,
+            id_comentario_pai__isnull=True,
+            ativo=True,
+            aprovado=True
+        )
+        error_logger.info(f'[api_criar_comentario] Verificação: Total de comentários visíveis para questão {questao_id_int} após criar: {comentarios_verificacao.count()}')
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Comentário adicionado com sucesso!',
+            'comentario_id': novo_comentario.id
+        }, status=200)
+        
+    except Exception as e:
+        error_logger.error(f'Erro ao criar comentário: {str(e)}')
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao criar comentário: {str(e)}'
+        }, status=500)
 
 @csrf_exempt
 def api_estatisticas(request):
