@@ -286,7 +286,7 @@
         {% endif %}
         
         <div class="user-type-buttons">
-             <button type="button" class="type-btn" data-type="usuario" onclick="selectUserType('usuario')">
+             <button type="button" class="type-btn active" data-type="usuario" onclick="selectUserType('usuario')">
                  👤 Usuário Normal
              </button>
              <button type="button" class="type-btn" data-type="admin" onclick="selectUserType('admin')">
@@ -296,7 +296,7 @@
 
          <form method="POST" id="loginForm">
              {% csrf_token %}
-             <input type="hidden" name="user_type" id="user_type" value="" required>
+             <input type="hidden" name="user_type" id="user_type" value="usuario">
 
             <div class="form-group">
                 <label for="email">E-mail</label>
@@ -362,6 +362,9 @@
             const savedType = localStorage.getItem('user_type');
             if (savedType) {
                 try { selectUserType(savedType); } catch (e) {}
+            } else {
+                // Se não houver tipo salvo, define como 'usuario' por padrão
+                selectUserType('usuario');
             }
             
             // Navegação por teclado entre tipos
@@ -402,6 +405,14 @@
                 // Limpa estados
                 emailInput.classList.remove('input-error');
                 passwordInput.classList.remove('input-error');
+                
+                // Verifica se o tipo de usuário foi selecionado
+                const userType = document.getElementById('user_type');
+                if (!userType || !userType.value) {
+                    e.preventDefault();
+                    alert('Por favor, selecione o tipo de usuário (Usuário Normal ou Administrador).');
+                    return;
+                }
                 
                 if (!emailInput.value.trim()) {
                     emailInput.classList.add('input-error');

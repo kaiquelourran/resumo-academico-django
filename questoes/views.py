@@ -805,27 +805,28 @@ def login_view(request):
     if request.method == 'POST':
         email = request.POST.get('email', '').strip().lower()
         password = request.POST.get('password', '')
-        user_type = request.POST.get('user_type', 'usuario') # Mantido, mas não usado na autenticação
+        user_type = request.POST.get('user_type', 'usuario')
         
         if not email or not password:
             messages.error(request, 'Por favor, preencha todos os campos.')
+        elif not user_type:
+            messages.error(request, 'Por favor, selecione o tipo de usuário.')
         else:
             try:
                 # Tenta encontrar o usuário pelo email
                 user = User.objects.get(email=email)
+                
+                # Validação: Se selecionou "admin", o usuário DEVE ser admin
+                if user_type == 'admin' and not user.is_staff:
+                    messages.error(request, 'Você não tem permissão de administrador. Use o botão "Usuário Normal" para fazer login.')
+                    return render(request, 'questoes/login.html')
                 
                 # CORREÇÃO/MELHORIA: Autenticar usando o username encontrado.
                 user_auth = authenticate(request, username=user.username, password=password)
                 
                 if user_auth is not None:
                     login(request, user_auth)
-                    
-                    if user_type == 'admin' and not user.is_staff:
-                        # Logou, mas tentou como admin sem ser staff
-                        messages.warning(request, 'Você logou como usuário. Para acessar a área administrativa, use o login de administrador.')
-                    else:
-                        messages.success(request, f'Bem-vindo(a), {user.first_name or user.username}!')
-                    
+                    messages.success(request, f'Bem-vindo(a), {user.first_name or user.username}!')
                     return redirect('questoes:index')
                 else:
                     # Falha de senha
@@ -942,11 +943,9 @@ def relatar_problema_view(request):
 # ===== VIEWS ADMINISTRATIVAS =====
 
 @login_required
+@user_passes_test(lambda u: u.is_staff)
 def admin_dashboard_view(request):
     """Dashboard administrativo com métricas e estatísticas"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Você não tem permissão para acessar esta área.')
-        return redirect('questoes:index')
     
     total_usuarios = User.objects.count()
     total_respostas = RespostaUsuario.objects.count()
@@ -1047,11 +1046,9 @@ def admin_dashboard_view(request):
 
 
 @login_required
+@user_passes_test(lambda u: u.is_staff)
 def gerenciar_assuntos_view(request):
     """View para gerenciar assuntos/conteúdos"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Você não tem permissão para acessar esta área.')
-        return redirect('questoes:index')
     
     assuntos = Assunto.objects.annotate(
         total_questoes=Count('questoes')
@@ -1106,7 +1103,7 @@ def deletar_assunto_view(request):
 def admin_login_view(request):
     """Login para administradores"""
     if request.user.is_authenticated and request.user.is_staff:
-        return redirect('questoes:admin_dashboard')
+        return redirect('questoes:index')
     
     if request.method == 'POST':
         email = request.POST.get('email', '').strip().lower()
@@ -1125,7 +1122,7 @@ def admin_login_view(request):
                 if user_auth is not None:
                     login(request, user_auth)
                     messages.success(request, f'Bem-vindo(a), {user.first_name or user.username}!')
-                    return redirect('questoes:admin_dashboard')
+                    return redirect('questoes:index')
                 else:
                     messages.error(request, 'Email ou senha incorretos, ou você não tem permissão de administrador.')
             except User.DoesNotExist:
@@ -1134,11 +1131,9 @@ def admin_login_view(request):
     return render(request, 'questoes/admin_login.html') 
 # ===== VIEWS ADMIN - GERENCIAMENTO =====
 @login_required
+@user_passes_test(lambda u: u.is_staff)
 def gerenciar_questoes_view(request):
     """Exibe a lista de questões para gerenciamento admin"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
     
     # Agrupar questões por assunto
     assuntos_com_questoes = Assunto.objects.annotate(
@@ -1192,11 +1187,9 @@ def deletar_questao_view(request):
 
 
 @login_required
+@user_passes_test(lambda u: u.is_staff)
 def adicionar_questao_view(request):
     """View para adicionar nova questão com seletores encadeados"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
     
     mensagem_status = ''
     mensagem_texto = ''
@@ -1350,11 +1343,9 @@ def adicionar_questao_view(request):
 
 
 @login_required
+@user_passes_test(lambda u: u.is_staff)
 def editar_questao_view(request, questao_id):
     """Edita uma questão existente"""
-    if not request.user.is_staff:
-        messages.error(request, 'Acesso negado. Apenas administradores.')
-        return redirect('questoes:index')
     
     questao = get_object_or_404(Questao, id=questao_id)
 
