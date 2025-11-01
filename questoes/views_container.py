@@ -196,7 +196,7 @@ def cadastro_view(request):
             messages.error(request, 'Por favor, insira um e-mail válido.')
         elif len(password) < 6:
             messages.error(request, 'A senha deve ter pelo menos 6 caracteres.')
-       else:
+        else:
             try:
                 if User.objects.filter(email=email).exists():
                     messages.error(request, 'Este e-mail já está cadastrado.')
@@ -490,9 +490,9 @@ def adicionar_questao_view(request):
     
     if request.method == 'POST':
         tipo_conteudo = request.POST.get('tipo_conteudo', '').strip()
-            enunciado = request.POST.get('enunciado', '').strip()
-            explicacao = request.POST.get('explicacao', '').strip()
-            
+        enunciado = request.POST.get('enunciado', '').strip()
+        explicacao = request.POST.get('explicacao', '').strip()
+        
         alt1 = request.POST.get('alt1', '').strip()
         alt2 = request.POST.get('alt2', '').strip()
         alt3 = request.POST.get('alt3', '').strip()
@@ -545,8 +545,8 @@ def adicionar_questao_view(request):
                     # Garante que o assunto existe
                     assunto = get_object_or_404(Assunto, pk=id_assunto)
                     
-            questao = Questao.objects.create(
-                texto=enunciado,
+                    questao = Questao.objects.create(
+                        texto=enunciado,
                         id_assunto=assunto,
                         explicacao=explicacao
                     )
@@ -565,7 +565,7 @@ def adicionar_questao_view(request):
                             eh_correta = (index + 1 == correta_index)
                             novas_alternativas.append(
                                 Alternativa(
-                    id_questao=questao,
+                                    id_questao=questao,
                                     texto=texto,
                                     eh_correta=eh_correta
                                 )
@@ -576,9 +576,9 @@ def adicionar_questao_view(request):
                         Alternativa.objects.bulk_create(novas_alternativas)
                     
                     messages.success(request, f'Questão #{questao.id} adicionada com sucesso!')
-            return redirect('questoes:adicionar_questao')
+                    return redirect('questoes:adicionar_questao')
             
-        except Exception as e:
+            except Exception as e:
                 error_logger.error(f'Erro ao adicionar questão: {e}', exc_info=True)
                 messages.error(request, f'Erro ao adicionar a questão: {str(e)}')
     
@@ -748,7 +748,7 @@ def adicionar_assunto_view(request):
             mensagem_status = 'error'
             mensagem_texto = '<br>'.join(errors)
             messages.error(request, mensagem_texto)
-            else:
+        else:
             try:
                 if tipo_assunto == 'concurso':
                     nome_final = f"{concurso_ano} - {concurso_banca} - {concurso_orgao} - {concurso_prova}"
@@ -816,14 +816,14 @@ def deletar_assunto_view(request):
 
 @login_required
 def gerenciar_comentarios_view(request):
-    """Exibe lista de comentários reportados ou inativos"""
+    """Exibe lista de comentários reportados como abuso"""
     if not request.user.is_staff:
         messages.error(request, 'Acesso negado. Apenas administradores.')
         return redirect('questoes:index')
     
+    # Filtrar APENAS comentários que foram reportados (têm denúncias)
     comentarios = ComentarioQuestao.objects.filter(
-        # Filtra comentários inativos OU que tenham pelo menos 1 denúncia
-        Q(ativo=False) | Q(denuncias__isnull=False) 
+        denuncias__isnull=False
     ).annotate(
         total_denuncias=Count('denuncias')
     ).distinct().order_by('-data_comentario')
@@ -846,8 +846,8 @@ def toggle_comentario_view(request, comentario_id):
         try:
             comentario = get_object_or_404(ComentarioQuestao, pk=comentario_id)
             comentario.ativo = not comentario.ativo
-                comentario.save()
-                
+            comentario.save()
+            
             # Deleta as denúncias após a revisão (opcional, dependendo da sua regra de negócio)
             if comentario.ativo:
                 DenunciaComentario.objects.filter(id_comentario=comentario).delete()
@@ -873,7 +873,7 @@ def deletar_comentario_view(request, comentario_id):
             comentario.delete() # Deleta em cascata curtidas e denúncias relacionadas
             
             messages.success(request, 'Comentário excluído permanentemente com sucesso!')
-    except Exception as e:
+        except Exception as e:
             error_logger.error(f'Erro ao deletar comentário {comentario_id}: {e}', exc_info=True)
             messages.error(request, f'Erro ao excluir comentário: {str(e)}')
     
@@ -966,7 +966,7 @@ def responder_relatorio_view(request):
                 relatorio.data_atualizacao = timezone.now()
                 relatorio.save()
                 messages.success(request, f'Resposta enviada com sucesso para o relatório #{relatorio_id}.')
-    except Exception as e:
+            except Exception as e:
                 error_logger.error(f'Erro ao responder relatório {relatorio_id}: {e}', exc_info=True)
                 messages.error(request, f'Erro ao enviar resposta: {str(e)}')
         else:

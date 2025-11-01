@@ -78,9 +78,15 @@
                 {% endfor %}
             </div>
             <div class="stats-actions">
-                <button type="button" class="btn-stats-toggle" data-action="toggle-estatisticas" data-questao-id="{{ item.questao.id }}" onclick="console.log('🎯 Botão Ver Estatísticas clicado! Questão ID:', {{ item.questao.id }}); event.preventDefault(); event.stopPropagation(); if(window.toggleStatsSection){ console.log('✅ toggleStatsSection encontrado, chamando...'); window.toggleStatsSection({{ item.questao.id }}, this); } else { console.error('❌ toggleStatsSection não encontrado!'); alert('Erro: Função não disponível. Recarregue a página.'); } return false;">
-                    <i class="fas fa-chart-pie"></i> Ver Estatísticas
+                <button type="button" class="btn-action btn-stats-toggle" data-action="toggle-estatisticas" data-questao-id="{{ item.questao.id }}" onclick="console.log('🎯 Botão Ver Estatísticas clicado! Questão ID:', {{ item.questao.id }}); event.preventDefault(); event.stopPropagation(); if(window.toggleStatsSection){ console.log('✅ toggleStatsSection encontrado, chamando...'); window.toggleStatsSection({{ item.questao.id }}, this); } else { console.error('❌ toggleStatsSection não encontrado!'); alert('Erro: Função não disponível. Recarregue a página.'); } return false;">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Estatísticas</span>
                     <i class="fas fa-chevron-down stats-chevron"></i>
+                </button>
+                <button type="button" class="btn-action btn-comments-toggle comments-toggle-btn" data-action="toggle-comentarios" data-questao-id="{{ item.questao.id }}" onclick="console.log('💬 Botão Comentários clicado! Questão ID:', {{ item.questao.id }}); event.preventDefault(); event.stopPropagation(); if(typeof window.handleCommentsClick === 'function'){ window.handleCommentsClick(this); } else { console.error('❌ handleCommentsClick não encontrado!'); } return false;">
+                    <i class="fas fa-comments"></i>
+                    <span>Comentários</span>
+                    <i class="fas fa-chevron-down comments-chevron"></i>
                 </button>
             </div>
             <!-- Seção de Estatísticas Inline (inicialmente oculta) -->
@@ -119,15 +125,7 @@
                     </div>
                 </div>
             </div>
-            <!-- Seção de Comentários (conforme prompt técnico) -->
-            <div class="comments-section">
-                <button type="button" class="comments-toggle-btn" data-questao-id="{{ item.questao.id }}" onclick="console.log('💬 Botão Comentários clicado! Questão ID:', {{ item.questao.id }}); event.preventDefault(); event.stopPropagation(); if(typeof window.handleCommentsClick === 'function'){ window.handleCommentsClick(this); } else { console.error('❌ handleCommentsClick não encontrado!'); } return false;">
-                    <i class="fas fa-comments"></i>
-                    <span>Comentários</span>
-                    <i class="fas fa-chevron-down"></i>
-                </button>
-            </div>
-            <div class="comments-panel" id="comments-{{ item.questao.id }}" style="display: none;">
+            <div class="comments-panel" id="comments-{{ item.questao.id }}" style="display: none; margin-top: 16px;">
                 <!-- Estado de carregamento -->
                 <div class="comments-loading">
                     <i class="fas fa-spinner fa-spin"></i> Carregando comentários...
@@ -171,15 +169,6 @@
                         </div>
                         
                         <div class="comment-input-section">
-                            <div class="comment-toolbar">
-                                <button type="button" class="toolbar-btn" data-format="bold" title="Negrito">
-                                    <strong>B</strong>
-                                </button>
-                                <button type="button" class="toolbar-btn" data-format="italic" title="Itálico">
-                                    <em>I</em>
-                                </button>
-                            </div>
-                            
                             <form id="comment-form-{{ item.questao.id }}" class="comment-form" data-questao-id="{{ item.questao.id }}">
                                 {% csrf_token %}
                                 <div class="comment-textarea-container">
@@ -201,55 +190,7 @@
     <script>
     (function(){
       // ==================== SISTEMA DE COMENTÁRIOS - DEFINIR PRIMEIRO ====================
-      // Função para abrir/fechar painel de comentários (DEFINIR NO INÍCIO!)
-      window.handleCommentsClick = function(btn) {
-        try {
-          console.log('💬 handleCommentsClick chamado!', btn);
-          const questaoId = btn.dataset.questaoId;
-          if (!questaoId) {
-            console.error('❌ Questão ID não encontrado no botão');
-            return;
-          }
-          
-          const commentsPanel = document.getElementById('comments-' + questaoId);
-          if (!commentsPanel) {
-            console.error('❌ Painel de comentários não encontrado:', 'comments-' + questaoId);
-            return;
-          }
-          
-          const isOpen = commentsPanel.style.display !== 'none' && commentsPanel.style.display !== '';
-          
-          if (isOpen) {
-            // Fechar painel
-            commentsPanel.style.display = 'none';
-            btn.classList.remove('active');
-            console.log('📝 Painel fechado para questão', questaoId);
-          } else {
-            // Abrir painel e carregar comentários
-            commentsPanel.style.display = 'block';
-            btn.classList.add('active');
-            console.log('📝 Painel aberto para questão', questaoId, '- carregando comentários...');
-            // Chamar loadComments quando estiver disponível
-            setTimeout(function() {
-              if (window.loadComments) {
-                window.loadComments(questaoId, 'data');
-              } else {
-                console.error('❌ loadComments não encontrado ainda. Tentando novamente...');
-                setTimeout(function() {
-                  if (window.loadComments) {
-                    window.loadComments(questaoId, 'data');
-                  } else {
-                    console.error('❌ loadComments ainda não encontrado!');
-                  }
-                }, 500);
-              }
-            }, 100);
-          }
-        } catch (error) {
-          console.error('❌ Erro em handleCommentsClick:', error);
-        }
-      };
-      console.log('✅ handleCommentsClick definido no início!');
+      // A função handleCommentsClick será definida mais abaixo no código
       // ==================== FIM SISTEMA DE COMENTÁRIOS - INÍCIO ====================
       
       if (typeof window.responderQuestao === 'function') return;
@@ -485,77 +426,45 @@
         div.innerText = text ?? '';
         return div.innerHTML.replace(/\"/g, '&quot;');
       }
+      
+      // Expor escapeHtml globalmente para o modal de reporte
+      window.escapeHtml = escapeHtml;
 
-      // Função para abrir/fechar painel de comentários (DEFINIR PRIMEIRO!)
+      // Função para abrir/fechar painel de comentários (SIMPLIFICADA E CORRIGIDA)
       window.handleCommentsClick = function(btn) {
         try {
           console.log('💬 handleCommentsClick chamado!', btn);
           const questaoId = btn.dataset.questaoId || btn.getAttribute('data-questao-id');
           if (!questaoId) {
             console.error('❌ Questão ID não encontrado no botão');
-            console.error('❌ Botão:', btn);
-            console.error('❌ dataset:', btn.dataset);
             return;
           }
           
           console.log('🔍 Procurando painel para questão ID:', questaoId);
+          
+          // Tentar encontrar o painel de várias formas
           let commentsPanel = document.getElementById('comments-' + questaoId);
           
-          // Se não encontrar, tentar procurar dentro do card pai
+          // Se não encontrar, buscar no card pai
           if (!commentsPanel) {
             const card = btn.closest('.question-card');
             if (card) {
-              commentsPanel = card.querySelector('#comments-' + questaoId) || card.querySelector('.comments-panel');
-              console.log('🔍 Painel encontrado no card:', commentsPanel);
+              commentsPanel = card.querySelector('#comments-' + questaoId);
             }
           }
           
-          // Se ainda não encontrou, tentar encontrar por querySelector
+          // Se ainda não encontrou, criar dinamicamente
           if (!commentsPanel) {
-            commentsPanel = document.querySelector(`#comments-${questaoId}`);
-            console.log('🔍 Tentativa de querySelector:', commentsPanel);
-          }
-          
-          if (!commentsPanel) {
-            console.error('❌ Painel de comentários não encontrado:', 'comments-' + questaoId);
-            console.error('❌ Todos os painéis na página:', document.querySelectorAll('.comments-panel'));
+            console.log('⚠️ Painel não encontrado, criando dinamicamente...');
+            const card = btn.closest('.question-card') || 
+                        document.querySelector(`.question-card[data-questao-id="${questaoId}"]`) ||
+                        document.querySelector(`#questao-${questaoId}`);
             
-            // Tentar encontrar o card de várias formas
-            let card = btn.closest('.question-card');
-            if (!card) {
-              card = document.querySelector(`.question-card[data-questao-id="${questaoId}"]`) || 
-                     document.querySelector(`#questao-${questaoId}`);
-            }
-            
-            console.error('❌ Card pai:', card);
-            
-            // Criar painel dinamicamente se não existir
             if (card) {
-              console.log('⚠️ Criando painel de comentários dinamicamente...');
+              const statsActions = card.querySelector('.stats-actions');
+              const insertAfter = statsActions || card.querySelector('.alternatives');
               
-              // Procurar comments-section dentro do card
-              let commentsSection = card.querySelector('.comments-section');
-              
-              // Se não encontrar, criar a seção também
-              if (!commentsSection) {
-                console.log('⚠️ Criando .comments-section também...');
-                const statsActions = card.querySelector('.stats-actions');
-                if (statsActions) {
-                  statsActions.insertAdjacentHTML('afterend', `
-                    <div class="comments-section">
-                      <button type="button" class="comments-toggle-btn" data-questao-id="${questaoId}">
-                        <i class="fas fa-comments"></i>
-                        <span>Comentários</span>
-                        <i class="fas fa-chevron-down"></i>
-                      </button>
-                    </div>
-                  `);
-                  commentsSection = card.querySelector('.comments-section');
-                }
-              }
-              
-              // Agora criar o painel após a seção
-              if (commentsSection) {
+              if (insertAfter) {
                 const panelHTML = `
                   <div class="comments-panel" id="comments-${questaoId}" style="display: none;">
                     <div class="comments-loading">
@@ -580,14 +489,6 @@
                           <div class="user-name">Usuário</div>
                         </div>
                         <div class="comment-input-section">
-                          <div class="comment-toolbar">
-                            <button type="button" class="toolbar-btn" data-format="bold" title="Negrito">
-                              <strong>B</strong>
-                            </button>
-                            <button type="button" class="toolbar-btn" data-format="italic" title="Itálico">
-                              <em>I</em>
-                            </button>
-                          </div>
                           <form id="comment-form-${questaoId}" class="comment-form" data-questao-id="${questaoId}">
                             <div class="comment-textarea-container">
                               <textarea name="comentario" placeholder="Escreva o seu comentário" required minlength="10" maxlength="500" class="comment-textarea"></textarea>
@@ -600,117 +501,112 @@
                     </div>
                   </div>
                 `;
-                commentsSection.insertAdjacentHTML('afterend', panelHTML);
+                insertAfter.insertAdjacentHTML('afterend', panelHTML);
                 commentsPanel = document.getElementById('comments-' + questaoId);
-                console.log('✅ Painel criado dinamicamente:', commentsPanel);
-              } else {
-                // Se não encontrou comments-section, criar diretamente no final do card
-                console.log('⚠️ Criando painel diretamente no card...');
-                const panelHTML = `
-                  <div class="comments-section">
-                    <button type="button" class="comments-toggle-btn" data-questao-id="${questaoId}">
-                      <i class="fas fa-comments"></i>
-                      <span>Comentários</span>
-                      <i class="fas fa-chevron-down"></i>
-                    </button>
-                  </div>
-                  <div class="comments-panel" id="comments-${questaoId}" style="display: none;">
-                    <div class="comments-loading">
-                      <i class="fas fa-spinner fa-spin"></i> Carregando comentários...
-                    </div>
-                    <div class="comments-content" style="display: none;">
-                      <div class="comments-header">
-                        <div class="comments-tabs">
-                          <button class="tab-btn active" data-ordenacao="data">Ordenando por Data</button>
-                          <button class="tab-btn" data-ordenacao="curtidas">Mais curtidos</button>
-                        </div>
-                      </div>
-                      <div class="comments-list"></div>
-                      <div class="load-more-section">
-                        <button class="load-more-btn">Carregar mais</button>
-                      </div>
-                      <div class="add-comment-form">
-                        <div class="comment-user-info">
-                          <div class="user-avatar">
-                            <i class="fas fa-user"></i>
-                          </div>
-                          <div class="user-name">Usuário</div>
-                        </div>
-                        <div class="comment-input-section">
-                          <div class="comment-toolbar">
-                            <button type="button" class="toolbar-btn" data-format="bold" title="Negrito">
-                              <strong>B</strong>
-                            </button>
-                            <button type="button" class="toolbar-btn" data-format="italic" title="Itálico">
-                              <em>I</em>
-                            </button>
-                          </div>
-                          <form id="comment-form-${questaoId}" class="comment-form" data-questao-id="${questaoId}">
-                            <div class="comment-textarea-container">
-                              <textarea name="comentario" placeholder="Escreva o seu comentário" required minlength="10" maxlength="500" class="comment-textarea"></textarea>
-                              <div class="textarea-resize-handle"></div>
-                            </div>
-                            <button type="submit" class="btn-responder">Responder</button>
-                          </form>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                `;
-                card.insertAdjacentHTML('beforeend', panelHTML);
-                commentsPanel = document.getElementById('comments-' + questaoId);
-                console.log('✅ Painel criado diretamente no card:', commentsPanel);
+                console.log('✅ Painel criado dinamicamente!', commentsPanel);
+                
+                // Inicializar event listeners do painel criado
+                setTimeout(() => {
+                  // Inicializar tabs de ordenação
+                  const tabs = commentsPanel.querySelectorAll('.tab-btn');
+                  tabs.forEach(tab => {
+                    tab.addEventListener('click', function() {
+                      tabs.forEach(t => t.classList.remove('active'));
+                      this.classList.add('active');
+                      const ordenacao = this.dataset.ordenacao;
+                      if (window.loadComments) {
+                        window.loadComments(questaoId, ordenacao);
+                      }
+                    });
+                  });
+                  
+                  // Inicializar formulário de comentário
+                  const form = commentsPanel.querySelector(`#comment-form-${questaoId}`);
+                  if (form && !form.dataset.initialized) {
+                    form.dataset.initialized = 'true';
+                    form.addEventListener('submit', function(e) {
+                      e.preventDefault();
+                      const textarea = this.querySelector('.comment-textarea');
+                      const comentario = textarea.value.trim();
+                      
+                      if (!comentario || comentario.length < 10) {
+                        alert('O comentário deve ter pelo menos 10 caracteres.');
+                        return;
+                      }
+                      
+                      if (comentario.length > 500) {
+                        alert('O comentário não pode ter mais de 500 caracteres.');
+                        return;
+                      }
+                      
+                      const submitBtn = this.querySelector('.btn-responder');
+                      if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = 'Enviando...';
+                      }
+                      
+                      const formData = new FormData();
+                      formData.append('questao_id', questaoId);
+                      formData.append('comentario', comentario);
+                      formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]')?.value || '');
+                      
+                      fetch('/questoes/comentarios/criar/', {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin'
+                      })
+                      .then(response => response.json())
+                      .then(data => {
+                        if (data.success) {
+                          textarea.value = '';
+                          const charCountEl = this.querySelector('.char-count');
+                          if (charCountEl) charCountEl.textContent = '0/500 caracteres';
+                          
+                          if (window.loadComments) {
+                            const activeTab = commentsPanel.querySelector('.tab-btn.active');
+                            const ordenacao = activeTab ? activeTab.dataset.ordenacao : 'data';
+                            window.loadComments(questaoId, ordenacao);
+                          }
+                          alert('Comentário adicionado com sucesso!');
+                        } else {
+                          alert('Erro: ' + (data.message || 'Erro desconhecido'));
+                        }
+                      })
+                      .catch(error => {
+                        console.error('❌ Erro ao enviar comentário:', error);
+                        alert('Erro ao enviar comentário. Por favor, tente novamente.');
+                      })
+                      .finally(() => {
+                        if (submitBtn) {
+                          submitBtn.disabled = false;
+                          submitBtn.textContent = 'Responder';
+                        }
+                      });
+                    });
+                    
+                    // Adicionar contador de caracteres
+                    const textarea = form.querySelector('.comment-textarea');
+                    const charCount = form.querySelector('.char-count') || (() => {
+                      const counter = document.createElement('span');
+                      counter.className = 'char-count';
+                      counter.textContent = '0/500 caracteres';
+                      form.appendChild(counter);
+                      return counter;
+                    })();
+                    
+                    if (textarea && charCount) {
+                      textarea.addEventListener('input', function() {
+                        charCount.textContent = `${this.value.length}/500 caracteres`;
+                      });
+                    }
+                  }
+                  
+                  // Re-executar initComments para pegar os novos botões
+                  if (typeof initComments === 'function') {
+                    initComments();
+                  }
+                }, 200);
               }
-            } else {
-              // Se não encontrou o card, criar próximo ao botão
-              console.log('⚠️ Card não encontrado, criando painel próximo ao botão...');
-              const panelHTML = `
-                <div class="comments-panel" id="comments-${questaoId}" style="display: none;">
-                  <div class="comments-loading">
-                    <i class="fas fa-spinner fa-spin"></i> Carregando comentários...
-                  </div>
-                  <div class="comments-content" style="display: none;">
-                    <div class="comments-header">
-                      <div class="comments-tabs">
-                        <button class="tab-btn active" data-ordenacao="data">Ordenando por Data</button>
-                        <button class="tab-btn" data-ordenacao="curtidas">Mais curtidos</button>
-                      </div>
-                    </div>
-                    <div class="comments-list"></div>
-                    <div class="load-more-section">
-                      <button class="load-more-btn">Carregar mais</button>
-                    </div>
-                    <div class="add-comment-form">
-                      <div class="comment-user-info">
-                        <div class="user-avatar">
-                          <i class="fas fa-user"></i>
-                        </div>
-                        <div class="user-name">Usuário</div>
-                      </div>
-                      <div class="comment-input-section">
-                        <div class="comment-toolbar">
-                          <button type="button" class="toolbar-btn" data-format="bold" title="Negrito">
-                            <strong>B</strong>
-                          </button>
-                          <button type="button" class="toolbar-btn" data-format="italic" title="Itálico">
-                            <em>I</em>
-                          </button>
-                        </div>
-                        <form id="comment-form-${questaoId}" class="comment-form" data-questao-id="${questaoId}">
-                          <div class="comment-textarea-container">
-                            <textarea name="comentario" placeholder="Escreva o seu comentário" required minlength="10" maxlength="500" class="comment-textarea"></textarea>
-                            <div class="textarea-resize-handle"></div>
-                          </div>
-                          <button type="submit" class="btn-responder">Responder</button>
-                        </form>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              `;
-              btn.insertAdjacentHTML('afterend', panelHTML);
-              commentsPanel = document.getElementById('comments-' + questaoId);
-              console.log('✅ Painel criado próximo ao botão:', commentsPanel);
             }
           }
           
@@ -720,26 +616,36 @@
             return;
           }
           
+          // Toggle do painel
           const isOpen = commentsPanel.style.display !== 'none' && commentsPanel.style.display !== '';
           
           if (isOpen) {
             // Fechar painel
             commentsPanel.style.display = 'none';
             btn.classList.remove('active');
+            const chevron = btn.querySelector('.comments-chevron, .fa-chevron-down');
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
             console.log('📝 Painel fechado para questão', questaoId);
           } else {
             // Abrir painel e carregar comentários
             commentsPanel.style.display = 'block';
             btn.classList.add('active');
+            const chevron = btn.querySelector('.comments-chevron, .fa-chevron-down');
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
             console.log('📝 Painel aberto para questão', questaoId, '- carregando comentários...');
-            if (window.loadComments) {
-              loadComments(questaoId, 'data'); // Padrão: ordenar por data
-            } else {
-              console.error('❌ loadComments não encontrado!');
-            }
+            
+            // Carregar comentários
+            setTimeout(() => {
+              if (window.loadComments) {
+                window.loadComments(questaoId, 'data');
+              } else {
+                console.error('❌ loadComments não encontrado!');
+              }
+            }, 100);
           }
         } catch (error) {
-          console.error('❌ Erro em handleCommentsClick:', error);
+          console.error('❌ Erro em handleCommentsClick:', error, error.stack);
+          alert('Erro ao abrir comentários. Verifique o console para mais detalhes.');
         }
       };
 
@@ -789,7 +695,6 @@
               renderComments(questaoId, subset);
               initTabs(questaoId);
               initLoadMore(questaoId);
-              initToolbar(questaoId);
               initComments(); // Re-inicializar formulários
             } else {
               console.error('❌ Erro na resposta:', data.message);
@@ -917,21 +822,236 @@
       function addCommentEventListeners(questaoId) {
         // Curtir comentário
         document.querySelectorAll(`#comments-${questaoId} .curtir-btn`).forEach(btn => {
-          btn.addEventListener('click', function() {
+          // Remover listeners anteriores para evitar duplicação
+          const newBtn = btn.cloneNode(true);
+          btn.parentNode.replaceChild(newBtn, btn);
+          
+          newBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const comentarioId = this.dataset.comentarioId;
-            // TODO: Implementar curtir comentário
-            console.log('Curtir comentário:', comentarioId);
+            if (!comentarioId) {
+              console.error('ID do comentário não encontrado');
+              return;
+            }
+            
+            // Desabilitar botão durante requisição
+            const btnIcon = this.querySelector('i');
+            const originalHTML = this.innerHTML;
+            this.disabled = true;
+            this.style.opacity = '0.6';
+            
+            console.log('👍 Curtindo/descurtindo comentário:', comentarioId);
+            
+            // Enviar requisição AJAX
+            const formData = new FormData();
+            formData.append('comentario_id', comentarioId);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]')?.value || '');
+            
+            fetch('/questoes/comentarios/curtir/', {
+              method: 'POST',
+              body: formData,
+              credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+              console.log('📥 Resposta da curtida:', data);
+              
+              if (data.success) {
+                // Atualizar estado visual do botão
+                if (data.curtido) {
+                  this.classList.add('curtido');
+                  this.style.color = '#28a745';
+                } else {
+                  this.classList.remove('curtido');
+                  this.style.color = '#007bff';
+                }
+                
+                // Atualizar contador de curtidas
+                const curtidasText = this.textContent.trim();
+                const match = curtidasText.match(/\((\d+)\)/);
+                if (match) {
+                  this.innerHTML = `<i class="fas fa-thumbs-up"></i> Gostei (${data.total_curtidas})`;
+                  this.style.color = data.curtido ? '#28a745' : '#007bff';
+                }
+              } else {
+                alert('Erro ao curtir comentário: ' + (data.message || 'Erro desconhecido'));
+              }
+            })
+            .catch(error => {
+              console.error('❌ Erro ao curtir comentário:', error);
+              alert('Erro ao curtir comentário. Por favor, tente novamente.');
+            })
+            .finally(() => {
+              this.disabled = false;
+              this.style.opacity = '1';
+            });
           });
         });
 
-        // Respostas
+        // Botão de responder - mostrar/esconder formulário de resposta
         document.querySelectorAll(`#comments-${questaoId} .responder-btn`).forEach(btn => {
-          btn.addEventListener('click', function() {
-            const repliesSection = this.closest('.comment-item').querySelector('.comment-replies');
+          // Remover listeners anteriores
+          const newBtn = btn.cloneNode(true);
+          btn.parentNode.replaceChild(newBtn, btn);
+          
+          newBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const comentarioId = this.dataset.comentarioId;
+            const commentItem = this.closest('.comment-item');
+            
+            if (!commentItem) return;
+            
+            // Mostrar/esconder seção de respostas
+            const repliesSection = commentItem.querySelector('.comment-replies');
             if (repliesSection) {
               repliesSection.classList.toggle('collapsed');
             }
+            
+            // Mostrar/esconder formulário de resposta
+            let replyForm = commentItem.querySelector('.reply-form');
+            if (!replyForm) {
+              // Criar formulário de resposta se não existir
+              const questaoIdFromPanel = commentItem.closest('.comments-panel')?.dataset?.questaoId;
+              const questaoIdToUse = questaoIdFromPanel || questaoId;
+              replyForm = document.createElement('div');
+              replyForm.className = 'reply-form';
+              replyForm.innerHTML = `
+                <form class="comment-form reply-comment-form" data-questao-id="${questaoIdToUse}" data-comentario-pai-id="${comentarioId}">
+                  <textarea class="comment-textarea" placeholder="Escreva uma resposta..." minlength="10" maxlength="500" required></textarea>
+                  <div class="comment-form-footer">
+                    <span class="char-count">0/500 caracteres</span>
+                    <button type="submit" class="btn-responder">Responder</button>
+                  </div>
+                </form>
+              `;
+              
+              // Adicionar listener ao formulário
+              replyForm.querySelector('form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                handleReplySubmit(this, questaoIdToUse, comentarioId);
+              });
+              
+              // Adicionar contador de caracteres
+              const textarea = replyForm.querySelector('.comment-textarea');
+              const charCount = replyForm.querySelector('.char-count');
+              textarea.addEventListener('input', function() {
+                charCount.textContent = `${this.value.length}/500 caracteres`;
+              });
+              
+              commentItem.appendChild(replyForm);
+            } else {
+              replyForm.style.display = replyForm.style.display === 'none' ? 'block' : 'none';
+            }
           });
+        });
+        
+        // Botão de reportar abuso - com modal de opções
+        document.querySelectorAll(`#comments-${questaoId} .report-abuse`).forEach(link => {
+          // Remover listeners anteriores
+          const newLink = link.cloneNode(true);
+          link.parentNode.replaceChild(newLink, link);
+          
+          newLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const comentarioId = this.dataset.comentarioId;
+            if (!comentarioId) {
+              console.error('ID do comentário não encontrado');
+              return;
+            }
+            
+            // Abrir modal de reporte
+            showReportModal(comentarioId, this);
+          });
+        });
+        
+        // Inicializar contadores de caracteres nos formulários de resposta existentes
+        document.querySelectorAll(`#comments-${questaoId} .reply-form .comment-textarea`).forEach(textarea => {
+          const charCount = textarea.closest('.reply-form').querySelector('.char-count');
+          if (charCount) {
+            textarea.addEventListener('input', function() {
+              charCount.textContent = `${this.value.length}/500 caracteres`;
+            });
+          }
+        });
+      }
+      
+      // Função para enviar resposta a um comentário
+      function handleReplySubmit(form, questaoId, comentarioPaiId) {
+        const textarea = form.querySelector('.comment-textarea');
+        const comentario = textarea.value.trim();
+        
+        if (comentario.length < 10) {
+          alert('A resposta deve ter pelo menos 10 caracteres.');
+          return;
+        }
+        
+        if (comentario.length > 500) {
+          alert('A resposta não pode ter mais de 500 caracteres.');
+          return;
+        }
+        
+        const submitBtn = form.querySelector('.btn-responder');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Enviando...';
+        }
+        
+        console.log('📤 Enviando resposta:', questaoId, comentarioPaiId, comentario);
+        
+        const formData = new FormData();
+        formData.append('questao_id', questaoId);
+        formData.append('comentario', comentario);
+        formData.append('comentario_pai_id', comentarioPaiId);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]')?.value || '');
+        
+        fetch('/questoes/comentarios/criar/', {
+          method: 'POST',
+          body: formData,
+          credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log('📥 Resposta do servidor:', data);
+          
+          if (data.success) {
+            // Limpar textarea
+            textarea.value = '';
+            const charCountEl = form.querySelector('.char-count');
+            if (charCountEl) charCountEl.textContent = '0/500 caracteres';
+            
+            // Esconder formulário
+            form.closest('.reply-form').style.display = 'none';
+            
+            // Recarregar comentários para mostrar a nova resposta
+            if (window.loadComments) {
+              const commentsPanel = document.getElementById('comments-' + questaoId);
+              if (commentsPanel) {
+                const activeTab = commentsPanel.querySelector('.tab-btn.active');
+                const ordenacao = activeTab ? activeTab.dataset.ordenacao : 'data';
+                window.loadComments(questaoId, ordenacao);
+              }
+            }
+            
+            alert('Resposta adicionada com sucesso!');
+          } else {
+            alert('Erro ao adicionar resposta: ' + (data.message || 'Erro desconhecido'));
+          }
+        })
+        .catch(error => {
+          console.error('❌ Erro ao enviar resposta:', error);
+          alert('Erro ao enviar resposta. Por favor, tente novamente.');
+        })
+        .finally(() => {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Responder';
+          }
         });
       }
 
@@ -960,31 +1080,6 @@
         }
       }
 
-      // Função para inicializar toolbar de formatação
-      function initToolbar(questaoId) {
-        const toolbarBtns = document.querySelectorAll(`#comments-${questaoId} .toolbar-btn`);
-        toolbarBtns.forEach(btn => {
-          btn.addEventListener('click', function() {
-            const format = this.dataset.format;
-            const textarea = this.closest('.comment-input-section').querySelector('.comment-textarea');
-            if (textarea) {
-              const start = textarea.selectionStart;
-              const end = textarea.selectionEnd;
-              const selectedText = textarea.value.substring(start, end);
-              
-              if (format === 'bold') {
-                textarea.value = textarea.value.substring(0, start) + '**' + selectedText + '**' + textarea.value.substring(end);
-              } else if (format === 'italic') {
-                textarea.value = textarea.value.substring(0, start) + '*' + selectedText + '*' + textarea.value.substring(end);
-              }
-              
-              textarea.focus();
-              textarea.setSelectionRange(start + (format === 'bold' ? 2 : 1), end + (format === 'bold' ? 2 : 1));
-            }
-          });
-        });
-      }
-
       // Função para mostrar erro
       function showCommentsError(questaoId, message) {
         const commentsList = document.querySelector(`#comments-${questaoId} .comments-list`);
@@ -1004,11 +1099,10 @@
           const newButton = button.cloneNode(true);
           button.parentNode.replaceChild(newButton, button);
           
-          // Garantir que o botão seja clicável
-          newButton.style.pointerEvents = 'auto';
-          newButton.style.cursor = 'pointer';
-          newButton.style.zIndex = '100';
-          newButton.style.position = 'relative';
+          // Garantir que o botão tenha a classe btn-action para estilização padronizada
+          if (!newButton.classList.contains('btn-action')) {
+            newButton.classList.add('btn-action');
+          }
           
           // Adicionar listener
           newButton.addEventListener('click', function(e) {
@@ -1098,10 +1192,16 @@
             
             console.log('📤 Enviando comentário:', questaoId, comentario);
             
+            // Verificar se é uma resposta (tem comentario_pai_id)
+            const comentarioPaiId = this.dataset.comentarioPaiId || this.getAttribute('data-comentario-pai-id');
+            
             // Enviar comentário via AJAX
             const formData = new FormData();
             formData.append('questao_id', questaoId);
             formData.append('comentario', comentario);
+            if (comentarioPaiId) {
+              formData.append('comentario_pai_id', comentarioPaiId);
+            }
             formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]')?.value || '');
             
             fetch('/questoes/comentarios/criar/', {
@@ -1416,76 +1516,103 @@
 .question-header::before{ pointer-events:none !important; }
 .question-header{ pointer-events:auto !important; }
 
-/* Botão Ver Estatísticas no card (Toggle) */
-.btn-stats-toggle {
-  display: inline-flex !important;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%) !important;
-  color: #fff !important;
-  text-decoration: none;
-  font-weight: 700;
-  border: 1px solid rgba(0, 114, 255, 0.6);
-  box-shadow: 0 6px 16px rgba(0, 114, 255, 0.18);
-  cursor: pointer !important;
-  pointer-events: auto !important;
-  position: relative !important;
-  z-index: 10 !important;
-  transition: all 0.2s ease;
-  width: 100%;
-  justify-content: center;
-  margin-top: 12px;
+/* ==================== BOTÕES DE AÇÃO (ESTATÍSTICAS E COMENTÁRIOS) ==================== */
+/* Container dos botões - Layout lado a lado */
+.stats-actions {
+  display: flex !important;
+  gap: 12px !important;
+  margin-top: 16px !important;
+  width: 100% !important;
 }
 
-.btn-stats-toggle:hover {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(0, 114, 255, 0.25);
-}
-
-.stats-chevron {
-  margin-left: auto;
-  transition: transform 0.3s ease;
-}
-
-/* ==================== SEÇÃO DE COMENTÁRIOS (PROMPT TÉCNICO) ==================== */
-.comments-section {
-  margin-top: 15px;
-}
-
-/* Botão Toggle */
-.comments-toggle-btn {
-  width: 100%;
-  padding: 10px 15px !important;
-  background: white !important;
-  border: 2px solid #e1e5e9 !important;
-  border-radius: 8px !important;
+/* Padrão unificado para todos os botões de ação */
+.btn-action {
+  flex: 1 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 8px !important;
+  padding: 12px 16px !important;
+  border-radius: 10px !important;
+  font-size: 0.9em !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  text-decoration: none !important;
+  border: 2px solid transparent !important;
   cursor: pointer !important;
   pointer-events: auto !important;
   position: relative !important;
-  z-index: 100 !important;
+  z-index: 10 !important;
   transition: all 0.3s ease !important;
-  font-size: 0.95em !important;
-  font-weight: 600 !important;
-  color: #28a745 !important;
-  margin-top: 12px !important;
   box-sizing: border-box !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  outline: none !important;
+  min-width: 0 !important;
 }
 
+.btn-action i {
+  font-size: 1em !important;
+  color: inherit !important;
+}
+
+.btn-action span {
+  font-weight: 700 !important;
+  color: inherit !important;
+  white-space: nowrap !important;
+}
+
+.btn-action .stats-chevron,
+.btn-action .comments-chevron {
+  margin-left: auto !important;
+  transition: transform 0.3s ease !important;
+  font-size: 0.85em !important;
+}
+
+/* Botão de Estatísticas - Azul */
+.btn-stats-toggle {
+  background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%) !important;
+  border-color: rgba(0, 114, 255, 0.5) !important;
+  box-shadow: 0 4px 12px rgba(0, 114, 255, 0.2) !important;
+}
+
+.btn-stats-toggle:hover {
+  background: linear-gradient(135deg, #00B0E6 0%, #0056CC 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 16px rgba(0, 114, 255, 0.3) !important;
+}
+
+.btn-stats-toggle:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 8px rgba(0, 114, 255, 0.2) !important;
+}
+
+/* Botão de Comentários - Verde */
+.btn-comments-toggle,
+.comments-toggle-btn {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  border-color: rgba(40, 167, 69, 0.5) !important;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2) !important;
+}
+
+.btn-comments-toggle:hover,
 .comments-toggle-btn:hover {
-  background: #f0fff4;
-  border-color: #28a745;
+  background: linear-gradient(135deg, #218838 0%, #1aa179 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 16px rgba(40, 167, 69, 0.3) !important;
 }
 
-.comments-toggle-btn.active .fa-chevron-down {
-  transform: rotate(180deg);
+.btn-comments-toggle:active,
+.comments-toggle-btn:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2) !important;
 }
+
+/* Rotação do chevron quando ativo */
+.btn-action.active .stats-chevron,
+.btn-action.active .comments-chevron {
+  transform: rotate(180deg) !important;
+}
+
 
 /* Painel de Comentários */
 .comments-panel {
@@ -1672,6 +1799,23 @@
   text-decoration: underline;
 }
 
+/* Formulário de Resposta */
+.reply-form {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e9ecef;
+}
+
+.reply-form .comment-form {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.reply-form .comment-textarea {
+  min-height: 80px;
+}
+
 /* Botão Carregar Mais */
 .load-more-section {
   text-align: center;
@@ -1736,34 +1880,6 @@
   margin-left: 52px;
 }
 
-.comment-toolbar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-  padding: 8px 0;
-}
-
-.toolbar-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 5px 8px;
-  border-radius: 4px;
-  color: #666;
-  font-size: 14px;
-  transition: all 0.2s ease;
-}
-
-.toolbar-btn:hover {
-  background: #e9ecef;
-  color: #333;
-}
-
-.toolbar-btn.active {
-  background: #007bff;
-  color: white;
-}
-
 .comment-textarea-container {
   position: relative;
   margin-bottom: 15px;
@@ -1821,21 +1937,26 @@
   transform: none;
 }
 
-/* Respostas de Comentários */
+/* Respostas de Comentários (consolidado com estilos acima) */
 .comment-replies {
   margin-left: 52px;
   margin-top: 15px;
   padding-left: 15px;
   border-left: 2px solid #f0f0f0;
+  padding-top: 15px;
+  border-top: 1px solid #f0f0f0;
 }
 
 .comment-replies.collapsed {
   display: none;
+  max-height: 200px;
+  overflow: hidden;
 }
 
 .reply-item {
   background: #f8f9fa;
   border: 1px solid #e9ecef;
+  border-left: 3px solid #007bff;
   border-radius: 6px;
   padding: 12px;
   margin-bottom: 10px;
@@ -1915,7 +2036,6 @@
 }
 
 /* Botão Ver Estatísticas no card (antigo - manter para compatibilidade) */
-.stats-actions{ margin-top:12px; position:relative; z-index:10; }
 .btn-stats{ 
   display:inline-flex !important; 
   align-items:center; 
@@ -2125,6 +2245,14 @@ function criarCardQuestao(questaoData,index){
             return false;
           };
         }
+      }
+    });
+    
+    // Garantir que os botões de ação tenham a classe btn-action para estilização padronizada
+    const actionButtons = card.querySelectorAll('.btn-stats-toggle, .btn-comments-toggle, .comments-toggle-btn');
+    actionButtons.forEach(btn => {
+      if (!btn.classList.contains('btn-action')) {
+        btn.classList.add('btn-action');
       }
     });
   }, 0);
@@ -3298,6 +3426,443 @@ window.renderHistorico = function(historico){
   .stats-charts-grid{ grid-template-columns:1fr; }
   .stats-section-inline{ padding:15px; }
 }
+
+/* Modal de Reporte de Abuso */
+.report-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease;
+}
+
+.report-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+.report-modal h3 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.report-modal p {
+  color: #666;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+}
+
+.report-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.report-option {
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #f8f9fa;
+  text-align: left;
+}
+
+.report-option:hover {
+  border-color: #0072FF;
+  background: #e3f2fd;
+}
+
+.report-option.selected {
+  border-color: #0072FF;
+  background: #0072FF;
+  color: white;
+}
+
+.report-option input[type="radio"] {
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.report-option label {
+  cursor: pointer;
+  font-weight: 500;
+  display: block;
+  margin: 0;
+}
+
+.report-option-description {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 4px;
+  margin-left: 24px;
+}
+
+.report-option.selected .report-option-description {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.report-custom-reason {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  animation: slideDown 0.3s ease;
+}
+
+.report-custom-reason label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.report-custom-reason textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.report-custom-reason textarea:focus {
+  outline: none;
+  border-color: #0072FF;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    margin-top: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 200px;
+    margin-top: 16px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+}
+
+.report-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.report-modal-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.report-modal-btn-cancel {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.report-modal-btn-cancel:hover {
+  background: #d0d0d0;
+}
+
+.report-modal-btn-submit {
+  background: #dc3545;
+  color: white;
+}
+
+.report-modal-btn-submit:hover {
+  background: #c82333;
+}
+
+.report-modal-btn-submit:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 </style>
+
+<script>
+// Função para mostrar modal de reporte de abuso
+function showReportModal(comentarioId, linkElement) {
+  // Remover modal existente se houver
+  const existingModal = document.querySelector('.report-modal-overlay');
+  if (existingModal) {
+    existingModal.remove();
+  }
+  
+  // Opções pré-definidas de reporte
+  const opcoesReporte = [
+    {
+      tipo: 'spam',
+      titulo: 'Spam ou conteúdo promocional',
+      descricao: 'Este comentário contém spam, links promocionais ou conteúdo publicitário'
+    },
+    {
+      tipo: 'inapropriado',
+      titulo: 'Conteúdo inapropriado',
+      descricao: 'Este comentário contém linguagem ofensiva, palavrões ou conteúdo inadequado'
+    },
+    {
+      tipo: 'bullying',
+      titulo: 'Bullying ou assédio',
+      descricao: 'Este comentário contém bullying, assédio ou ataque pessoal a outros usuários'
+    },
+    {
+      tipo: 'outro',
+      titulo: 'Outro motivo',
+      descricao: 'Este comentário viola outras regras da comunidade'
+    }
+  ];
+  
+  // Criar overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'report-modal-overlay';
+  
+  // Criar modal
+  const modal = document.createElement('div');
+  modal.className = 'report-modal';
+  
+  // HTML do modal
+  modal.innerHTML = `
+    <h3>🚨 Reportar Comentário</h3>
+    <p>Por favor, selecione o motivo do reporte:</p>
+    
+    <div class="report-options">
+      ${opcoesReporte.map((opcao, index) => `
+        <div class="report-option" data-tipo="${opcao.tipo}">
+          <label>
+            <input type="radio" name="report-reason" value="${opcao.tipo}" ${index === 0 ? 'checked' : ''}>
+            ${escapeHtml(opcao.titulo)}
+          </label>
+          <div class="report-option-description">${escapeHtml(opcao.descricao)}</div>
+        </div>
+      `).join('')}
+    </div>
+    
+    <div class="report-custom-reason" id="report-custom-reason" style="display: none;">
+      <label for="report-custom-text">Descreva o motivo:</label>
+      <textarea 
+        id="report-custom-text" 
+        name="custom-reason" 
+        placeholder="Descreva detalhadamente o motivo do reporte (mínimo 10 caracteres)..."
+        rows="4"
+        maxlength="500"
+      ></textarea>
+      <div style="text-align: right; margin-top: 4px; font-size: 0.85rem; color: #666;">
+        <span id="report-char-count">0/500</span> caracteres
+      </div>
+    </div>
+    
+    <div class="report-modal-actions">
+      <button class="report-modal-btn report-modal-btn-cancel" onclick="closeReportModal()">Cancelar</button>
+      <button class="report-modal-btn report-modal-btn-submit" onclick="submitReport(${comentarioId}, this)">Reportar</button>
+    </div>
+  `;
+  
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  
+  // Adicionar evento de clique no overlay para fechar
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) {
+      closeReportModal();
+    }
+  });
+  
+  // Adicionar eventos de seleção das opções
+  modal.querySelectorAll('.report-option').forEach(option => {
+    option.addEventListener('click', function() {
+      // Desmarcar todas as opções
+      modal.querySelectorAll('.report-option').forEach(opt => {
+        opt.classList.remove('selected');
+        opt.querySelector('input[type="radio"]').checked = false;
+      });
+      
+      // Marcar opção selecionada
+      this.classList.add('selected');
+      this.querySelector('input[type="radio"]').checked = true;
+      
+      // Mostrar/ocultar caixa de texto se for "Outro motivo"
+      const tipoSelecionado = this.dataset.tipo;
+      const customReasonDiv = modal.querySelector('#report-custom-reason');
+      const customTextarea = modal.querySelector('#report-custom-text');
+      
+      if (tipoSelecionado === 'outro') {
+        customReasonDiv.style.display = 'block';
+        customTextarea.setAttribute('required', 'required');
+      } else {
+        customReasonDiv.style.display = 'none';
+        customTextarea.removeAttribute('required');
+        customTextarea.value = '';
+        modal.querySelector('#report-char-count').textContent = '0/500';
+      }
+    });
+    
+    // Marcar primeira opção como selecionada por padrão
+    if (option.querySelector('input[type="radio"]').checked) {
+      option.classList.add('selected');
+    }
+  });
+  
+  // Contador de caracteres para o textarea customizado
+  const customTextarea = modal.querySelector('#report-custom-text');
+  const charCount = modal.querySelector('#report-char-count');
+  if (customTextarea && charCount) {
+    customTextarea.addEventListener('input', function() {
+      const length = this.value.length;
+      charCount.textContent = `${length}/500`;
+      
+      // Mudar cor se exceder limite
+      if (length > 500) {
+        charCount.style.color = '#dc3545';
+      } else {
+        charCount.style.color = '#666';
+      }
+    });
+  }
+  
+  // Guardar referência ao link original para atualizar depois
+  overlay.dataset.linkElement = 'stored';
+  window.currentReportLink = linkElement;
+}
+
+// Função para fechar modal
+function closeReportModal() {
+  const overlay = document.querySelector('.report-modal-overlay');
+  if (overlay) {
+    overlay.remove();
+  }
+  window.currentReportLink = null;
+}
+
+// Função para enviar reporte
+function submitReport(comentarioId, button) {
+  const modal = document.querySelector('.report-modal');
+  if (!modal) return;
+  
+  // Obter opção selecionada
+  const selectedOption = modal.querySelector('input[name="report-reason"]:checked');
+  if (!selectedOption) {
+    alert('Por favor, selecione um motivo para o reporte.');
+    return;
+  }
+  
+  const tipo = selectedOption.value;
+  const tipoTitulos = {
+    'spam': 'Spam ou conteúdo promocional',
+    'inapropriado': 'Conteúdo inapropriado',
+    'bullying': 'Bullying ou assédio',
+    'outro': 'Outro motivo'
+  };
+  
+  // Se for "outro", verificar se há texto customizado
+  let motivo = tipoTitulos[tipo] || 'Outro motivo';
+  if (tipo === 'outro') {
+    const customText = modal.querySelector('#report-custom-text').value.trim();
+    if (!customText) {
+      alert('Por favor, descreva o motivo do reporte na opção "Outro motivo".');
+      return;
+    }
+    if (customText.length < 10) {
+      alert('A descrição do motivo deve ter pelo menos 10 caracteres.');
+      return;
+    }
+    motivo = `Outro motivo: ${customText}`;
+  }
+  
+  // Desabilitar botão
+  button.disabled = true;
+  button.textContent = 'Enviando...';
+  
+  console.log('🚨 Reportando comentário:', comentarioId, 'Tipo:', tipo);
+  
+  // Enviar requisição AJAX
+  const formData = new FormData();
+  formData.append('comentario_id', comentarioId);
+  formData.append('tipo', tipo);
+  formData.append('motivo', motivo);
+  formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]')?.value || '');
+  
+  fetch('/questoes/comentarios/reportar/', {
+    method: 'POST',
+    body: formData,
+    credentials: 'same-origin'
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('📥 Resposta do reporte:', data);
+    
+    closeReportModal();
+    
+    if (data.success) {
+      // Atualizar link original
+      if (window.currentReportLink) {
+        window.currentReportLink.style.color = '#6c757d';
+        window.currentReportLink.textContent = 'Reportado';
+        window.currentReportLink.style.pointerEvents = 'none';
+        window.currentReportLink.onclick = null;
+      }
+      
+      // Mostrar mensagem de sucesso
+      alert(data.message || 'Comentário reportado com sucesso! Nossa equipe irá analisar.');
+    } else {
+      alert('Erro ao reportar comentário: ' + (data.message || 'Erro desconhecido'));
+    }
+  })
+  .catch(error => {
+    console.error('❌ Erro ao reportar comentário:', error);
+    alert('Erro ao reportar comentário. Por favor, tente novamente.');
+    button.disabled = false;
+    button.textContent = 'Reportar';
+  });
+}
+
+// Expor funções globalmente
+window.showReportModal = showReportModal;
+window.closeReportModal = closeReportModal;
+window.submitReport = submitReport;
+</script>
 {% endblock %}
 

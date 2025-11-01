@@ -46,6 +46,8 @@ urlpatterns = [
     # APIs REST
     path('comentarios/api/', views.api_comentarios, name='api_comentarios'),
     path('comentarios/criar/', views.api_criar_comentario, name='api_criar_comentario'),
+    path('comentarios/curtir/', views.api_curtir_comentario, name='api_curtir_comentario'),
+    path('comentarios/reportar/', views.api_reportar_abuso, name='api_reportar_abuso'),
     path('api/estatisticas/', views.api_estatisticas, name='api_estatisticas'),
     
     # Relatar problema
@@ -59,4 +61,9 @@ urlpatterns = [
     
     # Login administrativo
     path('admin/login/', views.admin_login_view, name='admin_login'),
+    
+    # Gerenciar comentários (admin)
+    path('admin/gerenciar-comentarios/', views.gerenciar_comentarios_view, name='gerenciar_comentarios'),
+    path('admin/comentarios/<int:comentario_id>/toggle/', views.toggle_comentario_view, name='toggle_comentario'),
+    path('admin/comentarios/<int:comentario_id>/deletar/', views.deletar_comentario_view, name='deletar_comentario'),
 ]

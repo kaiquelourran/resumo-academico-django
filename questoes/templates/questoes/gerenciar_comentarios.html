@@ -3,8 +3,72 @@
 
 {% block title %}Gerenciar Comentários - Resumo Acadêmico{% endblock %}
 
+{% block breadcrumb %}
+<!-- Breadcrumb Navigation -->
+<div class="breadcrumb">
+    <div class="header-container">
+        <nav class="breadcrumb-nav">
+            <a href="{% url 'questoes:index' %}" class="breadcrumb-link">🏠 Início</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <a href="{% url 'questoes:admin_dashboard' %}" class="breadcrumb-link">⚙️ Dashboard Admin</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <span class="breadcrumb-current">💬 Gerenciar Comentários</span>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_header %}
+<!-- Page Title Section -->
+<div class="page-header">
+    <div class="header-container">
+        <h1 class="page-title">Gerenciar Comentários</h1>
+        <p class="page-subtitle">Administrar comentários reportados e inativos</p>
+    </div>
+</div>
+{% endblock %}
+
 {% block extra_css %}
 <style>
+    /* Padrão igual às outras páginas */
+    body {
+        background-image: linear-gradient(to top, #00C6FF, #0072FF);
+        min-height: 100vh;
+        margin: 0;
+    }
+    
+    .main-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        background: #FFFFFF;
+        border-radius: 16px;
+        border: 1px solid transparent;
+        background-image: linear-gradient(#FFFFFF, #FFFFFF), linear-gradient(to top, #00C6FF, #0072FF);
+        background-origin: border-box;
+        background-clip: padding-box, border-box;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        padding: 0 30px 30px 30px;
+    }
+    
+    .content-card {
+        background: transparent;
+        border-radius: 0;
+        box-shadow: none;
+        max-width: 100%;
+        margin: 0;
+        overflow: visible;
+        padding: 30px 0;
+    }
+    
+    .card-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 12px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #0072FF;
+    }
+    
     .modern-table { 
         width: 100%; 
         border-collapse: collapse; 
@@ -84,14 +148,86 @@
         margin-bottom: 16px; 
         color: #0072FF; 
     }
+    
+    .alert {
+        padding: 16px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .alert-info {
+        background-color: #e3f2fd;
+        color: #1976d2;
+        border-left: 4px solid #1976d2;
+    }
+    
+    .alert-info i {
+        font-size: 1.2rem;
+    }
+    
+    .btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: none;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+    
+    .btn-primary {
+        background: #0072FF;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #0056b3;
+        color: white;
+    }
+    
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-success:hover {
+        background: #218838;
+        color: white;
+    }
+    
+    .btn-warning {
+        background: #ffc107;
+        color: #212529;
+    }
+    
+    .btn-warning:hover {
+        background: #e0a800;
+        color: #212529;
+    }
+    
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background: #c82333;
+        color: white;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="main-container">
-    <div class="card">
+    <div class="content-card">
         <h2 class="card-title">📋 Comentários Reportados</h2>
-        <p>Aqui você pode visualizar e gerenciar comentários que foram reportados por usuários ou apagados por administradores.</p>
+        <p style="margin-bottom: 24px; color: #666;">Aqui você pode visualizar e gerenciar comentários que foram reportados como abuso por usuários.</p>
 
         {% if comentarios %}
             <div class="table-responsive">
@@ -175,7 +311,7 @@
             <div class="alert alert-info">
                 <i class="fas fa-info-circle"></i>
                 <strong>Nenhum comentário encontrado</strong><br>
-                Não há comentários reportados ou inativos no momento.
+                Não há comentários reportados como abuso no momento.
             </div>
         {% endif %}
     </div>

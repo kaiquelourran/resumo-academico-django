@@ -25,6 +25,12 @@ from .models import (
     RelatorioBug
 )
 from .filters import QuestaoFilter
+# Importar views de gerenciamento de comentários do views_container
+from .views_container import (
+    gerenciar_comentarios_view,
+    toggle_comentario_view,
+    deletar_comentario_view
+)
 
 error_logger = logging.getLogger('questoes.errors')
 
@@ -1540,6 +1546,7 @@ def api_criar_comentario(request):
     try:
         questao_id = request.POST.get('questao_id')
         comentario_texto = request.POST.get('comentario', '').strip()
+        comentario_pai_id = request.POST.get('comentario_pai_id', None)  # Opcional - para respostas
         
         if not questao_id:
             return JsonResponse({'success': False, 'message': 'ID da questão não fornecido'}, status=400)
@@ -1550,6 +1557,20 @@ def api_criar_comentario(request):
         except (ValueError, TypeError):
             error_logger.error(f'[api_criar_comentario] ID inválido: {questao_id}')
             return JsonResponse({'success': False, 'message': 'ID da questão inválido'}, status=400)
+        
+        # Validar comentário pai se fornecido (para respostas)
+        comentario_pai = None
+        if comentario_pai_id:
+            try:
+                comentario_pai_id_int = int(comentario_pai_id)
+                comentario_pai = ComentarioQuestao.objects.get(id=comentario_pai_id_int)
+                # Validar que o comentário pai pertence à mesma questão
+                if comentario_pai.id_questao_id != questao_id_int:
+                    return JsonResponse({'success': False, 'message': 'Comentário pai não pertence à questão especificada'}, status=400)
+            except (ValueError, TypeError):
+                return JsonResponse({'success': False, 'message': 'ID do comentário pai inválido'}, status=400)
+            except ComentarioQuestao.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'Comentário pai não encontrado'}, status=404)
         
         if not comentario_texto:
             return JsonResponse({'success': False, 'message': 'Comentário não pode estar vazio'}, status=400)
@@ -1565,13 +1586,14 @@ def api_criar_comentario(request):
         except Questao.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'Questão não encontrada'}, status=404)
         
-        # Criar comentário
+        # Criar comentário (principal ou resposta)
         novo_comentario = ComentarioQuestao.objects.create(
             id_questao=questao,
             nome_usuario=request.user.first_name or request.user.username,
             email_usuario=request.user.email if request.user.email else None,
             id_usuario=request.user,
             comentario=comentario_texto,
+            id_comentario_pai=comentario_pai,  # Será None para comentários principais
             ativo=True,
             aprovado=True
         )
@@ -1579,21 +1601,15 @@ def api_criar_comentario(request):
         # Forçar refresh do objeto do banco para garantir que está salvo
         novo_comentario.refresh_from_db()
         
-        error_logger.info(f'[api_criar_comentario] Comentário criado: ID={novo_comentario.id}, Questão={questao_id_int}, Ativo={novo_comentario.ativo}, Aprovado={novo_comentario.aprovado}')
-        
-        # Verificar se o comentário aparece na busca imediatamente após criação
-        comentarios_verificacao = ComentarioQuestao.objects.filter(
-            id_questao=questao,
-            id_comentario_pai__isnull=True,
-            ativo=True,
-            aprovado=True
-        )
-        error_logger.info(f'[api_criar_comentario] Verificação: Total de comentários visíveis para questão {questao_id_int} após criar: {comentarios_verificacao.count()}')
+        tipo_comentario = 'resposta' if comentario_pai else 'comentário principal'
+        error_logger.info(f'[api_criar_comentario] {tipo_comentario.capitalize()} criado: ID={novo_comentario.id}, Questão={questao_id_int}, Pai={comentario_pai.id if comentario_pai else None}, Ativo={novo_comentario.ativo}, Aprovado={novo_comentario.aprovado}')
         
         return JsonResponse({
             'success': True,
-            'message': 'Comentário adicionado com sucesso!',
-            'comentario_id': novo_comentario.id
+            'message': f'{tipo_comentario.capitalize()} adicionado com sucesso!',
+            'comentario_id': novo_comentario.id,
+            'is_resposta': comentario_pai is not None,
+            'comentario_pai_id': comentario_pai.id if comentario_pai else None
         }, status=200)
         
     except Exception as e:
@@ -1602,6 +1618,154 @@ def api_criar_comentario(request):
             'success': False,
             'message': f'Erro ao criar comentário: {str(e)}'
         }, status=500)
+
+@csrf_exempt
+@login_required
+def api_curtir_comentario(request):
+    """API para curtir/descurtir um comentário"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    
+    try:
+        comentario_id = request.POST.get('comentario_id')
+        
+        if not comentario_id:
+            return JsonResponse({'success': False, 'message': 'ID do comentário não fornecido'}, status=400)
+        
+        try:
+            comentario_id_int = int(comentario_id)
+        except (ValueError, TypeError):
+            return JsonResponse({'success': False, 'message': 'ID do comentário inválido'}, status=400)
+        
+        try:
+            comentario = ComentarioQuestao.objects.get(id=comentario_id_int)
+        except ComentarioQuestao.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Comentário não encontrado'}, status=404)
+        
+        # Verificar se usuário já curtiu
+        curtida_existente = CurtidaComentario.objects.filter(
+            id_comentario=comentario,
+            id_usuario=request.user,
+            ativo=True
+        ).first()
+        
+        if curtida_existente:
+            # Descurtir - marcar como inativo
+            curtida_existente.ativo = False
+            curtida_existente.save()
+            curtido = False
+            error_logger.info(f'[api_curtir_comentario] Usuário {request.user.id} descurtiu comentário {comentario_id_int}')
+        else:
+            # Curtir - criar ou reativar curtida
+            curtida_existente_inativa = CurtidaComentario.objects.filter(
+                id_comentario=comentario,
+                id_usuario=request.user,
+                ativo=False
+            ).first()
+            
+            if curtida_existente_inativa:
+                # Reativar curtida existente
+                curtida_existente_inativa.ativo = True
+                curtida_existente_inativa.save()
+            else:
+                # Criar nova curtida
+                CurtidaComentario.objects.create(
+                    id_comentario=comentario,
+                    id_usuario=request.user,
+                    ativo=True
+                )
+            curtido = True
+            error_logger.info(f'[api_curtir_comentario] Usuário {request.user.id} curtiu comentário {comentario_id_int}')
+        
+        # Retornar novo total de curtidas
+        total_curtidas = comentario.curtidas.filter(ativo=True).count()
+        
+        return JsonResponse({
+            'success': True,
+            'curtido': curtido,
+            'total_curtidas': total_curtidas,
+            'message': 'Curtida atualizada com sucesso!'
+        }, status=200)
+        
+    except Exception as e:
+        error_logger.error(f'Erro ao curtir comentário: {str(e)}', exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao curtir comentário: {str(e)}'
+        }, status=500)
+
+@csrf_exempt
+def api_reportar_abuso(request):
+    """API para reportar um comentário por abuso"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método não permitido'}, status=405)
+    
+    try:
+        comentario_id = request.POST.get('comentario_id')
+        motivo = request.POST.get('motivo', '').strip()
+        tipo = request.POST.get('tipo', 'outro')
+        
+        if not comentario_id:
+            return JsonResponse({'success': False, 'message': 'ID do comentário não fornecido'}, status=400)
+        
+        try:
+            comentario_id_int = int(comentario_id)
+        except (ValueError, TypeError):
+            return JsonResponse({'success': False, 'message': 'ID do comentário inválido'}, status=400)
+        
+        try:
+            comentario = ComentarioQuestao.objects.get(id=comentario_id_int)
+        except ComentarioQuestao.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Comentário não encontrado'}, status=404)
+        
+        # Verificar se o usuário já reportou este comentário
+        denuncia_existente = DenunciaComentario.objects.filter(
+            id_comentario=comentario,
+            email_usuario=request.user.email if request.user.is_authenticated else None,
+            ip_usuario=get_client_ip(request)
+        ).exists()
+        
+        if denuncia_existente:
+            return JsonResponse({
+                'success': False,
+                'message': 'Você já reportou este comentário anteriormente.'
+            }, status=400)
+        
+        # Criar denúncia
+        denuncia = DenunciaComentario.objects.create(
+            id_comentario=comentario,
+            email_usuario=request.user.email if request.user.is_authenticated else None,
+            ip_usuario=get_client_ip(request),
+            motivo=motivo,
+            tipo=tipo
+        )
+        
+        # Marcar comentário como reportado
+        comentario.reportado = True
+        comentario.save()
+        
+        error_logger.info(f'[api_reportar_abuso] Comentário {comentario_id_int} reportado por usuário {request.user.id if request.user.is_authenticated else "anônimo"}')
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Comentário reportado com sucesso! Nossa equipe irá analisar.'
+        }, status=200)
+        
+    except Exception as e:
+        error_logger.error(f'Erro ao reportar abuso: {str(e)}', exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'message': f'Erro ao reportar comentário: {str(e)}'
+        }, status=500)
+
+def get_client_ip(request):
+    """Obtém o IP do cliente"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 
 @csrf_exempt
 def api_estatisticas(request):
