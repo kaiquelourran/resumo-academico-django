@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.db.models import Count, Q, Sum, Avg, Case, When, IntegerField, FloatField, F, ExpressionWrapper, Max, OuterRef, Subquery
 from django.utils import timezone
 from django.core.paginator import Paginator
+from django.conf import settings
 from datetime import timedelta
 from collections import Counter
 import json
@@ -116,6 +117,11 @@ def estatisticas_questao(request, questao_id):
     base_qs = RespostaUsuario.objects.filter(id_questao=questao)
     if scope == 'user' and request.user.is_authenticated:
         base_qs = base_qs.filter(id_usuario=request.user)
+    
+    # Para histórico, buscar TODAS as respostas do usuário (sem filtro de data)
+    base_qs_historico = RespostaUsuario.objects.filter(id_questao=questao)
+    if scope == 'user' and request.user.is_authenticated:
+        base_qs_historico = base_qs_historico.filter(id_usuario=request.user)
 
     # Contagem por alternativa selecionada
     contagem_respostas = (
@@ -131,8 +137,16 @@ def estatisticas_questao(request, questao_id):
         labels.append(alt_id_para_label.get(alt_id, 'Alternativa'))
         data.append(item.get('total', 0))
 
-    total_respostas = base_qs.count()
-    total_acertos = base_qs.filter(acertou=True).count()
+    # Para estatísticas do usuário, usar histórico completo; para gerais, usar período configurado
+    if scope == 'user' and request.user.is_authenticated:
+        # Usar histórico completo para totais quando for estatísticas do usuário
+        total_respostas = base_qs_historico.count()
+        total_acertos = base_qs_historico.filter(acertou=True).count()
+    else:
+        # Usar período configurado para estatísticas gerais
+        total_respostas = base_qs.count()
+        total_acertos = base_qs.filter(acertou=True).count()
+    
     percentual_acerto = round((total_acertos / total_respostas) * 100, 2) if total_respostas > 0 else 0
 
     # Timeline diária dos últimos N dias
@@ -171,10 +185,62 @@ def estatisticas_questao(request, questao_id):
         for idxa, alt in enumerate(alternativas):
             letra = letras[idxa] if idxa < len(letras) else chr(65+idxa)
             alt_id_to_letter[alt.id] = letra
-        for item in contagem_respostas:
+        
+        # Contagem de TODAS as respostas (incluindo histórico completo se for scope='user')
+        # Usar base_qs_historico para contar todas as respostas do usuário
+        if scope == 'user' and request.user.is_authenticated:
+            # Para estatísticas do usuário, contar TODAS as respostas (sem limite de período)
+            contagem_respostas_completa = (
+                base_qs_historico
+                .values('id_alternativa')
+                .annotate(total=Count('id'))
+                .order_by('-total')
+            )
+        else:
+            # Para estatísticas gerais, usar base_qs (com período configurado)
+            contagem_respostas_completa = contagem_respostas
+        
+        for item in contagem_respostas_completa:
             letra = alt_id_to_letter.get(item['id_alternativa'])
             if letra:
                 by_alt[letra] = int(item['total'])
+        
+        # Histórico de respostas individuais (apenas para scope='user')
+        historico = []
+        try:
+            if scope == 'user' and request.user.is_authenticated:
+                from django.utils import timezone
+                # Buscar pelo menos as últimas 20 respostas (sem limite de data)
+                # Usar base_qs_historico que não tem filtro de período
+                historico_respostas = base_qs_historico.order_by('-data_resposta')[:20]  # Últimas 20
+                
+                # Log para debug
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f'Histórico: buscando respostas para questão {questao.id}, usuário {request.user.id}')
+                
+                # Converter para lista para garantir que podemos contar
+                historico_lista = list(historico_respostas)
+                logger.info(f'Histórico: total de respostas encontradas: {len(historico_lista)}')
+                
+                for resposta in historico_lista:
+                    letra_escolhida = alt_id_to_letter.get(resposta.id_alternativa_id, '?')
+                    data_formatada = timezone.localtime(resposta.data_resposta).strftime('%d/%m/%Y')
+                    historico.append({
+                        'data': data_formatada,
+                        'data_iso': resposta.data_resposta.isoformat(),
+                        'alternativa': letra_escolhida,
+                        'acertou': resposta.acertou,
+                    })
+                
+                logger.info(f'Histórico: {len(historico)} itens processados para retorno')
+        except Exception as e:
+            # Se houver erro ao buscar histórico, apenas não incluir histórico (não quebrar a resposta)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'Erro ao buscar histórico: {e}', exc_info=True)
+            historico = []
+        
         return JsonResponse({
             'success': True,
             'data': {
@@ -190,6 +256,7 @@ def estatisticas_questao(request, questao_id):
                 },
                 'by_alternative': by_alt,
                 'timeline': { 'labels': labels_tl, 'counts': counts_tl },
+                'historico': historico,  # Histórico individual de respostas
             }
         })
 
@@ -403,6 +470,7 @@ def listar_questoes_view(request, assunto_id):
 @csrf_exempt # Use apenas se a view não estiver autenticada ou for uma API
 def validar_resposta_view(request):
     """View que processa a resposta do quiz via AJAX/POST."""
+    from django.db import IntegrityError
     try:
         # Tenta carregar o JSON do corpo da requisição
         try:
@@ -433,22 +501,40 @@ def validar_resposta_view(request):
         
         # Salva a resposta do usuário (apenas se estiver logado)
         if request.user.is_authenticated:
-            # Apaga respostas anteriores para a mesma questão (se a intenção é salvar apenas a última)
-            RespostaUsuario.objects.filter(
-                id_usuario=request.user,
-                id_questao=questao
-            ).delete()
-            
-            # Cria nova resposta
-            RespostaUsuario.objects.create(
-                id_usuario=request.user,
-                id_questao=questao,
-                id_alternativa=alternativa,
-                acertou=acertou
-            )
+            # NÃO apagar respostas anteriores - manter histórico de todas as respostas
+            # Cria nova resposta (mantendo histórico completo)
+            try:
+                RespostaUsuario.objects.create(
+                    id_usuario=request.user,
+                    id_questao=questao,
+                    id_alternativa=alternativa,
+                    acertou=acertou
+                )
+            except IntegrityError as e:
+                # Se houver erro de constraint (unique_together ainda existe no banco),
+                # tenta atualizar a resposta existente em vez de criar nova
+                try:
+                    # Atualiza a resposta existente (mantém apenas a última)
+                    RespostaUsuario.objects.filter(
+                        id_usuario=request.user,
+                        id_questao=questao
+                    ).update(
+                        id_alternativa=alternativa,
+                        acertou=acertou,
+                        data_resposta=timezone.now()
+                    )
+                except Exception as update_err:
+                    # Se mesmo atualizar der erro, apenas loga e continua
+                    error_logger.warning(f'Erro ao atualizar resposta após IntegrityError: {update_err}')
+            except Exception as e:
+                # Outro tipo de erro - logar mas continuar (não quebrar o fluxo)
+                error_logger.error(f'Erro ao salvar resposta (não IntegrityError): {e}', exc_info=True)
+                # Não quebrar o fluxo se houver erro ao salvar - continua para retornar resposta ao frontend
 
         # alternativa_correta já obtida acima
         
+        # Sempre retornar sucesso, mesmo se houver erro ao salvar no banco
+        # (o erro já foi tratado acima e logado)
         return JsonResponse({
             'success': True,
             'acertou': acertou,
@@ -470,7 +556,16 @@ def validar_resposta_view(request):
         
     except Exception as e:
         error_logger.error(f"Erro inesperado na view validar_resposta_view: {e}", exc_info=True)
-        return JsonResponse({'success': False, 'error': 'Erro interno do servidor.'}, status=500)
+        # Retornar erro detalhado para debug (remover em produção se necessário)
+        import traceback
+        error_details = {
+            'success': False, 
+            'error': 'Erro interno do servidor.',
+            'debug_message': str(e) if hasattr(e, '__str__') else 'Erro desconhecido'
+        }
+        if settings.DEBUG:
+            error_details['traceback'] = traceback.format_exc()
+        return JsonResponse(error_details, status=500)
 
 
 def quiz_vertical_filtros_view(request, assunto_id):

@@ -127,7 +127,8 @@ class RespostaUsuario(models.Model):
         verbose_name = "Resposta do Usuário"
         verbose_name_plural = "Respostas dos Usuários"
         ordering = ['-data_resposta']
-        unique_together = ['id_usuario', 'id_questao']
+        # Removido unique_together para permitir histórico de múltiplas respostas
+        # unique_together = ['id_usuario', 'id_questao']
     
     def __str__(self):
         status = "✓" if self.acertou else "✗"

@@ -78,7 +78,46 @@
                 {% endfor %}
             </div>
             <div class="stats-actions">
-                <button type="button" class="btn-stats" data-action="ver-estatisticas" data-questao-id="{{ item.questao.id }}"><i class="fas fa-chart-pie"></i> Ver Estatísticas</button>
+                <button type="button" class="btn-stats-toggle" data-action="toggle-estatisticas" data-questao-id="{{ item.questao.id }}" onclick="console.log('🎯 Botão Ver Estatísticas clicado! Questão ID:', {{ item.questao.id }}); event.preventDefault(); event.stopPropagation(); if(window.toggleStatsSection){ console.log('✅ toggleStatsSection encontrado, chamando...'); window.toggleStatsSection({{ item.questao.id }}, this); } else { console.error('❌ toggleStatsSection não encontrado!'); alert('Erro: Função não disponível. Recarregue a página.'); } return false;">
+                    <i class="fas fa-chart-pie"></i> Ver Estatísticas
+                    <i class="fas fa-chevron-down stats-chevron"></i>
+                </button>
+            </div>
+            <!-- Seção de Estatísticas Inline (inicialmente oculta) -->
+            <div class="stats-section-inline" id="stats-section-{{ item.questao.id }}" style="display:none;">
+                <div class="stats-header-inline">
+                    <h3>Ver Estatísticas</h3>
+                    <button type="button" class="stats-close-inline" onclick="if(window.toggleStatsSection){ window.toggleStatsSection({{ item.questao.id }}); } return false;">
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                </div>
+                <div class="stats-content-inline">
+                    <div class="stats-charts-grid">
+                        <!-- Painel Esquerdo: Percentual de Rendimento -->
+                        <div class="chart-box-left">
+                            <h4 class="chart-title">Percentual de Rendimento</h4>
+                            <div class="chart-container">
+                                <canvas id="chartAccuracy-{{ item.questao.id }}" height="200"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Painel Direito: Alternativas mais respondidas -->
+                        <div class="chart-box-right">
+                            <h4 class="chart-title">Alternativas mais respondidas</h4>
+                            <div class="chart-container">
+                                <canvas id="chartAlternatives-{{ item.questao.id }}" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Painel Inferior: Histórico de Respostas -->
+                    <div class="history-section">
+                        <h4 class="history-title">Histórico de Respostas</h4>
+                        <div id="historicoRespostas-{{ item.questao.id }}" class="history-list">
+                            <!-- Será preenchido via JavaScript -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         {% empty %}
@@ -222,44 +261,81 @@
       
       // FUNÇÃO PRINCIPAL toggleFavorito - DEFINIR ANTES DE QUALQUER COISA
       window.toggleFavorito = function(id, btn){
-        const favs = getFavoritos();
-        id = Number(id);
-        const eraFavorito = favs.has(id);
-        
-        if(eraFavorito){
-          favs.delete(id);
-        } else {
-          favs.add(id);
-        }
-        
-        // Salvar no localStorage IMEDIATAMENTE
-        saveFavoritos(favs);
-        console.log('💾 Favoritos salvos no localStorage:', Array.from(favs));
-        
-        // Atualizar visual do botão
-        if(btn){
-          if(favs.has(id)){
-            btn.classList.add('is-fav');
+        try {
+          const favs = getFavoritos();
+          id = Number(id);
+          const eraFavorito = favs.has(id);
+          
+          console.log('🔄 toggleFavorito chamado! ID:', id, 'Era favorito:', eraFavorito);
+          
+          if(eraFavorito){
+            favs.delete(id);
+            console.log('❌ Removendo favorito ID:', id);
           } else {
-            btn.classList.remove('is-fav');
+            favs.add(id);
+            console.log('✅ Adicionando favorito ID:', id);
           }
-        }
-        
-        // marca no card para possíveis filtros futuros
-        const card = btn ? btn.closest('.question-card') : document.querySelector(`.question-card[data-questao-id='${id}']`);
-        if(card){
-          if(favs.has(id)) {
-            card.setAttribute('data-favorito','1');
-          } else {
-            card.removeAttribute('data-favorito');
+          
+          // Salvar no localStorage IMEDIATAMENTE
+          saveFavoritos(favs);
+          console.log('💾 Favoritos salvos no localStorage:', Array.from(favs));
+          
+          // Atualizar visual do botão clicado PRIMEIRO
+          if(btn){
+            if(favs.has(id)){
+              btn.classList.add('is-fav');
+              // FORÇAR estilos inline para garantir visual
+              btn.style.background = '#ff3860';
+              btn.style.borderColor = '#ff3860';
+              btn.style.color = '#fff';
+              console.log('✅ Botão marcado como favorito (visual)');
+            } else {
+              btn.classList.remove('is-fav');
+              // Remover estilos inline quando desfavoritar
+              btn.style.background = '';
+              btn.style.borderColor = '';
+              btn.style.color = '';
+              console.log('❌ Botão desmarcado como favorito (visual)');
+            }
           }
+          
+          // Marcar no card para possíveis filtros futuros
+          const card = btn ? btn.closest('.question-card') : document.querySelector(`.question-card[data-questao-id='${id}']`);
+          if(card){
+            if(favs.has(id)) {
+              card.setAttribute('data-favorito','1');
+              console.log('✅ Card marcado como favorito');
+            } else {
+              card.removeAttribute('data-favorito');
+              console.log('❌ Card desmarcado como favorito');
+            }
+          }
+          
+          // Atualizar TODOS os botões de favorito na página (caso haja duplicatas)
+          // IMPORTANTE: Fazer isso DEPOIS de salvar para garantir que usa o estado correto
+          setTimeout(() => {
+            if (window.aplicarFavoritosNosCards) {
+              try {
+                window.aplicarFavoritosNosCards();
+                console.log('✅ Todos os botões de favorito atualizados');
+              } catch (err) {
+                console.error('Erro ao aplicar favoritos em todos os cards:', err);
+              }
+            }
+          }, 50);
+          
+          // Verificar se realmente foi salvo
+          const verificacao = getFavoritos();
+          const agoraEFavorito = verificacao.has(id);
+          console.log('🔍 Verificação - Favoritos no localStorage após salvar:', Array.from(verificacao));
+          console.log('✅ toggleFavorito executado! ID:', id, 'Era favorito:', eraFavorito, 'Agora é favorito:', agoraEFavorito);
+          
+          return agoraEFavorito;
+        } catch (err) {
+          console.error('❌ Erro em toggleFavorito:', err);
+          alert('Erro ao favoritar/desfavoritar questão. Por favor, tente novamente.');
+          return false;
         }
-        
-        console.log('✅ toggleFavorito executado! ID:', id, 'Era favorito:', eraFavorito, 'Agora é favorito:', favs.has(id));
-        
-        // Verificar se realmente foi salvo
-        const verificacao = getFavoritos();
-        console.log('🔍 Verificação - Favoritos no localStorage após salvar:', Array.from(verificacao));
       };
       
       // Expor funções auxiliares também
@@ -268,6 +344,81 @@
       window.isFavorito = function(id){ return getFavoritos().has(Number(id)); };
       
       console.log('✅ toggleFavorito definido no escopo global!');
+      
+      // ===== FUNÇÃO PARA TOGGLE DA SEÇÃO DE ESTATÍSTICAS INLINE =====
+      window.toggleStatsSection = function(idQuestao, btnElement) {
+        try {
+          console.log('🔄 toggleStatsSection chamado! ID Questão:', idQuestao, 'btnElement:', btnElement);
+          
+          // Garantir que idQuestao seja um número
+          idQuestao = Number(idQuestao);
+          if (!idQuestao || isNaN(idQuestao)) {
+            console.error('❌ ID de questão inválido:', idQuestao);
+            return false;
+          }
+          
+          const sectionId = `stats-section-${idQuestao}`;
+          console.log('🔍 Procurando seção:', sectionId);
+          const section = document.getElementById(sectionId);
+          
+          if (!section) {
+            console.error('❌ Seção de estatísticas não encontrada:', sectionId);
+            console.log('🔍 Todas as seções disponíveis:', Array.from(document.querySelectorAll('[id^="stats-section-"]')).map(el => el.id));
+            return false;
+          }
+          
+          console.log('✅ Seção encontrada!');
+          const isExpanded = section.style.display !== 'none' && section.style.display !== '';
+          console.log('📊 Seção está expandida?', isExpanded);
+          
+          if (isExpanded) {
+            // Colapsar
+            section.style.display = 'none';
+            section.setAttribute('aria-expanded', 'false');
+            
+            // Atualizar ícone do botão
+            if (btnElement) {
+              const chevron = btnElement.querySelector('.stats-chevron');
+              if (chevron) {
+                chevron.classList.remove('fa-chevron-up');
+                chevron.classList.add('fa-chevron-down');
+              }
+            }
+            
+            console.log('✅ Seção de estatísticas colapsada para questão', idQuestao);
+          } else {
+            // Expandir
+            section.style.display = 'block';
+            section.setAttribute('aria-expanded', 'true');
+            
+            // Atualizar ícone do botão
+            if (btnElement) {
+              const chevron = btnElement.querySelector('.stats-chevron');
+              if (chevron) {
+                chevron.classList.remove('fa-chevron-down');
+                chevron.classList.add('fa-chevron-up');
+              }
+            }
+            
+            // SEMPRE carregar estatísticas ao expandir (garantir que dados estejam atualizados)
+            console.log('🔄 Carregando estatísticas para questão', idQuestao);
+            if (window.fetchAndRenderStatsInline) {
+              window.fetchAndRenderStatsInline(idQuestao, 'user', 14);
+            } else {
+              console.error('❌ fetchAndRenderStatsInline não está disponível!');
+            }
+            
+            console.log('✅ Seção de estatísticas expandida para questão', idQuestao);
+          }
+          
+          return false;
+        } catch (error) {
+          console.error('❌ Erro ao toggle seção de estatísticas:', error);
+          return false;
+        }
+      };
+      
+      console.log('✅ toggleStatsSection definido no escopo global!');
       
       // Aplicar favoritos IMEDIATAMENTE nos cards já renderizados pelo servidor
       (function aplicarFavoritosImediato(){
@@ -413,9 +564,119 @@
 .question-header::before{ pointer-events:none !important; }
 .question-header{ pointer-events:auto !important; }
 
-/* Botão Ver Estatísticas no card */
-.stats-actions{ margin-top:12px; }
-.btn-stats{ display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:10px; background:linear-gradient(135deg,#00C6FF 0%, #0072FF 100%); color:#fff; text-decoration:none; font-weight:800; border:1px solid rgba(0,114,255,.6); box-shadow:0 6px 16px rgba(0,114,255,.18); }
+/* Botão Ver Estatísticas no card (Toggle) */
+.btn-stats-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%) !important;
+  color: #fff !important;
+  text-decoration: none;
+  font-weight: 700;
+  border: 1px solid rgba(0, 114, 255, 0.6);
+  box-shadow: 0 6px 16px rgba(0, 114, 255, 0.18);
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 10 !important;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.btn-stats-toggle:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(0, 114, 255, 0.25);
+}
+
+.stats-chevron {
+  margin-left: auto;
+  transition: transform 0.3s ease;
+}
+
+/* Seção de Estatísticas Inline */
+.stats-section-inline {
+  margin-top: 16px;
+  padding: 20px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 2000px;
+    transform: translateY(0);
+  }
+}
+
+.stats-header-inline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.stats-header-inline h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.stats-close-inline {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.stats-close-inline:hover {
+  background: #e5e7eb;
+  color: #0f172a;
+}
+
+.stats-content-inline {
+  /* Conteúdo já está estilizado com as classes existentes */
+}
+
+/* Botão Ver Estatísticas no card (antigo - manter para compatibilidade) */
+.stats-actions{ margin-top:12px; position:relative; z-index:10; }
+.btn-stats{ 
+  display:inline-flex !important; 
+  align-items:center; 
+  gap:8px; 
+  padding:8px 14px; 
+  border-radius:10px; 
+  background:linear-gradient(135deg,#00C6FF 0%, #0072FF 100%) !important; 
+  color:#fff !important; 
+  text-decoration:none; 
+  font-weight:800; 
+  border:1px solid rgba(0,114,255,.6); 
+  box-shadow:0 6px 16px rgba(0,114,255,.18); 
+  cursor:pointer !important;
+  pointer-events:auto !important;
+  position:relative !important;
+  z-index:9999 !important;
+  user-select:none;
+}
 .btn-stats:hover{ filter:brightness(1.05); }
 </style>
 
@@ -485,9 +746,10 @@ document.addEventListener('DOMContentLoaded', function(){
   atualizarProgresso(); 
   inicializarFiltros();
   // Garante delegação mesmo em renderização inicial server-side
-  try { bindAlternativas(); } catch(_) {}
-  try { bindFavoritos(); } catch(_) {}
-  try { bindStatsButtons(); } catch(_) {}
+  // IMPORTANTE: Ordem de binding - estatísticas primeiro (useCapture), depois alternativas e favoritos
+  try { bindStatsButtons(); } catch(e) { console.error('Erro ao bindStatsButtons:', e); }
+  try { bindAlternativas(); } catch(e) { console.error('Erro ao bindAlternativas:', e); }
+  try { bindFavoritos(); } catch(e) { console.error('Erro ao bindFavoritos:', e); }
   currentCardIndex = 0;
   
   // Aplicar favoritos novamente após delays para garantir
@@ -527,8 +789,8 @@ function criarCardQuestao(questaoData,index){
   card.id = `questao-${questaoData.questao.id}`;
   card.dataset.questaoId=questaoData.questao.id; card.dataset.questaoIndex=index; card.dataset.statusResposta=questaoData.status;
   card.innerHTML=`
-    <div class="question-header">\n      <span class="question-number">Questão ${index+1} de ${questoesList.length} (ID: ${questaoData.questao.id})</span>\n      <div class="question-header-right">\n        <span class="question-status ${questaoData.status}">${formatarStatus(questaoData.status)}</span>\n        <button class="fav-btn" aria-label="Favoritar" title="Favoritar" data-action="toggle-favorito" data-questao-id="${questaoData.questao.id}" onclick="if(window.toggleFavorito){ window.toggleFavorito(${questaoData.questao.id}, this); } return false;">❤</button>\n      </div>\n    </div>\n    <div class="question-text">${questaoData.questao.texto}</div>\n    <div class="alternatives">\n      ${questaoData.alternativas.map(alt=>`\n        <div class=\"alternative-item\" id=\"alternative-${alt.id}\" role=\"button\" tabindex=\"0\" data-questao-id=\"${questaoData.questao.id}\" data-alternativa-id=\"${alt.id}\" data-resposta-correta=\"${(alt.eh_correta===true||alt.eh_correta===1||alt.eh_correta==='1'||alt.eh_correta==='true'||alt.eh_correta==='True')?'1':'0'}\">\n          <div class=\"alternative-letter\">${alt.letra}</div>\n          <div class=\"alternative-text\">${alt.texto}</div>\n        </div>`).join('')}\n    </div>\n    <div class="stats-actions">\n      <button type="button" class="btn-stats" data-action="ver-estatisticas" data-questao-id="${questaoData.questao.id}"><i class="fas fa-chart-pie"></i> Ver Estatísticas</button>\n    </div>`; 
-  // Garantir que o botão de favorito tenha pointer-events ativo e aplicar estado de favorito
+    <div class="question-header">\n      <span class="question-number">Questão ${index+1} de ${questoesList.length} (ID: ${questaoData.questao.id})</span>\n      <div class="question-header-right">\n        <span class="question-status ${questaoData.status}">${formatarStatus(questaoData.status)}</span>\n        <button class="fav-btn" aria-label="Favoritar" title="Favoritar" data-action="toggle-favorito" data-questao-id="${questaoData.questao.id}" onclick="if(window.toggleFavorito){ window.toggleFavorito(${questaoData.questao.id}, this); } return false;">❤</button>\n      </div>\n    </div>\n    <div class="question-text">${questaoData.questao.texto}</div>\n    <div class="alternatives">\n      ${questaoData.alternativas.map(alt=>`\n        <div class=\"alternative-item\" id=\"alternative-${alt.id}\" role=\"button\" tabindex=\"0\" data-questao-id=\"${questaoData.questao.id}\" data-alternativa-id=\"${alt.id}\" data-resposta-correta=\"${(alt.eh_correta===true||alt.eh_correta===1||alt.eh_correta==='1'||alt.eh_correta==='true'||alt.eh_correta==='True')?'1':'0'}\" onclick="if(window.responderQuestao){ window.responderQuestao(${questaoData.questao.id}, ${alt.id}, this); } return false;">\n          <div class=\"alternative-letter\">${alt.letra}</div>\n          <div class=\"alternative-text\">${alt.texto}</div>\n        </div>`).join('')}\n    </div>\n    <div class="stats-actions">\n      <button type="button" class="btn-stats-toggle" data-action="toggle-estatisticas" data-questao-id="${questaoData.questao.id}" onclick="console.log('🎯 Botão Ver Estatísticas clicado (dinâmico)! Questão ID:', ${questaoData.questao.id}); event.preventDefault(); event.stopPropagation(); if(window.toggleStatsSection){ console.log('✅ toggleStatsSection encontrado, chamando...'); window.toggleStatsSection(${questaoData.questao.id}, this); } else { console.error('❌ toggleStatsSection não encontrado!'); alert('Erro: Função não disponível. Recarregue a página.'); } return false;">\n        <i class="fas fa-chart-pie"></i> Ver Estatísticas\n        <i class="fas fa-chevron-down stats-chevron"></i>\n      </button>\n    </div>\n    <!-- Seção de Estatísticas Inline (inicialmente oculta) -->\n    <div class="stats-section-inline" id="stats-section-${questaoData.questao.id}" style="display:none;">\n      <div class="stats-header-inline">\n        <h3>Ver Estatísticas</h3>\n        <button type="button" class="stats-close-inline" onclick="if(window.toggleStatsSection){ window.toggleStatsSection(${questaoData.questao.id}); } return false;">\n          <i class="fas fa-chevron-up"></i>\n        </button>\n      </div>\n      <div class="stats-content-inline">\n        <div class="stats-charts-grid">\n          <div class="chart-box-left">\n            <h4 class="chart-title">Percentual de Rendimento</h4>\n            <div class="chart-container">\n              <canvas id="chartAccuracy-${questaoData.questao.id}" height="200"></canvas>\n            </div>\n          </div>\n          <div class="chart-box-right">\n            <h4 class="chart-title">Alternativas mais respondidas</h4>\n            <div class="chart-container">\n              <canvas id="chartAlternatives-${questaoData.questao.id}" height="200"></canvas>\n            </div>\n          </div>\n        </div>\n        <div class="history-section">\n          <h4 class="history-title">Histórico de Respostas</h4>\n          <div id="historicoRespostas-${questaoData.questao.id}" class="history-list"></div>\n        </div>\n      </div>\n    </div>`; 
+  // Garantir que os botões tenham pointer-events ativo e aplicar estado de favorito
   setTimeout(function(){
     const favBtn = card.querySelector('.fav-btn');
     if (favBtn) {
@@ -546,15 +808,79 @@ function criarCardQuestao(questaoData,index){
         }
       }
     }
+    
+    // Garantir que o botão de estatísticas seja clicável
+    const statsBtn = card.querySelector('.btn-stats');
+    if (statsBtn) {
+      statsBtn.style.pointerEvents = 'auto';
+      statsBtn.style.cursor = 'pointer';
+      statsBtn.style.zIndex = '9999';
+      statsBtn.style.position = 'relative';
+      
+      // Adicionar onclick inline como fallback (se ainda não tiver)
+      const questaoId = statsBtn.getAttribute('data-questao-id');
+      if (questaoId) {
+        // Sempre garantir que o onclick funcione, mesmo que já tenha um
+        const existingOnclick = statsBtn.getAttribute('onclick');
+        if (!existingOnclick || !existingOnclick.includes('toggleStatsSection')) {
+          statsBtn.onclick = function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            console.log('🎯 Botão de estatísticas clicado via JavaScript onclick! ID:', questaoId);
+            if (window.toggleStatsSection) {
+              console.log('✅ Chamando toggleStatsSection...');
+              window.toggleStatsSection(Number(questaoId), statsBtn);
+            } else {
+              console.error('❌ window.toggleStatsSection não encontrado!');
+            }
+            return false;
+          };
+          console.log('✅ onclick JavaScript adicionado ao botão de estatísticas ID:', questaoId);
+        }
+      }
+    }
+    
+    // GARANTIR que as alternativas sejam clicáveis (CRÍTICO!)
+    const altItems = card.querySelectorAll('.alternative-item');
+    altItems.forEach(altItem => {
+      altItem.style.pointerEvents = 'auto';
+      altItem.style.cursor = 'pointer';
+      
+      // Adicionar onclick inline se não tiver
+      if (!altItem.getAttribute('onclick')) {
+        const questaoId = altItem.getAttribute('data-questao-id');
+        const alternativaId = altItem.getAttribute('data-alternativa-id');
+        if (questaoId && alternativaId) {
+          altItem.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🎯 Alternativa clicada via JavaScript onclick! Questão:', questaoId, 'Alternativa:', alternativaId);
+            if (window.responderQuestao) {
+              window.responderQuestao(Number(questaoId), Number(alternativaId), this);
+            } else {
+              console.error('❌ window.responderQuestao não encontrado!');
+            }
+            return false;
+          };
+        }
+      }
+    });
   }, 0);
   return card; }
 
 function formatarStatus(s){ const m={'nao-respondida':'Não Respondida','respondida':'Respondida','certa':'Certa','errada':'Errada'}; return m[s]||s; }
 
 function responderQuestao(questaoId,alternativaId,elemento){
-  const isTrue = (v)=> (v===true||v===1||v==='1'||v==='true'||v==='True');
-  const card=elemento.closest('.question-card'); const alternativas=card.querySelectorAll('.alternative-item');
-  try { console.log('[responderQuestao] qid=', questaoId, 'aid=', alternativaId); } catch(_) {}
+  try {
+    const isTrue = (v)=> (v===true||v===1||v==='1'||v==='true'||v==='True');
+    const card=elemento.closest('.question-card'); 
+    if (!card) {
+      console.error('Erro: card não encontrado para questão', questaoId);
+      return;
+    }
+    const alternativas=card.querySelectorAll('.alternative-item');
+    try { console.log('[responderQuestao] qid=', questaoId, 'aid=', alternativaId); } catch(_) {}
   
   // GARANTIR que o botão de favorito SEMPRE fique clicável (CRÍTICO!)
   const favBtn = card ? card.querySelector('.fav-btn') : null;
@@ -564,12 +890,17 @@ function responderQuestao(questaoId,alternativaId,elemento){
     favBtn.style.zIndex = '100';
   }
   
-  // Limpar TODAS as classes de feedback e desativar cliques APENAS nas alternativas
+  // Limpar TODAS as classes de feedback ANTES de responder
+  // IMPORTANTE: NÃO desativar pointer-events aqui! As alternativas devem ser clicáveis ANTES de responder
   alternativas.forEach(alt=>{ 
     alt.classList.remove('alternative-correct','alternative-correct-chosen','alternative-incorrect-chosen'); 
-    alt.style.pointerEvents='none'; 
-    alt.style.cursor='default'; 
+    // NÃO desativar pointer-events aqui - as alternativas devem ser clicáveis para poder responder
+    // alt.style.pointerEvents='auto'; // Garantir que esteja ativo
+    // alt.style.cursor='pointer'; // Garantir cursor de pointer
   });
+  
+  // APÓS processar a resposta, então desativar para evitar cliques duplicados
+  // Isso será feito após a validação do backend
   const dados=(window.questoesList||[]).find(q=>q.questao.id===questaoId);
   let corretaId = NaN;
   if (dados && Array.isArray(dados.alternativas)){
@@ -605,62 +936,93 @@ function responderQuestao(questaoId,alternativaId,elemento){
       alt.classList.add('alternative-incorrect-chosen'); // Vermelho se clicou na errada
     }
   });
-  const idx=questoesList.findIndex(q=>q.questao.id===questaoId); if(idx>-1){ const ok=selId===corretaId; questoesList[idx].status=ok?'certa':'errada'; card.dataset.statusResposta=ok?'certa':'errada'; const st=card.querySelector('.question-status'); if(st){ st.textContent=ok?'Certa':'Errada'; st.className=`question-status ${ok?'certa':'errada'}`; } }
-  // Toast de feedback removido conforme solicitado
-  // try { if (typeof exibirFeedback==='function') exibirFeedback((selId===corretaId)?'Correto! 😄':'Incorreto! 😥', (selId===corretaId)); } catch(_) {}
-  atualizarProgresso();
-  const token=document.querySelector('[name=csrfmiddlewaretoken]').value;
-  fetch('/questoes/quiz/validar/',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','X-CSRFToken':token},
-    body:JSON.stringify({id_questao:questaoId,id_alternativa:selId})
-  })
-  .then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status)))
-  .then(data=>{
-    try{
-      // Autoritativo pelo backend
-      const corretaBackend = Number(data.id_alternativa_correta);
-      const acertouBackend = !!data.acertou;
-      const selecionadaBackend = Number(data.id_alternativa_selecionada);
-      
-      // Limpar TODAS as classes de feedback primeiro
-      alternativas.forEach(alt=>{
-        alt.classList.remove('alternative-correct','alternative-correct-chosen','alternative-incorrect-chosen');
-      });
-      
-      // Aplicar feedback baseado na resposta do backend
-      alternativas.forEach(alt=>{
-        const id=Number(alt.getAttribute('data-alternativa-id'));
-        
-        // Se é a alternativa CORRETA
-        if (id === corretaBackend) {
-          // Se foi a alternativa que o usuário clicou (e está correta)
-          if (id === selecionadaBackend && acertouBackend) {
-            alt.classList.add('alternative-correct-chosen'); // Verde com animação
-          } else {
-            alt.classList.add('alternative-correct'); // Verde simples
-          }
-        }
-        // Se foi a alternativa SELECIONADA e está INCORRETA
-        else if (id === selecionadaBackend && !acertouBackend) {
-          alt.classList.add('alternative-incorrect-chosen'); // Vermelho
-        }
-      });
-      
-      const st=card.querySelector('.question-status'); 
-      if(st){ 
-        st.textContent=acertouBackend?'Certa':'Errada'; 
-        st.className='question-status '+(acertouBackend?'certa':'errada'); 
-      }
-      // Toast de feedback removido conforme solicitado
-      // if (typeof exibirFeedback==='function'){ 
-      //   exibirFeedback(acertouBackend?'Correto! 😄':'Incorreto! 😥', acertouBackend); 
-      // }
-    }catch(e){ 
-      console.error('Erro ao processar resposta do backend:', e); 
+    const idx=questoesList.findIndex(q=>q.questao.id===questaoId); if(idx>-1){ const ok=selId===corretaId; questoesList[idx].status=ok?'certa':'errada'; card.dataset.statusResposta=ok?'certa':'errada'; const st=card.querySelector('.question-status'); if(st){ st.textContent=ok?'Certa':'Errada'; st.className=`question-status ${ok?'certa':'errada'}`; } }
+    // Toast de feedback removido conforme solicitado
+    // try { if (typeof exibirFeedback==='function') exibirFeedback((selId===corretaId)?'Correto! 😄':'Incorreto! 😥', (selId===corretaId)); } catch(_) {}
+    atualizarProgresso();
+    const tokenEl = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!tokenEl) {
+      console.error('Erro: CSRF token não encontrado');
+      return;
     }
-  })
-  .catch(()=>{});
+    const token = tokenEl.value;
+    fetch('/questoes/quiz/validar/',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':token},
+      body:JSON.stringify({id_questao:questaoId,id_alternativa:selId})
+    })
+    .then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status)))
+    .then(data=>{
+      try{
+        // Autoritativo pelo backend
+        const corretaBackend = Number(data.id_alternativa_correta);
+        const acertouBackend = !!data.acertou;
+        const selecionadaBackend = Number(data.id_alternativa_selecionada);
+        
+        // Limpar TODAS as classes de feedback primeiro
+        alternativas.forEach(alt=>{
+          alt.classList.remove('alternative-correct','alternative-correct-chosen','alternative-incorrect-chosen');
+        });
+        
+        // Aplicar feedback baseado na resposta do backend
+        alternativas.forEach(alt=>{
+          const id=Number(alt.getAttribute('data-alternativa-id'));
+          
+          // Se é a alternativa CORRETA
+          if (id === corretaBackend) {
+            // Se foi a alternativa que o usuário clicou (e está correta)
+            if (id === selecionadaBackend && acertouBackend) {
+              alt.classList.add('alternative-correct-chosen'); // Verde com animação
+            } else {
+              alt.classList.add('alternative-correct'); // Verde simples
+            }
+          }
+          // Se foi a alternativa SELECIONADA e está INCORRETA
+          else if (id === selecionadaBackend && !acertouBackend) {
+            alt.classList.add('alternative-incorrect-chosen'); // Vermelho
+          }
+        });
+        
+        const st=card.querySelector('.question-status'); 
+        if(st){ 
+          st.textContent=acertouBackend?'Certa':'Errada'; 
+          st.className='question-status '+(acertouBackend?'certa':'errada'); 
+        }
+        
+        // AGORA desativar cliques nas alternativas após processar resposta do backend
+        alternativas.forEach(alt=>{ 
+          alt.style.pointerEvents='none'; 
+          alt.style.cursor='default'; 
+        });
+        
+        // Recarregar estatísticas se a seção estiver expandida
+        const statsSection = document.getElementById(`stats-section-${questaoId}`);
+        if (statsSection && statsSection.style.display !== 'none') {
+          // Seção está expandida, recarregar estatísticas para atualizar histórico
+          setTimeout(() => {
+            if (window.fetchAndRenderStatsInline) {
+              window.fetchAndRenderStatsInline(questaoId, 'user', 14);
+              console.log('🔄 Estatísticas recarregadas após resposta para questão', questaoId);
+            }
+          }, 300); // Pequeno delay para garantir que o backend processou a resposta
+        }
+        
+        // Toast de feedback removido conforme solicitado
+        // if (typeof exibirFeedback==='function'){ 
+        //   exibirFeedback(acertouBackend?'Correto! 😄':'Incorreto! 😥', acertouBackend); 
+        // }
+      }catch(e){ 
+        console.error('Erro ao processar resposta do backend:', e); 
+      }
+    })
+    .catch((err)=>{ 
+      console.error('Erro ao validar resposta:', err); 
+      // Não quebrar a página se houver erro na validação
+    });
+  } catch (err) {
+    console.error('Erro geral em responderQuestao:', err);
+    // Não propagar erro para não quebrar a página
+  }
 }
 
 // Expor no escopo global para suportar onclick inline
@@ -751,6 +1113,15 @@ function aplicarFavoritosNosCards(){
   let aplicados = 0;
   let naoAplicados = 0;
   
+  // Aplicar estilos também nos botões de estatísticas
+  const statsButtons = document.querySelectorAll('.btn-stats');
+  statsButtons.forEach((btn)=>{
+    btn.style.pointerEvents = 'auto';
+    btn.style.cursor = 'pointer';
+    btn.style.zIndex = '9999';
+    btn.style.position = 'relative';
+  });
+  
   buttons.forEach((btn, index)=>{ 
     // FORÇAR pointer-events: auto SEMPRE no botão de favorito (CRÍTICO!)
     btn.style.pointerEvents = 'auto';
@@ -778,10 +1149,15 @@ function aplicarFavoritosNosCards(){
         console.log(`✅ Classe is-fav ADICIONADA e estilo aplicado ao botão ID ${id}`);
       } else {
         btn.classList.remove('is-fav');
-        // Remover estilos inline se não for favorito
+        // Remover estilos inline se não for favorito (usar removeProperty também)
+        btn.style.removeProperty('background');
+        btn.style.removeProperty('border-color');
+        btn.style.removeProperty('color');
+        // Também definir como vazio para garantir
         btn.style.background = '';
         btn.style.borderColor = '';
         btn.style.color = '';
+        console.log(`❌ Classe is-fav REMOVIDA e estilo removido do botão ID ${id}`);
       }
       
       // Marcar no card
@@ -848,9 +1224,21 @@ window.aplicarFavoritosNosCards = aplicarFavoritosNosCards;
       } else if (id && !favs.has(id)) {
         // Garantir que não-favoritos não tenham a classe
         btn.classList.remove('is-fav');
+        // Remover estilos inline quando desfavoritar (usando removeProperty para garantir remoção)
         btn.style.removeProperty('background');
         btn.style.removeProperty('border-color');
         btn.style.removeProperty('color');
+        // Também remover via estilo inline vazio para garantir
+        btn.style.background = '';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+        console.log(`❌ Favorito REMOVIDO do botão ID ${id}`);
+        
+        // Remover do card também
+        const card = btn.closest('.question-card');
+        if (card) {
+          card.removeAttribute('data-favorito');
+        }
       }
     });
   }
@@ -932,43 +1320,80 @@ function bindStatsButtons(){
   const qc = document.getElementById('questions-container');
   if (!qc) return;
   // Remove listeners anteriores para evitar duplicação
-  qc.removeEventListener('click', bindStatsButtons.handler);
-  // Cria novo handler
+  if (bindStatsButtons.handler) {
+    qc.removeEventListener('click', bindStatsButtons.handler, true);
+  }
+  // Cria novo handler - usar useCapture:true para capturar ANTES de outros listeners
   bindStatsButtons.handler = function(e){
     const btn = e.target.closest('[data-action="ver-estatisticas"]');
     if (!btn) return;
+    
     e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation(); // Impede que outros listeners sejam executados
+    
     const id = Number(btn.getAttribute('data-questao-id'));
-    if (id) { openStatsModal(id, 'user', 14); }
+    if (id && window.toggleStatsSection) {
+      console.log('✅ Botão de estatísticas clicado! ID:', id);
+      window.toggleStatsSection(id, btn);
+    } else {
+      console.error('❌ toggleStatsSection não está disponível ou ID inválido:', id);
+    }
   };
-  qc.addEventListener('click', bindStatsButtons.handler);
+  qc.addEventListener('click', bindStatsButtons.handler, true); // useCapture:true para capturar ANTES
+  console.log('✅ bindStatsButtons: listener adicionado com useCapture:true');
 }
 
 // Delegação: clicar em alternativas sem inline onclick
 function bindAlternativas(){
   const qc = document.getElementById('questions-container');
-  if (!qc) return;
+  if (!qc) {
+    console.warn('⚠️ bindAlternativas: questions-container não encontrado');
+    return;
+  }
   // Remove listeners anteriores para evitar duplicação
   if (bindAlternativas.handler) {
-    qc.removeEventListener('click', bindAlternativas.handler);
+    qc.removeEventListener('click', bindAlternativas.handler, false);
   }
   // Cria novo handler
   bindAlternativas.handler = function(e){
-    // PRIMEIRO: Ignora cliques em botões de favorito ou estatísticas (VERIFICAÇÃO ANTECIPADA)
-    if (e.target.closest('[data-action="toggle-favorito"]') || 
-        e.target.closest('[data-action="ver-estatisticas"]') ||
-        e.target.closest('.fav-btn') ||
-        e.target.classList.contains('fav-btn')) {
-      return;
+    try {
+      // PRIMEIRO: Ignora cliques em botões de favorito ou estatísticas (VERIFICAÇÃO ANTECIPADA)
+      if (e.target.closest('[data-action="toggle-favorito"]') || 
+          e.target.closest('[data-action="ver-estatisticas"]') ||
+          e.target.closest('.fav-btn') ||
+          e.target.closest('.btn-stats') ||
+          e.target.classList.contains('fav-btn') ||
+          e.target.classList.contains('btn-stats')) {
+        return;
+      }
+      
+      const item = e.target.closest('.alternative-item');
+      if (!item) return;
+      
+      // Garantir que a alternativa seja clicável
+      item.style.pointerEvents = 'auto';
+      item.style.cursor = 'pointer';
+      
+      const qid = Number(item.getAttribute('data-questao-id'));
+      const aid = Number(item.getAttribute('data-alternativa-id'));
+      
+      if (qid && aid) {
+        console.log('🎯 Alternativa clicada via bindAlternativas! Questão:', qid, 'Alternativa:', aid);
+        if (typeof window.responderQuestao === 'function') {
+          window.responderQuestao(qid, aid, item);
+        } else {
+          console.error('❌ window.responderQuestao não encontrado!');
+        }
+      } else {
+        console.warn('⚠️ bindAlternativas: qid ou aid inválido', { qid, aid });
+      }
+    } catch (err) {
+      console.error('Erro em bindAlternativas handler:', err);
     }
-    const item = e.target.closest('.alternative-item');
-    if (!item) return;
-    const qid = Number(item.getAttribute('data-questao-id'));
-    const aid = Number(item.getAttribute('data-alternativa-id'));
-    if (qid && aid) responderQuestao(qid, aid, item);
   };
   qc.addEventListener('click', bindAlternativas.handler, false); // false = bubbling phase (DEPOIS do capture)
+  console.log('✅ bindAlternativas: listener adicionado');
 }
 
 function bindFavoritos(){
@@ -976,10 +1401,15 @@ function bindFavoritos(){
   if (!qc) return;
   // Remove listeners anteriores para evitar duplicação
   if (bindFavoritos.handler) {
-    qc.removeEventListener('click', bindFavoritos.handler, true);
+    qc.removeEventListener('click', bindFavoritos.handler, false);
   }
   // Cria novo handler - apenas como fallback se onclick inline não funcionar
   bindFavoritos.handler = function(e){
+    // PRIMEIRO: Ignorar cliques em botões de estatísticas
+    if (e.target.closest('[data-action="ver-estatisticas"]') || e.target.closest('.btn-stats')) {
+      return; // Deixa bindStatsButtons tratar
+    }
+    
     // NÃO interceptar se já foi tratado pelo onclick inline
     // Apenas servir como fallback
     let btn = e.target.closest('.fav-btn');
@@ -1012,157 +1442,601 @@ function bindFavoritos(){
 // Ajusta chamadas existentes - garantir que favoritos sejam aplicados após renderizar
 const _renderizarTodas = renderizarTodasQuestoes; 
 renderizarTodasQuestoes = function(){ 
-  _renderizarTodas(); 
+  try {
+    _renderizarTodas(); 
+  } catch (err) {
+    console.error('Erro ao renderizar questões:', err);
+    // Continuar mesmo com erro para não quebrar a página
+  }
   setTimeout(()=>{ 
-    aplicarFavoritosNosCards(); // Aplicar favoritos imediatamente
-    bindStatsButtons(); 
-    bindAlternativas(); 
-    bindFavoritos(); 
+    try {
+      aplicarFavoritosNosCards(); // Aplicar favoritos imediatamente
+    } catch (err) {
+      console.error('Erro ao aplicar favoritos:', err);
+    }
+    try {
+      bindStatsButtons(); 
+    } catch (err) {
+      console.error('Erro ao vincular botões de estatísticas:', err);
+    }
+    try {
+      bindAlternativas(); 
+    } catch (err) {
+      console.error('Erro ao vincular alternativas:', err);
+    }
+    try {
+      bindFavoritos(); 
+    } catch (err) {
+      console.error('Erro ao vincular favoritos:', err);
+    }
   }, 0); 
-  // Aplicar favoritos novamente após pequeno delay
-  setTimeout(()=>{ aplicarFavoritosNosCards(); }, 50);
-  setTimeout(()=>{ aplicarFavoritosNosCards(); }, 200);
+  // Aplicar favoritos novamente após pequeno delay (com tratamento de erro)
+  setTimeout(()=>{ 
+    try { aplicarFavoritosNosCards(); } 
+    catch (err) { console.error('Erro ao aplicar favoritos (delay 50ms):', err); }
+  }, 50);
+  setTimeout(()=>{ 
+    try { aplicarFavoritosNosCards(); } 
+    catch (err) { console.error('Erro ao aplicar favoritos (delay 200ms):', err); }
+  }, 200);
 };
 
-// Expose helpers on window to be callable from inline onclick
-window.openStatsModal = function(idQuestao, defaultScope = 'user', days = 14) {
-  document.getElementById('statsQuestionId').textContent = '#' + idQuestao;
-  document.getElementById('statsAssunto').textContent = '';
-  document.getElementById('statsScope').textContent = defaultScope === 'user' ? 'Minhas' : 'Geral';
-  document.getElementById('statsPeriod').textContent = String(days);
+// Monitor global de cliques para debug
+(function(){
+  document.addEventListener('click', function(e){
+    if (e.target.closest('.btn-stats') || e.target.closest('[data-action="ver-estatisticas"]')) {
+      console.log('🔍 CLIQUE GLOBAL detectado no botão de estatísticas!', e.target);
+      const btn = e.target.closest('.btn-stats') || e.target.closest('[data-action="ver-estatisticas"]');
+      if (btn) {
+        const id = btn.getAttribute('data-questao-id');
+        console.log('✅ Botão encontrado, ID:', id);
+        console.log('✅ window.toggleStatsSection disponível?', typeof window.toggleStatsSection);
+        console.log('✅ Estilos do botão:', {
+          pointerEvents: window.getComputedStyle(btn).pointerEvents,
+          cursor: window.getComputedStyle(btn).cursor,
+          zIndex: window.getComputedStyle(btn).zIndex,
+          position: window.getComputedStyle(btn).position
+        });
+      }
+    }
+  }, true);
+})();
 
-  const modal = document.getElementById('statsModal');
-  modal.style.display = 'block';
-  modal.setAttribute('aria-hidden', 'false');
-
-  document.querySelectorAll('.scope-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.scope === defaultScope);
-    btn.onclick = () => window.fetchAndRenderStats(idQuestao, btn.dataset.scope, days);
-  });
-
-  // Fechamento
-  modal.querySelector('[data-close]').onclick = () => window.closeStatsModal();
-  modal.onclick = (e) => { if (e.target === modal) window.closeStatsModal(); };
-
-  window.fetchAndRenderStats(idQuestao, defaultScope, days);
-  return false; // evita navegação do <a href="#">
+// Função para renderizar estatísticas inline (dentro do card da questão)
+window.fetchAndRenderStatsInline = async function(idQuestao, scope, days) {
+  try {
+    console.log('🚀 fetchAndRenderStatsInline chamado para questão', idQuestao, 'scope:', scope, 'days:', days);
+    
+    const url = `/questoes/${idQuestao}/estatisticas/?format=json&scope=${encodeURIComponent(scope)}&days=${encodeURIComponent(days)}`;
+    console.log('📡 Fazendo requisição para:', url);
+    
+    const res = await fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' }, credentials: 'same-origin' });
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    
+    const json = await res.json();
+    console.log('📦 Resposta recebida:', json);
+    
+    if (!json.success && json.data === undefined) {
+      throw new Error(json.message || 'Erro ao obter estatísticas do servidor');
+    }
+    
+    const d = (json.data !== undefined) ? json.data : json;
+    console.log('✅ Dados processados:', {
+      totals: d.totals,
+      historicoLength: (d.historico || []).length,
+      byAlternative: d.by_alternative
+    });
+    
+    // Renderizar gráficos inline
+    if (typeof window.renderChartsInline === 'function') {
+      try {
+        console.log('📊 Renderizando gráficos para questão', idQuestao);
+        window.renderChartsInline(idQuestao, d);
+      } catch (chartErr) {
+        console.error('❌ Erro ao renderizar gráficos inline:', chartErr);
+      }
+    } else {
+      console.error('❌ renderChartsInline não está disponível!');
+    }
+    
+    // Renderizar histórico inline
+    if (typeof window.renderHistoricoInline === 'function') {
+      try {
+        const historico = d.historico || [];
+        console.log('📝 Renderizando histórico para questão', idQuestao, 'total de itens recebidos:', historico.length);
+        console.log('📝 Dados do histórico completo:', JSON.stringify(historico, null, 2));
+        window.renderHistoricoInline(idQuestao, historico);
+      } catch (histErr) {
+        console.error('❌ Erro ao renderizar histórico inline:', histErr);
+        const container = document.getElementById(`historicoRespostas-${idQuestao}`);
+        if (container) {
+          container.innerHTML = '<div class="history-empty">Erro ao carregar histórico.</div>';
+        }
+      }
+    } else {
+      console.error('❌ renderHistoricoInline não está disponível!');
+    }
+    
+    console.log('✅ Estatísticas carregadas e renderizadas com sucesso para questão', idQuestao);
+  } catch (err) {
+    console.error('❌ Erro completo ao buscar estatísticas inline:', err);
+    const container = document.getElementById(`historicoRespostas-${idQuestao}`);
+    if (container) {
+      container.innerHTML = '<div class="history-empty">Erro ao carregar estatísticas: ' + (err.message || 'Desconhecido') + '</div>';
+    }
+  }
 };
 
-window.closeStatsModal = function() {
-  const modal = document.getElementById('statsModal');
-  modal.style.display = 'none';
-  modal.setAttribute('aria-hidden', 'true');
-  if (window.chartAccuracy) { window.chartAccuracy.destroy(); window.chartAccuracy = null; }
-  if (window.chartAlternatives) { window.chartAlternatives.destroy(); window.chartAlternatives = null; }
-  if (window.chartTimeline) { window.chartTimeline.destroy(); window.chartTimeline = null; }
-};
-
+// Manter função antiga para compatibilidade (caso ainda seja chamada)
 window.fetchAndRenderStats = async function(idQuestao, scope, days) {
   try {
     const url = `/questoes/${idQuestao}/estatisticas/?format=json&scope=${encodeURIComponent(scope)}&days=${encodeURIComponent(days)}`;
     const res = await fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' }, credentials: 'same-origin' });
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    
     const json = await res.json();
-    if (!json.success && json.data === undefined) throw new Error(json.message || 'Erro ao obter estatísticas');
+    
+    if (!json.success && json.data === undefined) {
+      throw new Error(json.message || 'Erro ao obter estatísticas do servidor');
+    }
+    
     const d = (json.data !== undefined) ? json.data : json; // compat fallback
-    document.getElementById('statsAssunto').textContent = d.assunto || '';
-    document.getElementById('statsScope').textContent = d.scope === 'user' ? 'Minhas' : 'Geral';
-    document.getElementById('statsPeriod').textContent = String(d.period_days || days);
-    document.getElementById('kpiAttempts').textContent = d.totals.total_attempts;
-    document.getElementById('kpiCorrect').textContent = d.totals.correct_attempts;
-    document.getElementById('kpiWrong').textContent = d.totals.wrong_attempts;
-    document.getElementById('kpiAccuracy').textContent = (d.totals.accuracy_percent||0) + '%';
-    window.renderCharts(d);
+    
+    // Atualizar elementos do modal com segurança
+    try {
+      const assuntoEl = document.getElementById('statsAssunto');
+      const scopeEl = document.getElementById('statsScope');
+      const periodEl = document.getElementById('statsPeriod');
+      
+      if (assuntoEl) assuntoEl.textContent = d.assunto || '';
+      if (scopeEl) scopeEl.textContent = d.scope === 'user' ? 'Minhas' : 'Geral';
+      if (periodEl) periodEl.textContent = String(d.period_days || days);
+      
+      // Renderizar gráficos com tratamento de erro
+      if (typeof window.renderCharts === 'function') {
+        try {
+          window.renderCharts(d);
+        } catch (chartErr) {
+          console.error('Erro ao renderizar gráficos:', chartErr);
+        }
+      }
+      
+      // Renderizar histórico com tratamento de erro
+      if (typeof window.renderHistorico === 'function') {
+        try {
+          window.renderHistorico(d.historico || []);
+        } catch (histErr) {
+          console.error('Erro ao renderizar histórico:', histErr);
+          const container = document.getElementById('historicoRespostas');
+          if (container) {
+            container.innerHTML = '<div class="history-empty">Erro ao carregar histórico.</div>';
+          }
+        }
+      }
+    } catch (renderErr) {
+      console.error('Erro ao atualizar elementos do modal:', renderErr);
+      throw renderErr;
+    }
   } catch (err) {
-    console.error(err);
-    alert('Não foi possível carregar as estatísticas desta questão.');
+    console.error('Erro completo ao buscar estatísticas:', err);
+    // Não bloquear a página se houver erro - apenas mostrar mensagem
+    alert('Não foi possível carregar as estatísticas desta questão. Erro: ' + (err.message || 'Desconhecido'));
   }
 };
 
-window.renderCharts = function(d){
-  const acc = d.totals || { total_attempts:0, correct_attempts:0, wrong_attempts:0 };
-  const labels = ['A','B','C','D','E'];
-  const byAlt = d.by_alternative || {}; const values = labels.map(l=> byAlt[l]||0);
-  const tl = d.timeline || { labels:[], counts:[] };
+// Função para renderizar gráficos inline (com ID único por questão)
+window.renderChartsInline = function(idQuestao, d){
+  try {
+    const acc = d.totals || { total_attempts:0, correct_attempts:0, wrong_attempts:0 };
+    const labels = ['A','B','C','D','E'];
+    const byAlt = d.by_alternative || {}; 
+    const values = labels.map(l=> byAlt[l]||0);
+    
+    console.log('📊 Dados recebidos para gráficos:', {
+      totals: acc,
+      byAlternative: byAlt,
+      values: values,
+      labels: labels
+    });
 
-  const accCtx = document.getElementById('chartAccuracy').getContext('2d');
-  if (window.chartAccuracy) window.chartAccuracy.destroy();
-  window.chartAccuracy = new Chart(accCtx, { type:'doughnut', data:{ labels:['Acertos','Erros'], datasets:[{ data:[acc.correct_attempts||0, acc.wrong_attempts||0], backgroundColor:['#10B981','#EF4444'], borderWidth:0 }] }, options:{ plugins:{ legend:{ position:'bottom' }}, cutout:'60%' } });
-
-  const altCtx = document.getElementById('chartAlternatives').getContext('2d');
-  if (window.chartAlternatives) window.chartAlternatives.destroy();
-  window.chartAlternatives = new Chart(altCtx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Respostas por alternativa',
-        data: values,
-        backgroundColor: '#3B82F6'
-      }]
-    },
-    options: {
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: { precision: 0 }
-        }
-      },
-      plugins: { legend: { display: false } }
+    // Gráfico de rosca: Percentual de Rendimento (Acertos vs Erros)
+    const accCtx = document.getElementById(`chartAccuracy-${idQuestao}`);
+    if (!accCtx) {
+      console.warn('Elemento chartAccuracy não encontrado para questão', idQuestao);
+      return;
     }
-  });
+    
+    // Destruir gráfico anterior se existir
+    const chartKeyAccuracy = `chartAccuracy_${idQuestao}`;
+    if (window[chartKeyAccuracy]) {
+      try {
+        window[chartKeyAccuracy].destroy();
+      } catch (destroyErr) {
+        console.warn('Erro ao destruir gráfico anterior:', destroyErr);
+      }
+    }
+    
+    try {
+      window[chartKeyAccuracy] = new Chart(accCtx.getContext('2d'), { 
+        type:'doughnut', 
+        data:{ 
+          labels:['Acertos','Erros'], 
+          datasets:[{ 
+            data:[acc.correct_attempts||0, acc.wrong_attempts||0], 
+            backgroundColor:['#10B981','#EF4444'], 
+            borderWidth:0 
+          }] 
+        }, 
+        options:{ 
+          plugins:{ 
+            legend:{ 
+              position:'bottom',
+              labels: {
+                padding: 15,
+                font: { size: 12, weight: '600' }
+              }
+            }
+          }, 
+          cutout:'60%',
+          maintainAspectRatio: false
+        } 
+      });
+    } catch (chartErr) {
+      console.error('Erro ao criar gráfico de rosca inline:', chartErr);
+    }
 
-  const timeCtx = document.getElementById('chartTimeline').getContext('2d');
-  if (window.chartTimeline) window.chartTimeline.destroy();
-  window.chartTimeline = new Chart(timeCtx, { type:'line', data:{ labels: tl.labels||[], datasets:[{ label:'Tentativas', data: tl.counts||[], borderColor:'#14B8A6', backgroundColor:'rgba(20,184,166,.15)', tension:.3, fill:true, pointRadius:3, pointHoverRadius:5 }] }, options:{ plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } } });
+    // Gráfico de barras: Alternativas mais respondidas
+    const altCtx = document.getElementById(`chartAlternatives-${idQuestao}`);
+    if (!altCtx) {
+      console.warn('Elemento chartAlternatives não encontrado para questão', idQuestao);
+      return;
+    }
+    
+    // Destruir gráfico anterior se existir
+    const chartKeyAlternatives = `chartAlternatives_${idQuestao}`;
+    if (window[chartKeyAlternatives]) {
+      try {
+        window[chartKeyAlternatives].destroy();
+      } catch (destroyErr) {
+        console.warn('Erro ao destruir gráfico de barras anterior:', destroyErr);
+      }
+    }
+    
+    // Cores para cada alternativa
+    const altColors = ['#F97316', '#3B82F6', '#8B5CF6', '#EF4444', '#10B981'];
+    
+    try {
+      window[chartKeyAlternatives] = new Chart(altCtx.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Respostas por alternativa',
+            data: values,
+            backgroundColor: labels.map((_, i) => altColors[i] || '#64748b')
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0, stepSize: 1 }
+            }
+          },
+          plugins: { 
+            legend: { display: false } 
+          },
+          maintainAspectRatio: false
+        }
+      });
+    } catch (chartErr) {
+      console.error('Erro ao criar gráfico de barras inline:', chartErr);
+    }
+  } catch (err) {
+    console.error('Erro geral em renderChartsInline:', err);
+  }
+};
+
+// Manter função antiga para compatibilidade
+window.renderCharts = function(d){
+  try {
+    const acc = d.totals || { total_attempts:0, correct_attempts:0, wrong_attempts:0 };
+    const labels = ['A','B','C','D','E'];
+    const byAlt = d.by_alternative || {}; 
+    const values = labels.map(l=> byAlt[l]||0);
+
+    // Gráfico de rosca: Percentual de Rendimento (Acertos vs Erros)
+    const accCtx = document.getElementById('chartAccuracy');
+    if (!accCtx) {
+      console.warn('Elemento chartAccuracy não encontrado');
+      return;
+    }
+    
+    if (window.chartAccuracy) {
+      try {
+        window.chartAccuracy.destroy();
+      } catch (destroyErr) {
+        console.warn('Erro ao destruir gráfico anterior:', destroyErr);
+      }
+    }
+    
+    try {
+      window.chartAccuracy = new Chart(accCtx.getContext('2d'), { 
+        type:'doughnut', 
+        data:{ 
+          labels:['Acertos','Erros'], 
+          datasets:[{ 
+            data:[acc.correct_attempts||0, acc.wrong_attempts||0], 
+            backgroundColor:['#10B981','#EF4444'], 
+            borderWidth:0 
+          }] 
+        }, 
+        options:{ 
+          plugins:{ 
+            legend:{ 
+              position:'bottom',
+              labels: {
+                padding: 15,
+                font: { size: 12, weight: '600' }
+              }
+            }
+          }, 
+          cutout:'60%',
+          maintainAspectRatio: false
+        } 
+      });
+    } catch (chartErr) {
+      console.error('Erro ao criar gráfico de rosca:', chartErr);
+    }
+
+    // Gráfico de barras: Alternativas mais respondidas
+    const altCtx = document.getElementById('chartAlternatives');
+    if (!altCtx) {
+      console.warn('Elemento chartAlternatives não encontrado');
+      return;
+    }
+    
+    if (window.chartAlternatives) {
+      try {
+        window.chartAlternatives.destroy();
+      } catch (destroyErr) {
+        console.warn('Erro ao destruir gráfico de barras anterior:', destroyErr);
+      }
+    }
+    
+    // Cores para cada alternativa (baseado na imagem: A=laranja, B=azul)
+    const altColors = ['#F97316', '#3B82F6', '#8B5CF6', '#EF4444', '#10B981'];
+    
+    try {
+      window.chartAlternatives = new Chart(altCtx.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Respostas por alternativa',
+            data: values,
+            backgroundColor: labels.map((_, i) => altColors[i] || '#64748b')
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0, stepSize: 1 }
+            }
+          },
+          plugins: { 
+            legend: { display: false } 
+          },
+          maintainAspectRatio: false
+        }
+      });
+    } catch (chartErr) {
+      console.error('Erro ao criar gráfico de barras:', chartErr);
+    }
+  } catch (err) {
+    console.error('Erro geral em renderCharts:', err);
+    // Não propagar erro para não quebrar a página
+  }
+};
+
+// Função para renderizar histórico de respostas inline (com ID único por questão)
+window.renderHistoricoInline = function(idQuestao, historico){
+  console.log('📝 renderHistoricoInline chamado para questão', idQuestao, 'com', (historico || []).length, 'itens');
+  
+  const container = document.getElementById(`historicoRespostas-${idQuestao}`);
+  if (!container) {
+    console.error('❌ Container de histórico não encontrado para questão', idQuestao);
+    return;
+  }
+  
+  if (!historico || historico.length === 0) {
+    console.log('⚠️ Histórico vazio para questão', idQuestao);
+    container.innerHTML = '<div class="history-empty">Nenhuma resposta registrada ainda.</div>';
+    return;
+  }
+  
+  console.log('✅ Processando', historico.length, 'itens do histórico');
+  
+  // Ordenar por data (mais recente primeiro) - criar cópia para não alterar original
+  const historicoOrdenado = [...historico].sort((a, b) => {
+    if (a.data_iso && b.data_iso) {
+      return new Date(b.data_iso).getTime() - new Date(a.data_iso).getTime();
+    }
+    return 0;
+  });
+  
+  console.log('✅ Histórico ordenado. Itens:', historicoOrdenado.map(h => ({ data: h.data, alternativa: h.alternativa, acertou: h.acertou })));
+  
+  container.innerHTML = historicoOrdenado.map(item => {
+    const resultClass = item.acertou ? 'correct' : 'incorrect';
+    const resultText = item.acertou ? 'Você acertou!' : 'Você errou!';
+    const resultIcon = item.acertou ? '✓' : '✗';
+    
+    return '<div class="history-item">' +
+      '<span class="history-item-text">Em ' + item.data + ', você respondeu a opção ' + item.alternativa + '.</span>' +
+      '<div class="history-item-result ' + resultClass + '">' +
+      '<span class="history-item-result-icon">' + resultIcon + '</span>' +
+      '<span>' + resultText + '</span>' +
+      '</div>' +
+      '</div>';
+  }).join('');
+  
+  console.log('✅ Histórico renderizado com sucesso! Total de itens exibidos:', historicoOrdenado.length);
+};
+
+// Manter função antiga para compatibilidade
+window.renderHistorico = function(historico){
+  const container = document.getElementById('historicoRespostas');
+  if (!container) return;
+  
+  if (!historico || historico.length === 0) {
+    container.innerHTML = '<div class="history-empty">Nenhuma resposta registrada ainda.</div>';
+    return;
+  }
+  
+  container.innerHTML = historico.map(item => {
+    const resultClass = item.acertou ? 'correct' : 'incorrect';
+    const resultText = item.acertou ? 'Você acertou!' : 'Você errou!';
+    const resultIcon = item.acertou ? '✓' : '✗';
+    
+    return '<div class="history-item">' +
+      '<span class="history-item-text">Em ' + item.data + ', você respondeu a opção ' + item.alternativa + '.</span>' +
+      '<div class="history-item-result ' + resultClass + '">' +
+      '<span class="history-item-result-icon">' + resultIcon + '</span>' +
+      '<span>' + resultText + '</span>' +
+      '</div>' +
+      '</div>';
+  }).join('');
 };
 
 </script>
 
-<div id="statsModal" class="stats-modal" aria-hidden="true" style="display:none;">
-  <div class="stats-dialog" role="dialog" aria-modal="true" aria-labelledby="statsTitle">
-    <button type="button" class="stats-close" data-close>&times;</button>
-    <h2 id="statsTitle">Estatísticas da Questão <span id="statsQuestionId"></span></h2>
-    <p class="stats-subtitle"><span id="statsAssunto"></span> · Escopo: <span id="statsScope"></span> · Período: <span id="statsPeriod"></span>d</p>
-    <div class="stats-kpis">
-      <div class="kpi"><span class="kpi-label">Tentativas</span><span class="kpi-value" id="kpiAttempts">0</span></div>
-      <div class="kpi"><span class="kpi-label">Acertos</span><span class="kpi-value" id="kpiCorrect">0</span></div>
-      <div class="kpi"><span class="kpi-label">Erros</span><span class="kpi-value" id="kpiWrong">0</span></div>
-      <div class="kpi"><span class="kpi-label">Taxa de Acerto</span><span class="kpi-value" id="kpiAccuracy">0%</span></div>
-    </div>
-    <div class="stats-charts">
-      <div class="chart-box">
-        <h3>Precisão</h3>
-        <canvas id="chartAccuracy" height="140"></canvas>
-      </div>
-      <div class="chart-box">
-        <h3>Distribuição por Alternativa</h3>
-        <canvas id="chartAlternatives" height="160"></canvas>
-      </div>
-      <div class="chart-box full">
-        <h3>Tentativas nos últimos dias</h3>
-        <canvas id="chartTimeline" height="180"></canvas>
-      </div>
-    </div>
-    <div class="stats-scope">
-      <button type="button" class="scope-btn" data-scope="user">Minhas estatísticas</button>
-      <button type="button" class="scope-btn" data-scope="global">Geral (todos)</button>
-    </div>
-  </div>
-</div>
+<!-- Modal removido - agora usamos seções inline dentro de cada card -->
 
 <style>
-.stats-modal{ position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9999; }
-.stats-dialog{ max-width:900px; margin:40px auto; background:#fff; border-radius:12px; padding:20px; }
-.stats-close{ float:right; background:transparent; border:0; font-size:24px; cursor:pointer; }
-.stats-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:12px 0 20px; }
-.kpi{ background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px; padding:12px; text-align:center; }
-.kpi-label{ display:block; color:#64748b; font-weight:600; font-size:.85rem; }
-.kpi-value{ display:block; color:#0f172a; font-weight:800; font-size:1.4rem; margin-top:4px; }
-.stats-charts{ display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
-.chart-box.full{ grid-column:1 / -1; }
-.stats-scope{ margin-top:12px; display:flex; gap:8px; justify-content:flex-end; }
-.scope-btn{ border:1px solid #cbd5e1; background:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; }
-.scope-btn.active{ border-color:#0072FF; color:#0072FF; font-weight:700; }
+.stats-charts-grid{ 
+  display:grid; 
+  grid-template-columns:1fr 1fr; 
+  gap:24px; 
+  margin-bottom:30px;
+}
+.chart-box-left, .chart-box-right{ 
+  background:#f8fafc; 
+  border:1px solid #e5e7eb; 
+  border-radius:12px; 
+  padding:20px; 
+}
+.chart-title{ 
+  font-size:1.1rem; 
+  font-weight:700; 
+  color:#0f172a; 
+  margin-bottom:16px; 
+  text-align:center;
+}
+.chart-container{ 
+  position:relative; 
+  height:200px; 
+  display:flex; 
+  align-items:center; 
+  justify-content:center;
+}
+.history-section{ 
+  margin-top:24px; 
+  padding-top:24px; 
+  border-top:2px solid #e5e7eb;
+}
+.history-title{ 
+  font-size:1.1rem; 
+  font-weight:700; 
+  color:#0f172a; 
+  margin-bottom:16px; 
+}
+.history-list{ 
+  display:flex; 
+  flex-direction:column; 
+  gap:12px;
+}
+.history-item{ 
+  background:#f8fafc; 
+  border:1px solid #e5e7eb; 
+  border-radius:10px; 
+  padding:16px; 
+  display:flex; 
+  align-items:center; 
+  justify-content:space-between;
+}
+.history-item-text{ 
+  flex:1; 
+  color:#0f172a; 
+  font-size:.95rem;
+}
+.history-item-result{ 
+  display:flex; 
+  align-items:center; 
+  gap:8px; 
+  font-weight:700;
+}
+.history-item-result.correct{ color:#10B981; }
+.history-item-result.incorrect{ color:#EF4444; }
+.history-item-result-icon{ 
+  width:24px; 
+  height:24px; 
+  border-radius:50%; 
+  display:flex; 
+  align-items:center; 
+  justify-content:center; 
+  font-weight:900; 
+  font-size:14px;
+}
+.history-item-result.correct .history-item-result-icon{ 
+  background:#10B981; 
+  color:#fff; 
+}
+.history-item-result.incorrect .history-item-result-icon{ 
+  background:#EF4444; 
+  color:#fff; 
+}
+.history-empty{ 
+  text-align:center; 
+  padding:40px 20px; 
+  color:#64748b; 
+  font-style:italic;
+}
+.stats-scope{ 
+  margin-top:24px; 
+  display:flex; 
+  gap:8px; 
+  justify-content:flex-end; 
+  padding-top:20px;
+  border-top:1px solid #e5e7eb;
+}
+.scope-btn{ 
+  border:1px solid #cbd5e1; 
+  background:#fff; 
+  padding:10px 16px; 
+  border-radius:8px; 
+  cursor:pointer; 
+  font-weight:600;
+  transition:all .2s;
+}
+.scope-btn:hover{ background:#f8fafc; }
+.scope-btn.active{ 
+  border-color:#0072FF; 
+  background:#0072FF;
+  color:#fff; 
+  font-weight:700; 
+}
+@media (max-width:768px){
+  .stats-charts-grid{ grid-template-columns:1fr; }
+  .stats-section-inline{ padding:15px; }
+}
 </style>
 {% endblock %}
 
