@@ -3,99 +3,328 @@
 
 {% block title %}Gerenciar Conteúdos - Admin{% endblock %}
 
+{% block breadcrumb %}
+<!-- Breadcrumb Navigation -->
+<div class="breadcrumb">
+    <div class="header-container">
+        <nav class="breadcrumb-nav">
+            <a href="{% url 'questoes:index' %}" class="breadcrumb-link">🏠 Início</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <a href="{% url 'questoes:admin_dashboard' %}" class="breadcrumb-link">⚙️ Dashboard Admin</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <span class="breadcrumb-current">📚 Gerenciar Conteúdos</span>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_header %}
+<!-- Page Title Section -->
+<div class="page-header">
+    <div class="header-container">
+        <h1 class="page-title">Gerenciar Conteúdos</h1>
+        <p class="page-subtitle">Administre os conteúdos do sistema</p>
+    </div>
+</div>
+{% endblock %}
+
 {% block extra_css %}
 <style>
-    .header {
-        background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
+    /* Padrão igual às outras páginas */
+    body {
+        background-image: linear-gradient(to top, #00C6FF, #0072FF);
+        min-height: 100vh;
+        margin: 0;
+    }
+    
+    .main-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        background: #FFFFFF;
+        border-radius: 16px;
+        border: 1px solid transparent;
+        background-image: linear-gradient(#FFFFFF, #FFFFFF), linear-gradient(to top, #00C6FF, #0072FF);
+        background-origin: border-box;
+        background-clip: padding-box, border-box;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        padding: 0 30px 30px 30px;
+    }
+    
+    /* Barra de ações superior */
+    .top-actions {
+        padding: 20px 30px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .btn-header {
+        background: #6c757d;
         color: white;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 30px;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: background 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .btn-header:hover {
+        background: #5a6268;
+        color: white;
+    }
+    
+    .btn-header.success {
+        background: #28a745;
+    }
+    
+    .btn-header.success:hover {
+        background: #218838;
+    }
+    
+    /* Cards de estatísticas */
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin: 30px 0;
+        padding: 0 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         text-align: center;
-        position: relative;
+    }
+    
+    .stat-card h3 {
+        color: #333;
+        margin: 0 0 12px 0;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+    
+    .stat-number {
+        color: #00C6FF;
+        font-weight: 700;
+        font-size: 2.5rem;
+        margin: 0;
+    }
+    
+    /* Tabela */
+    .content-area {
+        padding: 30px;
     }
     
     .subjects-table {
         width: 100%;
         border-collapse: collapse;
         background: white;
-        border-radius: 10px;
+        border-radius: 12px;
         overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
     
-    .subjects-table th,
-    .subjects-table td {
-        padding: 15px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
+    .subjects-table thead {
+        background: #f8f9fa;
     }
     
     .subjects-table th {
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+        color: #333;
+        border-bottom: 2px solid #e0e0e0;
+        font-size: 0.95rem;
+    }
+    
+    .subjects-table td {
+        padding: 15px;
+        border-bottom: 1px solid #f0f0f0;
+        color: #666;
+        font-size: 0.95rem;
+    }
+    
+    .subjects-table tbody tr:hover {
         background: #f8f9fa;
-        font-weight: bold;
-        color: #495057;
     }
     
-    .subjects-table tr:hover {
-        background: #f8f9fa;
+    .subjects-table tbody tr:last-child td {
+        border-bottom: none;
     }
     
-    .actions {
-        display: flex;
-        gap: 10px;
-    }
-    
-    .delete-form {
-        display: inline;
-    }
-    
-    .stats {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
-    }
-    
-    .stat-card {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        text-align: center;
-    }
-    
-    .stat-number {
-        font-size: 2em;
-        font-weight: bold;
-        color: #00C6FF;
+    .nome-cell {
+        font-weight: 600;
+        color: #333;
     }
     
     .badge {
-        background: #e9ecef;
-        color: #495057;
-        padding: 4px 8px;
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 4px 10px;
         border-radius: 12px;
-        font-size: 0.875em;
+        font-size: 0.875rem;
         font-weight: 500;
+    }
+    
+    /* Ações */
+    .actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .actions form {
+        display: inline-block;
+        margin: 0;
+    }
+    
+    .btn-action {
+        padding: 8px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-view {
+        background: #2196f3;
+        color: white;
+    }
+    
+    .btn-view:hover {
+        background: #1976d2;
+        color: white;
+    }
+    
+    .btn-delete {
+        background: #6c757d;
+        color: white;
+        opacity: 0.8;
+        cursor: not-allowed;
+    }
+    
+    .btn-delete.active {
+        opacity: 1;
+        cursor: pointer;
+        background: #dc3545;
+    }
+    
+    .btn-delete.active:hover {
+        background: #c82333;
+    }
+    
+    /* Mensagens */
+    .alert {
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin: 20px 30px;
+    }
+    
+    .alert-success {
+        background: #e8f5e9;
+        color: #2e7d32;
+        border: 1px solid #4caf50;
+    }
+    
+    .alert-warning {
+        background: #fff3e0;
+        color: #e65100;
+        border: 1px solid #ff9800;
+    }
+    
+    /* Estado vazio */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #757575;
+    }
+    
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .main-container {
+            margin: 16px auto;
+            padding: 18px;
+            max-width: calc(100% - 32px);
+        }
+        
+        .top-actions {
+            padding: 15px;
+            flex-direction: column;
+        }
+        
+        .btn-header {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .stats-container {
+            grid-template-columns: 1fr;
+            padding: 0 15px;
+        }
+        
+        .content-area {
+            padding: 15px;
+        }
+        
+        .subjects-table {
+            font-size: 0.875rem;
+        }
+        
+        .subjects-table th,
+        .subjects-table td {
+            padding: 10px 8px;
+        }
+        
+        .actions {
+            flex-direction: column;
+        }
+        
+        .btn-action {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .main-container {
+            margin: 10px auto;
+            padding: 15px;
+            max-width: calc(100% - 20px);
+        }
+        
+        .stats-container {
+            gap: 15px;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="main-container">
-    <div class="header">
-        <div class="header-nav">
-            <button onclick="goBack()" class="btn-back">
-                <i class="fas fa-arrow-left"></i> Voltar
-            </button>
-        </div>
-        <h1>🎯 Gerenciar Conteúdos</h1>
-        <p>Administre os conteúdos do sistema</p>
-        <div style="margin-top: 15px;">
-            <a href="{% url 'questoes:admin_dashboard' %}" class="btn btn-secondary">← Voltar ao Dashboard</a>
-            <a href="{% url 'questoes:adicionar_assunto' %}" class="btn btn-success">+ Adicionar Conteúdo</a>
-        </div>
+<div class="main-container fade-in">
+    <!-- Ações superiores -->
+    <div class="top-actions">
+        <a href="{% url 'questoes:admin_dashboard' %}" class="btn-header">
+            <span>←</span> Voltar ao Dashboard
+        </a>
+        <a href="#" class="btn-header success">
+            <span>+</span> Adicionar Conteúdo
+        </a>
     </div>
 
     {% if messages %}
@@ -103,87 +332,82 @@
             <div class="alert alert-{{ message.tags }}">
                 {% if message.tags == 'success' %}
                     <strong>✅ Sucesso!</strong>
+                {% elif message.tags == 'error' %}
+                    <strong>❌ Erro!</strong>
                 {% endif %}
                 {{ message }}
             </div>
         {% endfor %}
     {% endif %}
     
-    {% if assuntos %}
-        <div class="stats">
-            <div class="stat-card">
-                <h3>Total de Conteúdos</h3>
-                <div class="stat-number">{{ total_assuntos }}</div>
-            </div>
-            <div class="stat-card">
-                <h3>Total de Questões</h3>
-                <div class="stat-number">{{ total_questoes }}</div>
-            </div>
+    <!-- Cards de estatísticas -->
+    <div class="stats-container">
+        <div class="stat-card">
+            <h3>Total de Conteúdos</h3>
+            <div class="stat-number">{{ total_assuntos }}</div>
         </div>
-    {% endif %}
+        <div class="stat-card">
+            <h3>Total de Questões</h3>
+            <div class="stat-number">{{ total_questoes }}</div>
+        </div>
+    </div>
 
-    {% if not assuntos %}
-        <div class="alert alert-warning">
-            <strong>Nenhum assunto encontrado!</strong> 
-            <a href="{% url 'questoes:adicionar_assunto' %}">Clique aqui para adicionar o primeiro assunto</a>.
-        </div>
-    {% else %}
-        <table class="subjects-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Nome</th>
-                    <th>Tipo</th>
-                    <th>Questões</th>
-                    <th>Criado em</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for assunto in assuntos %}
+    <!-- Tabela de conteúdos -->
+    <div class="content-area">
+        {% if not assuntos.exists %}
+            <div class="empty-state">
+                <h3>Nenhum conteúdo encontrado!</h3>
+                <p><a href="#">Clique aqui para adicionar o primeiro conteúdo</a></p>
+            </div>
+        {% else %}
+            <table class="subjects-table">
+                <thead>
                     <tr>
-                        <td>{{ assunto.id }}</td>
-                        <td><strong>{{ assunto.nome }}</strong></td>
-                        <td>{{ assunto.get_tipo_assunto_display }}</td>
-                        <td>
-                            <span class="badge">{{ assunto.questoes.count }} questões</span>
-                        </td>
-                        <td>{{ assunto.criado_em|date:"d/m/Y H:i" }}</td>
-                        <td>
-                            <div class="actions">
-                                <a href="{% url 'questoes:listar_questoes' assunto.id %}" 
-                                   class="btn btn-primary" target="_blank">Ver Questões</a>
-                                
-                                {% if assunto.questoes.count > 0 %}
-                                    <span class="btn btn-secondary" style="opacity: 0.6; cursor: not-allowed;" 
-                                          title="Não é possível excluir assunto com questões">
-                                        🔒 Excluir
-                                    </span>
-                                {% else %}
-                                    <form method="POST" action="{% url 'questoes:deletar_assunto' %}" class="delete-form"
-                                          onsubmit="return confirm('Tem certeza que deseja excluir o conteúdo \'{{ assunto.nome }}\'? Esta ação não pode ser desfeita!')">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="id" value="{{ assunto.id }}">
-                                        <button type="submit" class="btn btn-danger">🗑️ Excluir</button>
-                                    </form>
-                                {% endif %}
-                            </div>
-                        </td>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Descrição</th>
+                        <th>Questões</th>
+                        <th>Criado em</th>
+                        <th>Ações</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endif %}
+                </thead>
+                <tbody>
+                    {% for assunto in assuntos %}
+                        <tr>
+                            <td>{{ assunto.id }}</td>
+                            <td class="nome-cell">{{ assunto.nome|upper }}</td>
+                            <td>Sem descrição</td>
+                            <td>
+                                <span class="badge">{{ assunto.total_questoes }} questões</span>
+                            </td>
+                            <td>{{ assunto.criado_em|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <div class="actions">
+                                    <a href="{% url 'questoes:listar_questoes' assunto.id %}" 
+                                       class="btn-action btn-view">
+                                        Ver Questões
+                                    </a>
+                                    {% if assunto.total_questoes > 0 %}
+                                        <button type="button" class="btn-action btn-delete" disabled title="Não é possível excluir conteúdo com questões">
+                                            🔒 Excluir
+                                        </button>
+                                    {% else %}
+                                        <form method="POST" action="{% url 'questoes:deletar_assunto' %}" style="display: inline;" 
+                                              onsubmit="return confirm('Tem certeza que deseja excluir o conteúdo \'{{ assunto.nome }}\'? Esta ação não pode ser desfeita!');">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="assunto_id" value="{{ assunto.id }}">
+                                            <button type="submit" class="btn-action btn-delete active">
+                                                🔒 Excluir
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
 </div>
-
-<script>
-    function goBack() {
-        if (window.history.length > 1) {
-            window.history.back();
-        } else {
-            window.location.href = '{% url "questoes:index" %}';
-        }
-    }
-</script>
 {% endblock %}
-

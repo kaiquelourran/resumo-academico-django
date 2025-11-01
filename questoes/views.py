@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib import messages
@@ -10,7 +10,7 @@ from django.db.models import Count, Q, Sum, Avg, Case, When, IntegerField, Float
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.conf import settings
-from datetime import timedelta
+from datetime import timedelta, datetime
 from collections import Counter
 import json
 import logging
@@ -800,7 +800,7 @@ def simulado_online_view(request, assunto_id):
 def login_view(request):
     """View de login"""
     if request.user.is_authenticated:
-        return redirect('questoes:escolher_assunto')
+        return redirect('questoes:index')
     
     if request.method == 'POST':
         email = request.POST.get('email', '').strip().lower()
@@ -826,7 +826,7 @@ def login_view(request):
                     else:
                         messages.success(request, f'Bem-vindo(a), {user.first_name or user.username}!')
                     
-                    return redirect('questoes:escolher_assunto')
+                    return redirect('questoes:index')
                 else:
                     # Falha de senha
                     messages.error(request, 'Email ou senha incorretos.')
@@ -839,7 +839,7 @@ def login_view(request):
 def cadastro_view(request):
     """View de cadastro"""
     if request.user.is_authenticated:
-        return redirect('questoes:escolher_assunto')
+        return redirect('questoes:index')
     
     if request.method == 'POST':
         nome = request.POST.get('nome', '').strip()
@@ -952,11 +952,18 @@ def admin_dashboard_view(request):
     total_respostas = RespostaUsuario.objects.count()
     
     hoje = timezone.now().date()
-    usuarios_hoje = User.objects.filter(date_joined__date=hoje).count()
-    semana_inicio = hoje - timedelta(days=7)
-    usuarios_semana = User.objects.filter(date_joined__gte=semana_inicio).count()
-    mes_inicio = hoje - timedelta(days=30)
-    usuarios_mes = User.objects.filter(date_joined__gte=mes_inicio).count()
+    hoje_inicio = timezone.make_aware(datetime.combine(hoje, datetime.min.time()))
+    
+    # Logins hoje (usuários que fizeram login hoje)
+    usuarios_hoje = User.objects.filter(last_login__gte=hoje_inicio).count() if User.objects.filter(last_login__isnull=False).exists() else 0
+    
+    # Logins última semana
+    semana_inicio = hoje_inicio - timedelta(days=7)
+    usuarios_semana = User.objects.filter(last_login__gte=semana_inicio).count() if User.objects.filter(last_login__isnull=False).exists() else 0
+    
+    # Logins último mês
+    mes_inicio = hoje_inicio - timedelta(days=30)
+    usuarios_mes = User.objects.filter(last_login__gte=mes_inicio).count() if User.objects.filter(last_login__isnull=False).exists() else 0
     
     usuarios_lista = User.objects.order_by('-date_joined')[:10]
     
@@ -1039,6 +1046,63 @@ def admin_dashboard_view(request):
     return render(request, 'questoes/admin_dashboard.html', context)
 
 
+@login_required
+def gerenciar_assuntos_view(request):
+    """View para gerenciar assuntos/conteúdos"""
+    if not request.user.is_staff:
+        messages.error(request, 'Acesso negado. Você não tem permissão para acessar esta área.')
+        return redirect('questoes:index')
+    
+    assuntos = Assunto.objects.annotate(
+        total_questoes=Count('questoes')
+    ).order_by('-criado_em')
+    
+    total_assuntos = Assunto.objects.count()
+    total_questoes = Questao.objects.count()
+    
+    context = {
+        'assuntos': assuntos,
+        'total_assuntos': total_assuntos,
+        'total_questoes': total_questoes,
+    }
+    
+    return render(request, 'questoes/gerenciar_assuntos.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def deletar_assunto_view(request):
+    """Deleta um assunto (apenas para staff/admin)"""
+    if request.method != 'POST':
+        messages.error(request, 'Método não permitido.')
+        return redirect('questoes:gerenciar_assuntos')
+    
+    assunto_id = request.POST.get('assunto_id')
+    if not assunto_id:
+        messages.error(request, 'ID do assunto não fornecido.')
+        return redirect('questoes:gerenciar_assuntos')
+    
+    try:
+        assunto = Assunto.objects.get(id=assunto_id)
+        
+        # Verificar se o assunto tem questões
+        total_questoes = assunto.questoes.count()
+        if total_questoes > 0:
+            messages.error(request, f'Não é possível excluir o conteúdo "{assunto.nome}" pois ele possui {total_questoes} questão(ões) associada(s).')
+            return redirect('questoes:gerenciar_assuntos')
+        
+        nome_assunto = assunto.nome
+        assunto.delete()
+        messages.success(request, f'Conteúdo "{nome_assunto}" excluído com sucesso!')
+    except Assunto.DoesNotExist:
+        messages.error(request, f'Conteúdo #{assunto_id} não encontrado.')
+    except Exception as e:
+        error_logger.error(f'Erro ao deletar assunto {assunto_id}: {e}', exc_info=True)
+        messages.error(request, f'Erro ao excluir conteúdo: {str(e)}')
+    
+    return redirect('questoes:gerenciar_assuntos')
+
+
 def admin_login_view(request):
     """Login para administradores"""
     if request.user.is_authenticated and request.user.is_staff:
@@ -1076,40 +1140,55 @@ def gerenciar_questoes_view(request):
         messages.error(request, 'Acesso negado. Apenas administradores.')
         return redirect('questoes:index')
     
-    # MELHORIA: Contar alternativas e agrupar por dificuldade no ORM (mais eficiente)
-    questoes = Questao.objects.select_related('id_assunto').annotate(
+    # Agrupar questões por assunto
+    assuntos_com_questoes = Assunto.objects.annotate(
+        total_questoes_assunto=Count('questoes')
+    ).filter(total_questoes_assunto__gt=0).order_by('tipo_assunto', 'nome')
+    
+    # Criar dicionário agrupado: {assunto: [questoes]}
+    questoes_agrupadas = {}
+    for assunto in assuntos_com_questoes:
+        questoes_do_assunto = Questao.objects.filter(
+            id_assunto=assunto
+        ).select_related('id_assunto').annotate(
         total_alternativas=Count('alternativas')
-    ).order_by('-id')
+        ).order_by('id')  # Ordenar por ID dentro de cada assunto
+        questoes_agrupadas[assunto] = list(questoes_do_assunto)
     
-    total_questoes = questoes.count()
-    
-    # MELHORIA: Contagem de dificuldade usando ORM
-    questoes_por_dificuldade_query = questoes.values('dificuldade').annotate(
-        count=Count('id')
-    ).order_by('dificuldade')
-    
-    questoes_por_dificuldade = {}
-    for item in questoes_por_dificuldade_query:
-        dificuldade = item['dificuldade'] if item['dificuldade'] else 'não definida'
-        questoes_por_dificuldade[dificuldade] = item['count']
-
-    # Adiciona a contagem de "não definida" se for zero e não aparecer na query
-    if 'não definida' not in questoes_por_dificuldade:
-        if 'dificuldade' in [f.name for f in Questao._meta.fields] and not Questao.objects.filter(dificuldade__isnull=False).exists():
-            pass # Não precisa adicionar se o campo estiver preenchido em todos
-        else:
-            # Se a dificuldade for um campo NULL ou vazio
-            dificuldade_count = Questao.objects.filter(dificuldade__isnull=True).count()
-            if dificuldade_count > 0:
-                questoes_por_dificuldade['não definida'] = dificuldade_count
+    # Total geral de questões
+    total_questoes = Questao.objects.count()
     
     context = {
-        'questoes': questoes,
+        'questoes_agrupadas': questoes_agrupadas,
         'total_questoes': total_questoes,
-        'questoes_por_dificuldade': questoes_por_dificuldade
     }
     
     return render(request, 'questoes/gerenciar_questoes.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def deletar_questao_view(request):
+    """Deleta uma questão (apenas para staff/admin)"""
+    if request.method != 'POST':
+        messages.error(request, 'Método não permitido.')
+        return redirect('questoes:gerenciar_questoes')
+    
+    questao_id = request.POST.get('questao_id')
+    if not questao_id:
+        messages.error(request, 'ID da questão não fornecido.')
+        return redirect('questoes:gerenciar_questoes')
+    
+    try:
+        questao = Questao.objects.get(id=questao_id)
+        questao.delete()
+        messages.success(request, f'Questão #{questao_id} deletada com sucesso!')
+    except Questao.DoesNotExist:
+        messages.error(request, f'Questão #{questao_id} não encontrada.')
+    except Exception as e:
+        messages.error(request, f'Erro ao deletar questão: {str(e)}')
+    
+    return redirect('questoes:gerenciar_questoes')
 
 
 @login_required

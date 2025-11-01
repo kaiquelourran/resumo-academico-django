@@ -3,14 +3,38 @@
 
 {% block title %}Painel Admin - Resumo Acadêmico{% endblock %}
 
+{% block breadcrumb %}
+<!-- Breadcrumb Navigation -->
+<div class="breadcrumb">
+    <div class="header-container">
+        <nav class="breadcrumb-nav">
+            <a href="{% url 'questoes:index' %}" class="breadcrumb-link">🏠 Início</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <span class="breadcrumb-current">⚙️ Dashboard Admin</span>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_header %}
+<!-- Page Title Section -->
+<div class="page-header">
+    <div class="header-container">
+        <h1 class="page-title">Painel de Administração</h1>
+        <p class="page-subtitle">Bem-vindo, {{ user.first_name|default:user.username }} {{ user.last_name|default:"" }} {% if user.is_staff %}admin{% endif %}!</p>
+    </div>
+</div>
+{% endblock %}
+
 {% block extra_css %}
 <style>
-    /* Padrão visual alinhado ao index.php */
+    /* Padrão igual às outras páginas */
     body {
         background-image: linear-gradient(to top, #00C6FF, #0072FF);
         min-height: 100vh;
         margin: 0;
     }
+    
     .main-container {
         max-width: 1100px;
         margin: 0 auto;
@@ -23,86 +47,171 @@
         box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         padding: 0 30px 30px 30px;
     }
-    .user-info a { text-decoration: none; font-weight: 600; }
-    .user-info a:hover { text-decoration: none; }
-    /* Botões de navegação aprimorados */
-    .nav-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%); color: #fff; border: 1px solid #bfe0ff; font-weight: 800; text-decoration: none; box-shadow: 0 8px 18px rgba(0,114,255,0.28); transition: transform .2s ease, box-shadow .2s ease, filter .2s ease; letter-spacing: .2px; }
-    .nav-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(0,114,255,0.32); filter: brightness(1.03); }
-    .nav-btn:focus { outline: 3px solid rgba(0,114,255,0.35); outline-offset: 2px; }
-    .nav-btn.secondary { background: linear-gradient(180deg, #6c757d 0%, #495057 100%); border-color: #adb5bd; box-shadow: 0 8px 18px rgba(108,117,125,0.28); }
-    .nav-btn.secondary:hover { box-shadow: 0 12px 26px rgba(108,117,125,0.32); }
-    .nav-btn.danger { background: linear-gradient(180deg, #dc3545 0%, #c82333 100%); border-color: #dc3545; box-shadow: 0 8px 18px rgba(220,53,69,0.28); }
-    .nav-btn.danger:hover { box-shadow: 0 12px 26px rgba(220,53,69,0.32); }
-    /* Cards */
-    .card { background: #FFFFFF; border: 1px solid #e1e5e9; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.06); }
-    .card-title { color: #333333; margin-bottom: 16px; }
-    .card-description { color: #666666; }
-    .btn { display: inline-block; padding: 12px 18px; border-radius: 8px; background: linear-gradient(to top, #00C6FF, #0072FF); color: #fff; border: none; font-weight: 600; text-decoration: none; transition: transform .2s ease, box-shadow .2s ease; }
-    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,114,255,0.3); }
-    .btn:active { transform: translateY(0); }
-    .btn:focus { outline: 3px solid rgba(0,114,255,0.35); outline-offset: 2px; }
-    .btn[aria-busy="true"] { cursor: wait; opacity: .8; }
-    .btn-primary { background: linear-gradient(to top, #007bff, #0056b3); }
-    .btn-success { background: linear-gradient(to top, #28a745, #1e7e34); }
-    .btn-warning { background: linear-gradient(to top, #ffc107, #e0a800); color: #212529; }
-    .btn-danger { background: linear-gradient(to top, #dc3545, #c82333); }
-    .btn-secondary { background: linear-gradient(to top, #6c757d, #545b62); }
-    .btn-outline { background: transparent; border: 2px solid #0072FF; color: #0072FF; }
-    .btn-outline:hover { background: #0072FF; color: #fff; }
-    .btn, .nav-btn { cursor: pointer; user-select: none; position: relative; z-index: 10; display: inline-block; text-decoration: none; }
-    .btn:disabled, .nav-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .btn:disabled:hover, .nav-btn:disabled:hover { transform: none; box-shadow: none; }
-    .buttons-grid a, .user-actions a { position: relative; z-index: 10; pointer-events: auto; }
-    /* Estatísticas */
-    .stats-container { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
-    .stat-card { background: #FFFFFF; border: 1px solid #e1e5e9; border-radius: 12px; padding: 20px; min-width: 200px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.06); }
-    .stat-number { color: #0072FF; font-weight: 700; font-size: 2rem; }
-    .stat-label { color: #333; }
-    .stat-card h3 { color: #333; margin-bottom: 10px; font-size: 1rem; }
+    
+    /* Barra de ações superior */
+    .top-actions {
+        padding: 20px 30px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .btn-header {
+        background: #1976d2;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: background 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .btn-header:hover {
+        background: #1565c0;
+        color: white;
+    }
+    .nav-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        border-radius: 10px;
+        color: #fff;
+        border: none;
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transition: transform .2s ease, box-shadow .2s ease;
+        cursor: pointer;
+    }
+    .nav-btn.secondary {
+        background: linear-gradient(135deg, #5a67d8 0%, #4c51bf 100%);
+    }
+    .nav-btn.danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    }
+    .nav-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
+    
     /* Seções */
-    .admin-section, .metrics-section, .analytics-section { margin-bottom: 40px; }
-    .admin-section h2, .metrics-section h2 { color: #333; margin-bottom: 20px; font-size: 1.5rem; }
-    .buttons-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
-    .cards-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-    .analytics-list { list-style: none; padding: 0; margin: 0; }
-    .analytics-list li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; color: #666; }
-    .analytics-list li:last-child { border-bottom: none; }
-    /* Header estiloso */
-    .app-header { background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%); border-radius: 16px; padding: 18px; color: #fff; box-shadow: 0 12px 30px rgba(0,114,255,0.25); margin-bottom: 24px; position: relative; }
-    .app-header .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-    .app-header .brand { display: flex; align-items: center; gap: 12px; }
-    .app-header .logo { font-size: 1.8rem; }
-    .app-header .titles .title { margin: 0; color: #fff; font-size: 1.8rem; }
-    .app-header .titles .subtitle { margin: 2px 0 0; color: #eaf6ff; font-size: 1rem; }
-    .app-header .user-actions { display: flex; align-items: center; gap: 12px; }
-    .header-nav { position: absolute; top: 18px; left: 18px; z-index: 2; }
-    .btn-back { background: rgba(255, 255, 255, 0.2); color: white; border: 2px solid rgba(255, 255, 255, 0.3); padding: 10px 20px; border-radius: 25px; font-size: 0.9rem; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(10px); }
-    .btn-back:hover { background: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.5); transform: translateY(-2px); }
-    /* Footer */
-    .footer { text-align: center; padding: 20px; color: #666; border-top: 1px solid #e9ecef; margin-top: 40px; }
-    /* Responsividade */
-    @media (max-width: 768px) {
-        html, body { overflow-x: hidden; }
-        .main-container { margin: 16px auto; padding: 18px; max-width: calc(100% - 32px); }
-        .app-header .header-inner { flex-direction: column; align-items: flex-start; }
-        .app-header .user-actions { width: 100%; justify-content: space-between; flex-wrap: wrap; }
-        .stats-container { flex-direction: column; gap: 12px; }
-        .stat-card { width: 100%; }
-        .buttons-grid { grid-template-columns: 1fr; }
-        .cards-container { grid-template-columns: 1fr; }
-        .header-nav { position: static; margin-bottom: 16px; }
+    .admin-section, .metrics-section, .users-section, .analytics-section {
+        margin-bottom: 40px;
     }
-    @media (max-width: 480px) {
-        .app-header .titles .title { font-size: 1.4rem; }
-        .stat-number { font-size: 1.6rem; }
+    .admin-section h2, .metrics-section h2, .users-section h2, .analytics-section h2 {
+        color: #333;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+        font-weight: 600;
     }
-    /* Estilos para seção de usuários */
+    
+    /* Grid de botões 2x3 */
+    .buttons-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 14px 20px;
+        border-radius: 12px;
+        color: #fff;
+        border: none;
+        font-weight: 600;
+        text-decoration: none;
+        transition: transform .2s ease, box-shadow .2s ease;
+        font-size: 1rem;
+        text-align: center;
+    }
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    }
+    .btn-success {
+        background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    }
+    .btn-secondary {
+        background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+    }
+    .btn-outline {
+        background: #fff;
+        border: 2px solid #0072FF;
+        color: #0072FF;
+    }
+    .btn-outline:hover {
+        background: #0072FF;
+        color: #fff;
+    }
+    
+    /* Métricas - 4 na primeira linha + 1 centralizado */
+    .stats-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+    .stats-row {
+        display: flex;
+        gap: 20px;
+        width: 100%;
+        justify-content: center;
+    }
+    .stats-row-bottom {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin-top: 0;
+    }
+    .stat-card {
+        background: #FFFFFF;
+        border: 1px solid #e1e5e9;
+        border-radius: 12px;
+        padding: 24px;
+        min-width: 200px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transition: transform .2s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    .stat-card h3 {
+        color: #666;
+        margin: 0 0 12px 0;
+        font-size: 0.9rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+    .stat-number {
+        color: #0072FF;
+        font-weight: 700;
+        font-size: 2.2rem;
+        margin: 0;
+    }
+    
+    /* Seção de usuários */
     .users-section {
         background: white;
         border-radius: 16px;
         padding: 30px;
         margin-bottom: 30px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
     }
     .users-header {
         display: flex;
@@ -112,10 +221,26 @@
         padding-bottom: 15px;
         border-bottom: 2px solid #f0f0f0;
     }
+    .users-header h2 {
+        margin: 0;
+    }
     .users-header p {
         color: #666;
         margin: 0;
         font-size: 14px;
+    }
+    .btn-view-all {
+        background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: transform .2s ease;
+    }
+    .btn-view-all:hover {
+        transform: translateY(-2px);
     }
     .users-table {
         background: #f8f9fa;
@@ -136,6 +261,7 @@
     .table-body {
         max-height: 400px;
         overflow-y: auto;
+        background: white;
     }
     .table-row {
         display: grid;
@@ -146,8 +272,11 @@
         transition: background-color 0.2s ease;
         align-items: center;
     }
+    .table-row:nth-child(even) {
+        background: #f8f9fa;
+    }
     .table-row:hover {
-        background: #f0f7ff;
+        background: #e8f4fd;
     }
     .table-row:last-child {
         border-bottom: none;
@@ -159,8 +288,8 @@
         font-weight: 500;
     }
     .user-avatar-small {
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         background: linear-gradient(135deg, #0072FF, #00C6FF);
         color: white;
@@ -168,26 +297,29 @@
         align-items: center;
         justify-content: center;
         font-weight: 600;
-        font-size: 14px;
+        font-size: 15px;
     }
     .col-email {
         color: #666;
         font-size: 14px;
     }
+    .col-type {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
     .type-badge {
-        padding: 4px 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
         border-radius: 12px;
         font-size: 12px;
         font-weight: 600;
-        text-align: center;
-    }
-    .type-badge.admin {
-        background: #ff6b6b;
-        color: white;
     }
     .type-badge.user {
-        background: #4ecdc4;
-        color: white;
+        background: #e3f2fd;
+        color: #1976d2;
     }
     .col-date, .col-login {
         font-size: 13px;
@@ -197,12 +329,96 @@
         color: #999;
         font-style: italic;
     }
-    .no-users {
-        text-align: center;
-        padding: 40px;
+    
+    /* Análises e Relatórios */
+    .analytics-section {
+        margin-bottom: 30px;
+    }
+    .cards-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+    }
+    .card {
+        background: #FFFFFF;
+        border: 1px solid #e1e5e9;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .card h4 {
+        color: #333;
+        margin: 0 0 16px 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .analytics-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .analytics-list li {
+        padding: 10px 0;
+        border-bottom: 1px solid #f0f0f0;
         color: #666;
+        font-size: 0.95rem;
+    }
+    .analytics-list li:last-child {
+        border-bottom: none;
+    }
+    .analytics-list li strong {
+        color: #333;
+        font-weight: 600;
+    }
+    
+    /* Footer */
+    .footer {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+        border-top: 1px solid #e9ecef;
+        margin-top: 40px;
+    }
+    
+    /* Responsividade - padrão igual às outras páginas */
+    @media (max-width: 1024px) {
+        .cards-container {
+            grid-template-columns: repeat(2, 1fr);
+        }
     }
     @media (max-width: 768px) {
+        html, body {
+            overflow-x: hidden;
+        }
+        .main-container {
+            margin: 16px auto;
+            padding: 18px;
+            max-width: calc(100% - 32px);
+        }
+        .top-actions {
+            padding: 15px;
+            flex-direction: column;
+        }
+        .btn-header {
+            width: 100%;
+            justify-content: center;
+        }
+        .buttons-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        .stats-row {
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            flex: 1 1 calc(50% - 10px);
+            min-width: 150px;
+        }
+        .cards-container {
+            grid-template-columns: 1fr;
+        }
         .table-header, .table-row {
             grid-template-columns: 1fr;
             gap: 8px;
@@ -226,75 +442,90 @@
         .col-date::before { content: "📅 "; }
         .col-login::before { content: "🕐 "; }
     }
+    @media (max-width: 480px) {
+        .main-container {
+            margin: 10px auto;
+            padding: 15px;
+            max-width: calc(100% - 20px);
+        }
+        .buttons-grid {
+            grid-template-columns: 1fr;
+        }
+        .stat-card {
+            width: 100%;
+        }
+        .top-actions {
+            padding: 10px;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="main-container fade-in">
-    <div class="app-header">
-        <div class="header-nav">
-            <button onclick="goBack()" class="btn-back">
-                <i class="fas fa-arrow-left"></i> Voltar
-            </button>
-        </div>
-        <div class="header-inner">
-            <div class="brand">
-                <span class="logo">👨‍💼</span>
-                <div class="titles">
-                    <h1 class="title">Painel de Administração</h1>
-                    <p class="subtitle">Bem-vindo, {{ user.first_name }}!</p>
-                </div>
-            </div>
-            <div class="user-actions">
-                <a href="{% url 'questoes:desempenho' %}" class="nav-btn secondary">📊 Meu Desempenho</a>
-                <a href="{% url 'questoes:logout' %}" class="nav-btn danger">🚪 Sair</a>
-            </div>
-        </div>
+    <!-- Ações superiores -->
+    <div class="top-actions">
+        <a href="{% url 'questoes:desempenho' %}" class="btn-header">
+            <span>📊</span> Meu Desempenho
+        </a>
+        <a href="{% url 'questoes:logout' %}" class="btn-header" style="background: #dc3545;">
+            <span>🚪</span> Sair
+        </a>
     </div>
 
-    <main class="content">
+    <main class="content" style="padding: 30px;">
+        <!-- Gerenciamento de Conteúdo - 6 botões em 2 linhas -->
         <section class="admin-section">
             <h2>Gerenciamento de Conteúdo</h2>
             <div class="buttons-grid">
                 <a href="{% url 'questoes:gerenciar_questoes' %}" class="btn btn-primary">📋 Gerenciar Questões</a>
-                <a href="{% url 'questoes:adicionar_assunto' %}" class="btn btn-primary">📚 Gerenciar Conteúdos</a>
+                <a href="{% url 'questoes:gerenciar_assuntos' %}" class="btn btn-primary">📚 Gerenciar Conteúdos</a>
+                <a href="#" class="btn btn-primary">💬 Gerenciar Comentários</a>
                 <a href="{% url 'questoes:adicionar_questao' %}" class="btn btn-success">➕ Adicionar Questão</a>
-                <a href="{% url 'questoes:adicionar_assunto' %}" class="btn btn-secondary">📝 Adicionar Conteúdo</a>
+                <a href="{% url 'questoes:escolher_assunto' %}" class="btn btn-secondary">📝 Adicionar Conteúdo</a>
                 <a href="{% url 'questoes:index' %}" class="btn btn-outline">🏠 Voltar ao Site</a>
             </div>
         </section>
         
+        <!-- Métricas Gerais - 4 na primeira linha + 1 centralizado -->
         <section class="metrics-section">
             <h2>📊 Métricas Gerais do Site</h2>
             <div class="stats-container">
-                <div class="stat-card slide-in">
+                <div class="stats-row">
+                    <div class="stat-card">
                     <h3>👥 Usuários Cadastrados</h3>
                     <div class="stat-number">{{ total_usuarios }}</div>
                 </div>
-                <div class="stat-card slide-in">
+                    <div class="stat-card">
                     <h3>🎯 Questões Respondidas</h3>
                     <div class="stat-number">{{ total_respostas }}</div>
                 </div>
-                <div class="stat-card slide-in">
+                    <div class="stat-card">
                     <h3>📅 Logins Hoje</h3>
                     <div class="stat-number">{{ usuarios_hoje }}</div>
                 </div>
-                <div class="stat-card slide-in">
+                    <div class="stat-card">
                     <h3>📆 Logins Última Semana</h3>
                     <div class="stat-number">{{ usuarios_semana }}</div>
+                    </div>
                 </div>
-                <div class="stat-card slide-in">
+                <div class="stats-row-bottom">
+                    <div class="stat-card">
                     <h3>📈 Logins Último Mês</h3>
                     <div class="stat-number">{{ usuarios_mes }}</div>
+                    </div>
                 </div>
             </div>
         </section>
 
+        <!-- Usuários Cadastrados com botão Ver Todos -->
         <section class="users-section">
+            <div class="users-header">
+                <div>
             <h2>👥 Usuários Cadastrados</h2>
-            <div class="users-container">
-                <div class="users-header">
                     <p>Últimos 10 usuários cadastrados no sistema</p>
+                </div>
+                <a href="#" class="btn-view-all">Ver Todos</a>
                 </div>
                 <div class="users-table">
                     <div class="table-header">
@@ -310,15 +541,13 @@
                                 <div class="table-row">
                                     <div class="col-name">
                                         <div class="user-avatar-small">
-                                            {{ usuario.nome|first|upper }}
+                                        {{ usuario.first_name|first|upper }}{% if usuario.last_name %}{{ usuario.last_name|first|upper }}{% else %}{{ usuario.username|first|upper }}{% endif %}
                                         </div>
-                                        <span>{{ usuario.nome }}</span>
+                                    <span>{{ usuario.first_name|default:usuario.username }} {{ usuario.last_name|default:"" }}</span>
                                     </div>
                                     <div class="col-email">{{ usuario.email }}</div>
                                     <div class="col-type">
-                                        <span class="type-badge {% if usuario.is_staff %}admin{% else %}user{% endif %}">
-                                            {% if usuario.is_staff %}👑 Admin{% else %}👤 Usuário{% endif %}
-                                        </span>
+                                    <span class="type-badge user">👤 Usuário</span>
                                     </div>
                                     <div class="col-date">
                                         {{ usuario.date_joined|date:"d/m/Y" }}
@@ -329,24 +558,26 @@
                                 </div>
                             {% endfor %}
                         {% else %}
-                            <div class="no-users">
-                                <p>Nenhum usuário cadastrado ainda.</p>
+                        <div class="table-row">
+                            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #666;">
+                                Nenhum usuário cadastrado ainda.
+                            </div>
                             </div>
                         {% endif %}
-                    </div>
                 </div>
             </div>
         </section>
 
+        <!-- Análises e Relatórios -->
         <section class="analytics-section">
             <h2>📈 Análises e Relatórios</h2>
             <div class="cards-container">
                 <div class="card">
-                    <h4>🎯 Conteúdos mais difíceis (taxa de acerto)</h4>
+                    <h4>📊 Conteúdos mais difíceis (taxa de acerto)</h4>
                     <ul class="analytics-list">
                         {% if assuntos_dificeis %}
                             {% for item in assuntos_dificeis %}
-                                <li>{{ item.assunto }} — <strong>{{ item.taxa }}%</strong></li>
+                                <li>{{ item.assunto|upper }} — <strong>{{ item.taxa }}%</strong></li>
                             {% endfor %}
                         {% else %}
                             <li>Sem dados suficientes.</li>
@@ -356,9 +587,9 @@
                 <div class="card">
                     <h4>📊 Distribuição de dificuldade</h4>
                     <ul class="analytics-list">
-                        <li>🔴 Difíceis (< 40%): <strong>{{ buckets.dificeis }}</strong></li>
-                        <li>🟡 Médias (40–70%): <strong>{{ buckets.medias }}</strong></li>
-                        <li>🟢 Fáceis (> 70%): <strong>{{ buckets.faceis }}</strong></li>
+                        <li>🔴 Difíceis (&lt;40%): <strong>{{ buckets.dificeis }}</strong></li>
+                        <li>🟡 Médias (40-70%): <strong>{{ buckets.medias }}</strong></li>
+                        <li>🟢 Fáceis (&gt; 70%): <strong>{{ buckets.faceis }}</strong></li>
                     </ul>
                 </div>
                 <div class="card">
@@ -382,15 +613,4 @@
     </footer>
 </div>
 
-<script>
-    function goBack() {
-        if (window.history.length > 1) {
-            window.history.back();
-        } else {
-            window.location.href = '{% url "questoes:index" %}';
-        }
-    }
-</script>
 {% endblock %}
-
-

@@ -178,6 +178,10 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Configuração de redirecionamento após login
+LOGIN_REDIRECT_URL = '/questoes/index/'
+LOGIN_URL = '/questoes/login/'
+
 # ==================== CONFIGURAÇÕES DE SEGURANÇA ADICIONAL ====================
 # Nota: As principais configurações de segurança já estão no topo do arquivo
 # (linhas 35-54). Estas são configurações adicionais para CPS e HSTS
