@@ -1,8 +1,10 @@
 from django.contrib import admin
+from import_export.admin import ImportExportModelAdmin
 from .models import (
     Assunto, Questao, Alternativa, RespostaUsuario, RelatorioBug,
     ComentarioQuestao, CurtidaComentario, DenunciaComentario
 )
+from .resources import QuestaoResource, AlternativaResource
 from django.db.models import Count
 
 class AlternativaInline(admin.TabularInline):
@@ -39,7 +41,13 @@ class AssuntoAdmin(admin.ModelAdmin):
         return qs.annotate(questoes_count=Count('questoes'))
 
 @admin.register(Questao)
-class QuestaoAdmin(admin.ModelAdmin):
+class QuestaoAdmin(ImportExportModelAdmin, admin.ModelAdmin):
+    resource_class = QuestaoResource
+    # Configurações de importação
+    import_template_name = 'admin/import_export/import.html'
+    # Mensagem customizada após importação
+    from_encoding = 'utf-8'
+    
     list_display = ('id', 'id_assunto', 'texto_resumido', 'tem_explicacao', 'alternativas_count_display', 'criado_em')
     list_filter = ('id_assunto', 'criado_em')
     search_fields = ('texto', 'explicacao')
@@ -79,7 +87,11 @@ class QuestaoAdmin(admin.ModelAdmin):
     alternativas_count_display.short_description = 'Nº de Alternativas'
 
 @admin.register(Alternativa)
-class AlternativaAdmin(admin.ModelAdmin):
+class AlternativaAdmin(ImportExportModelAdmin, admin.ModelAdmin):
+    resource_class = AlternativaResource
+    # Configurações de importação
+    import_template_name = 'admin/import_export/import.html'
+    
     list_display = ('id', 'id_questao', 'texto_resumido', 'eh_correta', 'ordem')
     list_filter = ('eh_correta', 'id_questao__id_assunto')
     search_fields = ('texto', 'id_questao__texto')

@@ -5,3 +5,4 @@ mysql-connector-python==8.2.0
 bcrypt==4.1.2
 django-filter==23.3
 django-comments-xtd==3.0.0
+django-import-export==4.0.0

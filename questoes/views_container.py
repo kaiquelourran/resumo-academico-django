@@ -822,14 +822,48 @@ def gerenciar_comentarios_view(request):
         return redirect('questoes:index')
     
     # Filtrar APENAS comentários que foram reportados (têm denúncias)
+    # Ordenar por data da denúncia mais recente
+    from django.db.models import Max, OuterRef, Subquery
+    
+    # Subquery para pegar a data da denúncia mais recente
+    ultima_denuncia = DenunciaComentario.objects.filter(
+        id_comentario=OuterRef('pk')
+    ).order_by('-data_denuncia').values('data_denuncia')[:1]
+    
     comentarios = ComentarioQuestao.objects.filter(
         denuncias__isnull=False
     ).annotate(
-        total_denuncias=Count('denuncias')
-    ).distinct().order_by('-data_comentario')
+        total_denuncias=Count('denuncias'),
+        data_ultima_denuncia=Subquery(ultima_denuncia)
+    ).distinct().order_by('-data_ultima_denuncia', '-data_comentario')
+    
+    # Para cada comentário, buscar a última denúncia para exibir detalhes
+    comentarios_com_denuncias = []
+    for comentario in comentarios:
+        ultima_denuncia_obj = comentario.denuncias.order_by('-data_denuncia').first()
+        
+        # Tentar buscar nome do denunciante através do email
+        reporter_nome = "Anônimo"
+        if ultima_denuncia_obj and ultima_denuncia_obj.email_usuario:
+            try:
+                usuario_denunciante = User.objects.filter(email=ultima_denuncia_obj.email_usuario).first()
+                if usuario_denunciante:
+                    reporter_nome = usuario_denunciante.get_full_name() or usuario_denunciante.username
+                else:
+                    # Se não encontrar pelo email, usa o email como identificação
+                    reporter_nome = ultima_denuncia_obj.email_usuario.split('@')[0]
+            except:
+                reporter_nome = "Anônimo"
+        
+        comentarios_com_denuncias.append({
+            'comentario': comentario,
+            'ultima_denuncia': ultima_denuncia_obj,
+            'reporter_nome': reporter_nome,
+            'total_denuncias': comentario.total_denuncias
+        })
     
     context = {
-        'comentarios': comentarios
+        'comentarios_com_denuncias': comentarios_com_denuncias
     }
     
     return render(request, 'questoes/gerenciar_comentarios.html', context)

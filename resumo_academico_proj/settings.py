@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_filters',  # Adicionar esta linha obrigatoriamente
+    'import_export',  # django-import-export para importação em lote
     'questoes',  # App de questões
     'institucional',  # App de páginas institucionais
 ]

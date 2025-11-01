@@ -48,6 +48,7 @@
         background-clip: padding-box, border-box;
         box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         padding: 0 30px 30px 30px;
+        overflow: visible;
     }
     
     .content-card {
@@ -74,8 +75,8 @@
         border-collapse: collapse; 
         background: #fff; 
         border-radius: 12px; 
-        overflow: hidden; 
         box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+        table-layout: auto;
     }
     .modern-table th { 
         background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%); 
@@ -116,6 +117,14 @@
         background: #f8d7da; 
         color: #721c24; 
     }
+    .badge-warning {
+        background: #fff3cd;
+        color: #856404;
+    }
+    .badge-info {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
     
     .btn-sm { 
         padding: 6px 12px; 
@@ -130,12 +139,38 @@
     
     .table-responsive { 
         width: 100%; 
-        overflow-x: auto; 
-        -webkit-overflow-scrolling: touch; 
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
     
     .modern-table { 
-        min-width: 900px; 
+        width: 100%;
+        min-width: 1200px;
+    }
+    
+    @media (min-width: 1400px) {
+        .modern-table {
+            min-width: auto;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .modern-table {
+            font-size: 0.85rem;
+        }
+        .modern-table th,
+        .modern-table td {
+            padding: 12px 8px;
+        }
+        .actions {
+            flex-direction: column;
+        }
+        .actions form {
+            width: 100%;
+        }
+        .actions button {
+            width: 100%;
+        }
     }
     
     .loading { 
@@ -229,7 +264,7 @@
         <h2 class="card-title">📋 Comentários Reportados</h2>
         <p style="margin-bottom: 24px; color: #666;">Aqui você pode visualizar e gerenciar comentários que foram reportados como abuso por usuários.</p>
 
-        {% if comentarios %}
+        {% if comentarios_com_denuncias %}
             <div class="table-responsive">
                 <table class="modern-table">
                     <thead>
@@ -240,15 +275,17 @@
                             <th><i class="fas fa-user"></i> Autor</th>
                             <th><i class="fas fa-calendar"></i> Data</th>
                             <th><i class="fas fa-flag"></i> Status</th>
+                            <th><i class="fas fa-exclamation-triangle"></i> Denúncia</th>
                             <th><i class="fas fa-cogs"></i> Ações</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for comentario in comentarios %}
+                        {% for item in comentarios_com_denuncias %}
+                            {% with comentario=item.comentario ultima_denuncia=item.ultima_denuncia total_denuncias=item.total_denuncias reporter_nome=item.reporter_nome %}
                             <tr>
                                 <td><strong>#{{ comentario.id }}</strong></td>
                                 <td>
-                                    <a href="{% url 'questoes:quiz' comentario.id_questao.id %}" 
+                                    <a href="{% url 'questoes:quiz_vertical_filtros' comentario.id_questao.id_assunto.id %}?questao_inicial={{ comentario.id_questao.id }}&filtro=todas" 
                                        target="_blank" 
                                        class="btn btn-sm btn-primary">
                                         <i class="fas fa-external-link-alt"></i> Questão {{ comentario.id_questao.id }}
@@ -256,7 +293,11 @@
                                 </td>
                                 <td>
                                     <div style="max-width: 300px; word-wrap: break-word;">
-                                        {{ comentario.comentario|truncatewords:20 }}
+                                        {% if comentario.comentario|length > 100 %}
+                                            {{ comentario.comentario|truncatewords:20 }}...
+                                        {% else %}
+                                            {{ comentario.comentario }}
+                                        {% endif %}
                                     </div>
                                 </td>
                                 <td>
@@ -266,7 +307,7 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <small>{{ comentario.data_comentario|date:"d/m/Y H:i" }}</small>
+                                    <small>{{ comentario.data_comentario|date:"d/m/Y" }} às {{ comentario.data_comentario|date:"H:i" }}</small>
                                 </td>
                                 <td>
                                     <span class="badge {% if comentario.ativo %}badge-success{% else %}badge-danger{% endif %}">
@@ -276,24 +317,76 @@
                                             <i class="fas fa-ban"></i> Inativo
                                         {% endif %}
                                     </span>
-                                    {% if comentario.denuncias.count > 0 %}
-                                        <span class="badge badge-danger" style="margin-left:6px;">
-                                            <i class="fas fa-flag"></i> {{ comentario.denuncias.count }} denúncia(s)
+                                    {% if total_denuncias > 0 %}
+                                        <span class="badge badge-danger" style="margin-left:6px; margin-top: 4px; display: inline-block;">
+                                            <i class="fas fa-flag"></i> Reportado
                                         </span>
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <div class="actions">
+                                    {% if ultima_denuncia %}
+                                        <div style="max-width: 280px;">
+                                            <div style="margin-bottom: 8px;">
+                                                <strong style="font-size: 0.9rem;">{{ reporter_nome }}</strong><br>
+                                                <small style="color: #666;">
+                                                    {% if ultima_denuncia.email_usuario %}
+                                                        {{ ultima_denuncia.email_usuario }}
+                                                    {% else %}
+                                                        IP: {{ ultima_denuncia.ip_usuario|default:"N/A" }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                            <div style="margin-bottom: 8px;">
+                                                <small style="color: #666;">{{ ultima_denuncia.data_denuncia|date:"d/m/Y" }} às {{ ultima_denuncia.data_denuncia|date:"H:i" }}</small>
+                                            </div>
+                                            {% if ultima_denuncia.tipo %}
+                                                <div style="margin-bottom: 8px;">
+                                                    <span class="badge badge-warning">
+                                                        {% if ultima_denuncia.tipo == 'spam' %}
+                                                            Spam
+                                                        {% elif ultima_denuncia.tipo == 'inapropriado' %}
+                                                            Conteúdo Inapropriado
+                                                        {% elif ultima_denuncia.tipo == 'bullying' %}
+                                                            Bullying ou Assédio
+                                                        {% elif ultima_denuncia.tipo == 'outro' %}
+                                                            Outro
+                                                        {% else %}
+                                                            {{ ultima_denuncia.get_tipo_display }}
+                                                        {% endif %}
+                                                    </span>
+                                                </div>
+                                            {% endif %}
+                                            {% if ultima_denuncia.motivo %}
+                                                <div style="margin-bottom: 8px; font-size: 0.85rem; color: #555; word-wrap: break-word;">
+                                                    {{ ultima_denuncia.motivo|truncatewords:15 }}
+                                                </div>
+                                            {% endif %}
+                                            {% if total_denuncias > 1 %}
+                                                <div>
+                                                    <span class="badge badge-info">
+                                                        <i class="fas fa-exclamation-circle"></i> {{ total_denuncias }} denúncia(s)
+                                                    </span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <small style="color: #999;">Sem detalhes</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="actions" style="min-width: 260px;">
                                         <form method="POST" action="{% url 'questoes:toggle_comentario' comentario.id %}" style="display: inline;">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm {% if comentario.ativo %}btn-warning{% else %}btn-success{% endif %}">
+                                            <button type="submit" 
+                                                    class="btn btn-sm {% if comentario.ativo %}btn-warning{% else %}btn-success{% endif %}"
+                                                    onclick="return confirm('Tem certeza que deseja {% if comentario.ativo %}desativar{% else %}ativar{% endif %} este comentário?');">
                                                 <i class="fas {% if comentario.ativo %}fa-ban{% else %}fa-check{% endif %}"></i> 
                                                 {% if comentario.ativo %}Desativar{% else %}Ativar{% endif %}
                                             </button>
                                         </form>
                                         
                                         <form method="POST" action="{% url 'questoes:deletar_comentario' comentario.id %}" 
-                                              onsubmit="return confirm('Tem certeza que deseja EXCLUIR PERMANENTEMENTE este comentário? Esta ação não pode ser desfeita.')"
+                                              onsubmit="return confirm('ATENÇÃO: Tem certeza que deseja EXCLUIR PERMANENTEMENTE este comentário? Esta ação não pode ser desfeita.');"
                                               style="display: inline;">
                                             {% csrf_token %}
                                             <button type="submit" class="btn btn-danger btn-sm">
@@ -303,6 +396,7 @@
                                     </div>
                                 </td>
                             </tr>
+                            {% endwith %}
                         {% endfor %}
                     </tbody>
                 </table>
