@@ -100,12 +100,23 @@
   <ul style="margin-top: 8px; margin-bottom: 12px;">
     <li><strong>id</strong> (opcional): Se preenchido, atualiza o registro existente. Se vazio, cria um novo.</li>
     <li><strong>texto</strong> (obrigatório): Texto completo da questão.</li>
-    <li><strong>id_assunto</strong> (obrigatório): ID do assunto existente no banco de dados (Foreign Key).</li>
     <li><strong>explicacao</strong> (opcional): Texto da explicação ou justificativa da questão.</li>
+    <li><strong>id_assunto</strong> (obrigatório): ID do assunto existente no banco de dados. Veja os IDs disponíveis em <a href="{% url 'admin:questoes_assunto_changelist' %}" target="_blank">Gerenciar Assuntos</a>.</li>
   </ul>
-  <p style="margin-top: 12px; margin-bottom: 0;"><strong>⚠️ Importante:</strong> O campo <code>id_assunto</code> deve corresponder ao ID de um Assunto que já existe no banco de dados. Caso contrário, a importação falhará para essa linha.</p>
+  <p style="margin-top: 12px; margin-bottom: 0;"><strong>⚠️ Importante:</strong> O campo <code>id_assunto</code> deve corresponder ao ID de um Assunto que já existe no banco de dados. Caso contrário, a importação falhará para essa linha. Você pode ver os IDs dos assuntos na página de <a href="{% url 'admin:questoes_assunto_changelist' %}" target="_blank">Gerenciar Assuntos</a>.</p>
   <p style="margin-top: 8px; margin-bottom: 0;"><strong>📝 Formatos suportados:</strong> CSV, XLSX, JSON, TSV. O CSV é o mais recomendado para garantir compatibilidade.</p>
   <p style="margin-top: 8px; margin-bottom: 0;"><strong>🌐 Codificação:</strong> Recomenda-se usar UTF-8 para garantir que acentos e caracteres especiais sejam importados corretamente.</p>
+  <div style="background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 16px; margin-top: 16px;">
+    <h4 style="margin-top: 0; color: #333;">📄 Exemplo de Formato CSV:</h4>
+    <pre style="background: #f5f5f5; padding: 12px; border-radius: 4px; overflow-x: auto; margin: 8px 0; font-size: 0.9rem;"><code>id,texto,explicacao,id_assunto
+,"Qual é a capital do Brasil?","Brasília é a capital federal.",3
+,"Quem descobriu o Brasil?","Pedro Álvares Cabral descobriu em 1500.",3
+5,"Qual é o maior oceano?","O Oceano Pacífico é o maior do mundo.",3</code></pre>
+    <p style="margin: 8px 0 0 0; font-size: 0.9rem; color: #666;">
+      <strong>Colunas:</strong> <code>id</code> (opcional), <code>texto</code> (obrigatório), <code>explicacao</code> (opcional), <code>id_assunto</code> (obrigatório)<br>
+      <strong>Observação:</strong> Substitua o número <code>3</code> no exemplo acima pelo ID real do seu Assunto. Você pode ver os IDs na página de <a href="{% url 'admin:questoes_assunto_changelist' %}" target="_blank">Gerenciar Assuntos</a>.
+    </p>
+  </div>
 </div>
 {% endif %}
 
@@ -116,6 +127,7 @@
   {% block confirm_import_form %}
   <form action="{% url opts|admin_urlname:"process_import" %}" method="POST">
     {% csrf_token %}
+    
     {{ confirm_form.as_p }}
     
     <div class="legend-box">

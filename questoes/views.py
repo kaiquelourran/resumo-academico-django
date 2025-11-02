@@ -25,11 +25,14 @@ from .models import (
     RelatorioBug
 )
 from .filters import QuestaoFilter
-# Importar views de gerenciamento de comentários do views_container
+# Importar views de gerenciamento de comentários e assuntos do views_container
 from .views_container import (
     gerenciar_comentarios_view,
     toggle_comentario_view,
-    deletar_comentario_view
+    deletar_comentario_view,
+    adicionar_assunto_view,
+    gerenciar_assuntos_view,
+    deletar_assunto_view
 )
 
 error_logger = logging.getLogger('questoes.errors')
@@ -1189,6 +1192,42 @@ def deletar_questao_view(request):
         messages.error(request, f'Questão #{questao_id} não encontrada.')
     except Exception as e:
         messages.error(request, f'Erro ao deletar questão: {str(e)}')
+    
+    return redirect('questoes:gerenciar_questoes')
+
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+@require_POST
+def deletar_todas_questoes_assunto_view(request):
+    """Deleta todas as questões de um assunto específico (apenas para staff/admin)"""
+    assunto_id = request.POST.get('assunto_id')
+    
+    if not assunto_id:
+        messages.error(request, 'ID do assunto não fornecido.')
+        return redirect('questoes:gerenciar_questoes')
+    
+    try:
+        assunto = Assunto.objects.get(id=assunto_id)
+        questoes_count = Questao.objects.filter(id_assunto=assunto).count()
+        
+        if questoes_count == 0:
+            messages.warning(request, f'O assunto "{assunto.nome}" não possui questões para deletar.')
+            return redirect('questoes:gerenciar_questoes')
+        
+        # Usar transação para garantir integridade
+        with transaction.atomic():
+            # Deleta todas as questões do assunto (isso também deleta as alternativas via CASCADE)
+            questoes_deletadas = Questao.objects.filter(id_assunto=assunto).delete()
+            count = questoes_deletadas[0]  # Número de objetos deletados
+        
+        messages.success(request, f'✅ {count} questão(ões) do assunto "{assunto.nome}" foram deletadas com sucesso!')
+        
+    except Assunto.DoesNotExist:
+        messages.error(request, f'Assunto com ID {assunto_id} não encontrado.')
+    except Exception as e:
+        error_logger.error(f'Erro ao deletar questões do assunto: {e}', exc_info=True)
+        messages.error(request, f'Erro ao deletar questões: {str(e)}')
     
     return redirect('questoes:gerenciar_questoes')
 

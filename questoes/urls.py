@@ -19,10 +19,12 @@ urlpatterns = [
     # Gerenciar questões (admin)
     path('gerenciar/', views.gerenciar_questoes_view, name='gerenciar_questoes'),
     path('gerenciar-assuntos/', views.gerenciar_assuntos_view, name='gerenciar_assuntos'),
+    path('adicionar-assunto/', views.adicionar_assunto_view, name='adicionar_assunto'),
     path('deletar-assunto/', views.deletar_assunto_view, name='deletar_assunto'),
     path('adicionar/', views.adicionar_questao_view, name='adicionar_questao'),
     path('editar/<int:questao_id>/', views.editar_questao_view, name='editar_questao'),
     path('deletar/', views.deletar_questao_view, name='deletar_questao'),
+    path('deletar-todas-assunto/', views.deletar_todas_questoes_assunto_view, name='deletar_todas_questoes_assunto'),
     
     # Página inicial - escolher assunto
     path('', views.escolher_assunto_view, name='escolher_assunto'),

@@ -1,0 +1,234 @@
+{% extends "admin/import_export/base.html" %}
+{% load i18n %}
+{% load admin_urls %}
+{% load import_export_tags %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{% static "import_export/import.css" %}" />
+<style>
+  .add {
+    background-color: #d4edda !important;
+  }
+  .change {
+    background-color: #fff3cd !important;
+  }
+  .skip, .delete {
+    background-color: #f8d7da !important;
+  }
+  
+  .import-preview th {
+    background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%);
+    color: #fff;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+  }
+  
+  .import-preview td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  
+  .import-preview tbody tr:hover {
+    opacity: 0.9;
+  }
+  
+  .import-type {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+  }
+  
+  .instructions-box {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    padding: 20px;
+    margin-bottom: 24px;
+    border-radius: 4px;
+  }
+  
+  .instructions-box h3 {
+    margin-top: 0;
+    color: #1976d2;
+  }
+  
+  .legend-box {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 16px;
+    margin: 20px 0;
+    border-radius: 4px;
+  }
+  
+  .error-box {
+    background: #f8d7da;
+    border-left: 4px solid #dc3545;
+    padding: 16px;
+    margin: 20px 0;
+    border-radius: 4px;
+  }
+</style>
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+  <script type="text/javascript" src="{% url 'admin:jsi18n' %}"></script>
+  {% if confirm_form %}
+    {{ confirm_form.media }}
+  {% else %}
+    {{ form.media }}
+  {% endif %}
+{% endblock %}
+
+{% block breadcrumbs_last %}
+{% translate "Import" %} {{ opts.verbose_name }}
+{% endblock %}
+
+{% block content %}
+
+<h1>📥 Importar {{ opts.verbose_name }}</h1>
+
+{# ============================================ #}
+{# ETAPA 1: SELECÇÃO DO ARQUIVO E CONFIGURAÇÕES #}
+{# ============================================ #}
+{% if not confirm_form and not result %}
+<div class="instructions-box">
+  <h3>📋 Instruções de Importação de Alternativas</h3>
+  <p style="margin-bottom: 8px;"><strong>Formato do arquivo:</strong> O arquivo deve conter as seguintes colunas:</p>
+  <ul style="margin-top: 8px; margin-bottom: 12px;">
+    <li><strong>id</strong> (opcional): Se preenchido, atualiza o registro existente. Se vazio, cria um novo.</li>
+    <li><strong>id_questao</strong> (obrigatório): ID da questão existente no banco de dados. Veja os IDs disponíveis em <a href="{% url 'admin:questoes_questao_changelist' %}" target="_blank">Gerenciar Questões</a>.</li>
+    <li><strong>texto</strong> (obrigatório): Texto completo da alternativa.</li>
+    <li><strong>eh_correta</strong> (obrigatório): Indica se é a alternativa correta. Use <code>True</code>, <code>False</code>, <code>1</code> ou <code>0</code>.</li>
+    <li><strong>ordem</strong> (opcional): Ordem de exibição da alternativa (número inteiro).</li>
+  </ul>
+  <p style="margin-top: 12px; margin-bottom: 0;"><strong>⚠️ Importante:</strong> O campo <code>id_questao</code> deve corresponder ao ID de uma Questão que já existe no banco de dados. Caso contrário, a importação falhará para essa linha. Você pode ver os IDs das questões na página de <a href="{% url 'admin:questoes_questao_changelist' %}" target="_blank">Gerenciar Questões</a>.</p>
+  <p style="margin-top: 8px; margin-bottom: 0;"><strong>📝 Formatos suportados:</strong> CSV, XLSX, JSON, TSV. O CSV é o mais recomendado para garantir compatibilidade.</p>
+  <p style="margin-top: 8px; margin-bottom: 0;"><strong>🌐 Codificação:</strong> Recomenda-se usar UTF-8 para garantir que acentos e caracteres especiais sejam importados corretamente.</p>
+  <div style="background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 16px; margin-top: 16px;">
+    <h4 style="margin-top: 0; color: #333;">📄 Exemplo de Formato CSV:</h4>
+    <pre style="background: #f5f5f5; padding: 12px; border-radius: 4px; overflow-x: auto; margin: 8px 0; font-size: 0.9rem;"><code>id,id_questao,texto,eh_correta,ordem
+,1,"Brasília",True,1
+,1,"São Paulo",False,2
+,1,"Rio de Janeiro",False,3
+,1,"Belo Horizonte",False,4
+,2,"Pedro Álvares Cabral",True,1</code></pre>
+    <p style="margin: 8px 0 0 0; font-size: 0.9rem; color: #666;">
+      <strong>Colunas:</strong> <code>id</code> (opcional), <code>id_questao</code> (obrigatório), <code>texto</code> (obrigatório), <code>eh_correta</code> (obrigatório), <code>ordem</code> (opcional)<br>
+      <strong>Observação:</strong> Substitua o número <code>1</code> no exemplo acima pelo ID real da sua Questão. Você pode ver os IDs na página de <a href="{% url 'admin:questoes_questao_changelist' %}" target="_blank">Gerenciar Questões</a>.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% if confirm_form %}
+  {# ============================================ #}
+  {# ETAPA 2: CONFIRMAÇÃO E REVISÃO #}
+  {# ============================================ #}
+  {% block confirm_import_form %}
+  <form action="{% url opts|admin_urlname:"process_import" %}" method="POST">
+    {% csrf_token %}
+    
+    {{ confirm_form.as_p }}
+    
+    <div class="legend-box">
+      <p style="margin: 0;"><strong>🎨 Legenda de cores:</strong></p>
+      <ul style="margin: 8px 0 0 0;">
+        <li><span style="background: #d4edda; padding: 4px 8px; border-radius: 3px; font-weight: 600;">Verde</span> = Linhas que serão <strong>criadas</strong> (Novo)</li>
+        <li><span style="background: #fff3cd; padding: 4px 8px; border-radius: 3px; font-weight: 600;">Amarelo</span> = Linhas que serão <strong>atualizadas</strong> (Update)</li>
+        <li><span style="background: #f8d7da; padding: 4px 8px; border-radius: 3px; font-weight: 600;">Vermelho</span> = Linhas com <strong>erros</strong> (serão ignoradas)</li>
+      </ul>
+    </div>
+    
+    <p style="margin: 20px 0;">
+      <strong>Revise as alterações abaixo.</strong> Linhas em <span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">verde</span> serão criadas. Linhas em <span style="background: #fff3cd; padding: 2px 6px; border-radius: 3px;">amarelo</span> serão atualizadas. Linhas em <span style="background: #f8d7da; padding: 2px 6px; border-radius: 3px;">vermelho</span> contêm erros e serão ignoradas.
+    </p>
+    
+    <div class="submit-row">
+      <input type="submit" class="default" name="confirm" value="{% translate 'Confirmar Importação' %}" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+      <a href="{% url opts|admin_urlname:"changelist" %}" class="button" style="padding: 10px 20px; text-decoration: none; border-radius: 4px; background: #6c757d; color: white; display: inline-block; margin-left: 10px;">Cancelar Importação</a>
+    </div>
+  </form>
+  {% endblock %}
+{% else %}
+  {# ============================================ #}
+  {# ETAPA 1: FORMULÁRIO DE UPLOAD #}
+  {# ============================================ #}
+  {% block import_form %}
+  <form action="" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {% include "admin/import_export/resource_fields_list.html" with import_or_export="import" %}
+    
+    {% block form_detail %}
+    <fieldset class="module aligned">
+      {% for field in form %}
+        <div class="form-row">
+          {{ field.errors }}
+
+          {{ field.label_tag }}
+
+          {% if field.field.widget.attrs.readonly %}
+            {{ field.field.value }}
+            {{ field.as_hidden }}
+          {% else %}
+            {{ field }}
+          {% endif %}
+
+          {% if field.field.help_text %}
+          <p class="help">{{ field.field.help_text|safe }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </fieldset>
+    {% endblock %}
+
+    {% block form_submit_button %}
+    <div class="submit-row">
+      <input type="submit" class="default" value="{% translate 'Próximo Passo: Visualizar Importação' %}" style="background: #0072FF; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">
+    </div>
+    {% endblock %}
+  </form>
+  {% endblock %}
+{% endif %}
+
+{# ============================================ #}
+{# RESULTADO: PRÉVIA E ERROS #}
+{# ============================================ #}
+{% if result %}
+  {% if result.has_errors %}
+    <div class="error-box">
+      <h3>❌ Erros encontrados durante a importação</h3>
+      <ul>
+        {% for error in result.base_errors %}
+          <li>{{ error.error }}</li>
+        {% endfor %}
+        {% for line, errors in result.row_errors %}
+          <li>
+            Linha {{ line.number }}: 
+            {% for error in errors %}
+              {{ error.error }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% else %}
+    <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 20px; margin: 20px 0; border-radius: 4px;">
+      <h3 style="margin-top: 0; color: #155724;">✅ Importação Concluída com Sucesso!</h3>
+      <p style="margin-bottom: 8px;"><strong>Total de linhas processadas:</strong> {{ result.total_rows }}</p>
+      <p style="margin-bottom: 8px;"><strong>Alternativas criadas:</strong> {{ result.totals.new|default:0 }}</p>
+      <p style="margin-bottom: 8px;"><strong>Alternativas atualizadas:</strong> {{ result.totals.update|default:0 }}</p>
+      <p style="margin-bottom: 0;"><strong>Erros:</strong> {{ result.totals.error|default:0 }}</p>
+      <div style="margin-top: 20px;">
+        <a href="{% url opts|admin_urlname:"changelist" %}" class="button" style="background: #0072FF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; margin-right: 10px;">Visualizar Lista de Alternativas</a>
+        <a href="{% url opts|admin_urlname:"import" %}" class="button" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Importar Novamente</a>
+      </div>
+    </div>
+  {% endif %}
+{% endif %}
+
+{% endblock %}
+

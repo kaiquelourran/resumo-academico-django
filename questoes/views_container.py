@@ -723,9 +723,6 @@ def adicionar_assunto_view(request):
         messages.error(request, 'Acesso negado. Apenas administradores.')
         return redirect('questoes:index')
     
-    mensagem_status = ''
-    mensagem_texto = ''
-    
     if request.method == 'POST':
         tipo_assunto = request.POST.get('tipo_assunto', '').strip()
         nome_assunto = request.POST.get('nome_assunto', '').strip()
@@ -745,9 +742,8 @@ def adicionar_assunto_view(request):
             errors.append('Para concursos, preencha todos os campos obrigatórios (Ano, Banca, Órgão e Prova).')
         
         if errors:
-            mensagem_status = 'error'
-            mensagem_texto = '<br>'.join(errors)
-            messages.error(request, mensagem_texto)
+            for error in errors:
+                messages.error(request, error)
         else:
             try:
                 if tipo_assunto == 'concurso':
@@ -778,10 +774,7 @@ def adicionar_assunto_view(request):
                 error_logger.error(f'Erro ao adicionar assunto: {e}', exc_info=True)
                 messages.error(request, f'Erro ao adicionar o conteúdo: {str(e)}')
     
-    return render(request, 'questoes/adicionar_assunto.html', {
-        'mensagem_status': mensagem_status,
-        'mensagem_texto': mensagem_texto,
-    })
+    return render(request, 'questoes/adicionar_assunto.html')
 
 
 @login_required

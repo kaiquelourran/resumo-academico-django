@@ -7,6 +7,7 @@ from .models import (
 from .resources import QuestaoResource, AlternativaResource
 from django.db.models import Count
 
+
 class AlternativaInline(admin.TabularInline):
     model = Alternativa
     extra = 4
@@ -22,6 +23,31 @@ class AssuntoAdmin(admin.ModelAdmin):
     ordering = ('tipo_assunto', 'nome')
     readonly_fields = ('criado_em', 'atualizado_em')
     
+    def get_queryset(self, request):
+        """Garante que apenas admins vejam os IDs dos assuntos"""
+        qs = super().get_queryset(request)
+        return qs.annotate(questoes_count=Count('questoes'))
+    
+    def has_module_permission(self, request):
+        """Apenas admins podem acessar o módulo de Assuntos"""
+        return request.user.is_staff
+    
+    def has_view_permission(self, request, obj=None):
+        """Apenas admins podem ver os assuntos"""
+        return request.user.is_staff
+    
+    def has_change_permission(self, request, obj=None):
+        """Apenas admins podem editar assuntos"""
+        return request.user.is_staff
+    
+    def has_add_permission(self, request):
+        """Apenas admins podem adicionar assuntos"""
+        return request.user.is_staff
+    
+    def has_delete_permission(self, request, obj=None):
+        """Apenas admins podem deletar assuntos"""
+        return request.user.is_staff
+    
     fieldsets = (
         ('Informações do Assunto', {
             'fields': ('nome', 'tipo_assunto')
@@ -35,18 +61,13 @@ class AssuntoAdmin(admin.ModelAdmin):
     def total_questoes_display(self, obj):
         return obj.total_questoes()
     total_questoes_display.short_description = 'Total de Questões'
-    
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.annotate(questoes_count=Count('questoes'))
 
 @admin.register(Questao)
 class QuestaoAdmin(ImportExportModelAdmin, admin.ModelAdmin):
     resource_class = QuestaoResource
     # Configurações de importação
     import_template_name = 'admin/import_export/import.html'
-    # Mensagem customizada após importação
-    from_encoding = 'utf-8'
+    from_encoding = 'utf-8'  # Codificação padrão UTF-8
     
     list_display = ('id', 'id_assunto', 'texto_resumido', 'tem_explicacao', 'alternativas_count_display', 'criado_em')
     list_filter = ('id_assunto', 'criado_em')
@@ -88,9 +109,11 @@ class QuestaoAdmin(ImportExportModelAdmin, admin.ModelAdmin):
 
 @admin.register(Alternativa)
 class AlternativaAdmin(ImportExportModelAdmin, admin.ModelAdmin):
-    resource_class = AlternativaResource
+    """Admin class para o modelo Alternativa com suporte a importação/exportação"""
+    resource_class = AlternativaResource  # Certifique-se de que está usando AlternativaResource
     # Configurações de importação
-    import_template_name = 'admin/import_export/import.html'
+    import_template_name = 'admin/import_export/import_alternativa.html'  # Template customizado para alternativas
+    from_encoding = 'utf-8'  # Codificação padrão UTF-8
     
     list_display = ('id', 'id_questao', 'texto_resumido', 'eh_correta', 'ordem')
     list_filter = ('eh_correta', 'id_questao__id_assunto')

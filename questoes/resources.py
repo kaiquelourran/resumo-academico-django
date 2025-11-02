@@ -10,34 +10,18 @@ from .models import Questao, Alternativa
 # Isso mapeia as colunas da sua planilha para o seu modelo Questao.
 # =========================================================================
 class QuestaoResource(resources.ModelResource):
-    # Campos customizados para mapeamento de ForeignKey
-    id_assunto__nome = Field(
-        attribute='id_assunto__nome',
-        column_name='assunto_nome',
-        readonly=True
-    )
-    id_assunto = Field(
-        attribute='id_assunto',
-        column_name='assunto_id'
-    )
+    """Resource para importação de Questões"""
     
     class Meta:
         model = Questao
-        # Campos que o usuário provavelmente terá em sua planilha para a Questão:
-        # IMPORTANTE: Os nomes das colunas no CSV devem ser exatamente estes:
-        # - id (opcional): Se preenchido, atualiza a questão existente
-        # - texto: Texto completo da questão (OBRIGATÓRIO)
-        # - id_assunto: ID do assunto (OBRIGATÓRIO - deve existir no banco)
-        # - explicacao: Explicação/justificativa (opcional)
         fields = (
-            'id',
-            'texto',          # Texto da questão (coluna na planilha: "texto")
-            'id_assunto',     # ID do assunto (ForeignKey - coluna: "id_assunto")
-            'explicacao',     # Explicação (opcional - coluna: "explicacao")
-            # Campos de data são automáticos, não precisam estar na planilha
+            'id',          # (opcional): Se preenchido, atualiza a questão existente; se vazio, cria nova com ID automático
+            'texto',       # (obrigatório): Texto completo da questão
+            'explicacao',  # (opcional): Explicação/justificativa
+            'id_assunto',  # (obrigatório): ID do assunto (Foreign Key)
         )
-        # Permite que a importação crie e atualize itens, não apenas crie.
-        import_id_fields = ('id',)
+        # REMOVIDO: import_id_fields = ('id',) 
+        # Isso permite que o Django gere IDs automaticamente quando o campo 'id' não for fornecido no CSV
         skip_unchanged = True  # Pula linhas que não tiveram mudanças
         report_skipped = True  # Relata as linhas que foram puladas
         exclude = ('criado_em', 'atualizado_em')  # Exclui campos automáticos
@@ -50,7 +34,7 @@ class QuestaoResource(resources.ModelResource):
         if 'texto' in row and not row.get('texto', '').strip():
             raise ValueError("O campo 'texto' é obrigatório e não pode estar vazio.")
         
-        # Valida se o assunto existe se for fornecido por ID
+        # Valida se o assunto existe
         if 'id_assunto' in row and row.get('id_assunto'):
             try:
                 assunto_id = int(row['id_assunto'])
@@ -65,10 +49,12 @@ class QuestaoResource(resources.ModelResource):
             except (TypeError, AttributeError):
                 # Se não conseguir converter para int, ignora
                 pass
-    
-    def get_import_fields(self):
-        """Retorna os campos que serão importados"""
-        return self.get_fields()
+        else:
+            raise ValueError("O campo 'id_assunto' é obrigatório e não pode estar vazio.")
+        
+        # Remove o campo 'id' se estiver vazio para permitir geração automática de ID
+        if 'id' in row and (not row.get('id') or str(row.get('id', '')).strip() == ''):
+            row['id'] = None  # None permite que o Django gere o ID automaticamente
 
 
 # =========================================================================
@@ -76,37 +62,32 @@ class QuestaoResource(resources.ModelResource):
 # Importação separada de alternativas, referenciando o ID da Questão
 # =========================================================================
 class AlternativaResource(resources.ModelResource):
-    # Campos customizados para mapeamento de ForeignKey
-    id_questao__texto = Field(
-        attribute='id_questao__texto',
-        column_name='questao_texto',
-        readonly=True
-    )
-    id_questao = Field(
-        attribute='id_questao',
-        column_name='questao_id'
-    )
+    """Resource para importação de Alternativas"""
     
     class Meta:
         model = Alternativa
         fields = (
-            'id',
-            'id_questao',     # ID da questão (ForeignKey)
-            'texto',          # Texto da alternativa
-            'eh_correta',     # Se é a alternativa correta (True/False)
-            'ordem',          # Ordem de exibição
+            'id',             # (opcional): Se preenchido, atualiza a alternativa existente; se vazio, cria nova com ID automático
+            'id_questao',     # (obrigatório): ID da questão (Foreign Key) - Vínculo com a Questão
+            'texto',          # (obrigatório): Texto da alternativa
+            'eh_correta',     # (obrigatório): Se é a alternativa correta (True/False, 1/0)
+            'ordem',          # (opcional): Ordem de exibição
         )
-        import_id_fields = ('id',)
+        # REMOVIDO: import_id_fields = ('id',)
+        # Isso permite que o Django gere IDs automaticamente quando o campo 'id' não for fornecido no CSV
         skip_unchanged = True
         report_skipped = True
+        exclude = ('criado_em', 'atualizado_em')  # Exclui campos automáticos, se existirem
     
     def before_import_row(self, row, **kwargs):
         """Método executado antes de importar cada linha - valida dados"""
+        from .models import Questao
+        
         # Valida se o texto da alternativa foi fornecido (campo obrigatório)
         if 'texto' in row and not row.get('texto', '').strip():
             raise ValueError("O campo 'texto' é obrigatório e não pode estar vazio.")
         
-        # Valida se a questão existe se for fornecido por ID
+        # Valida se a questão existe (campo obrigatório)
         if 'id_questao' in row and row.get('id_questao'):
             try:
                 questao_id = int(row['id_questao'])
@@ -121,6 +102,12 @@ class AlternativaResource(resources.ModelResource):
             except (TypeError, AttributeError):
                 # Se não conseguir converter para int, ignora
                 pass
+        else:
+            raise ValueError("O campo 'id_questao' é obrigatório e não pode estar vazio.")
+        
+        # Remove o campo 'id' se estiver vazio para permitir geração automática de ID
+        if 'id' in row and (not row.get('id') or str(row.get('id', '')).strip() == ''):
+            row['id'] = None  # None permite que o Django gere o ID automaticamente
     
     def get_import_fields(self):
         """Retorna os campos que serão importados"""

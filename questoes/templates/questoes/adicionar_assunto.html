@@ -76,14 +76,17 @@
     </header>
 
     <div class="user-info">
-        <a href="{% url 'questoes:index' %}" class="btn btn-outline">Voltar ao Dashboard</a>
+        <a href="{% url 'questoes:admin_dashboard' %}" class="btn btn-outline">Voltar ao Dashboard Admin</a>
     </div>
 
     <main class="content">
-        {% if mensagem_status %}
-            <div class="alert alert-{{ mensagem_status }} fade-in">
-                {{ mensagem_texto }}
-            </div>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} fade-in">
+                    <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %}"></i>
+                    {{ message|safe }}
+                </div>
+            {% endfor %}
         {% endif %}
 
         <div class="form-container">
@@ -141,7 +144,7 @@
                 </div>
                 
                 <div class="form-actions">
-                    <a href="{% url 'questoes:index' %}" class="btn btn-outline">Cancelar</a>
+                    <a href="{% url 'questoes:admin_dashboard' %}" class="btn btn-outline">Cancelar</a>
                     <button type="submit" class="btn btn-primary">Salvar Conteúdo</button>
                 </div>
             </form>

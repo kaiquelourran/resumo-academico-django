@@ -108,9 +108,25 @@
         font-size: 1.3rem;
         font-weight: bold;
         color: #1976d2;
+        margin: 0;
+    }
+    
+    .assunto-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         margin-bottom: 15px;
         padding-bottom: 10px;
         border-bottom: 2px solid #e0e0e0;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    
+    @media (max-width: 768px) {
+        .assunto-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
     }
     
     .table-container {
@@ -346,10 +362,25 @@
                 <!-- Loop por assunto -->
                 {% for assunto, questoes in questoes_agrupadas.items %}
                     <div class="assunto-section">
-                        <!-- Título do assunto -->
-                        <h2 class="assunto-title">
-                            {{ assunto.nome|upper }} ({{ questoes|length }} questões)
-                        </h2>
+                        <!-- Título do assunto com botão de deletar todas -->
+                        <div class="assunto-header">
+                            <h2 class="assunto-title">
+                                {{ assunto.nome|upper }} ({{ questoes|length }} questões)
+                            </h2>
+                            <form method="POST" 
+                                  action="{% url 'questoes:deletar_todas_questoes_assunto' %}" 
+                                  onsubmit="return confirm('⚠️ ATENÇÃO: Tem certeza que deseja EXCLUIR TODAS as {{ questoes|length }} questão(ões) do assunto \"{{ assunto.nome }}\"?\\n\\nEsta ação NÃO pode ser desfeita e também deletará todas as alternativas relacionadas!');"
+                                  style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="assunto_id" value="{{ assunto.id }}">
+                                <button type="submit" 
+                                        class="btn-action btn-excluir" 
+                                        title="Deletar todas as questões deste assunto"
+                                        style="background: #f44336; color: white; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 500; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; transition: opacity 0.3s;">
+                                    <span>🗑️</span> Deletar Todas ({{ questoes|length }})
+                                </button>
+                            </form>
+                        </div>
                         
                         <!-- Tabela de questões do assunto -->
                         <div class="table-container">

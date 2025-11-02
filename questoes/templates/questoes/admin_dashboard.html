@@ -110,7 +110,7 @@
         font-weight: 600;
     }
     
-    /* Grid de botões - ajustado para 7 botões */
+    /* Grid de botões - ajustado para 8 botões */
     .buttons-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -481,7 +481,7 @@
     </div>
 
     <main class="content" style="padding: 30px;">
-        <!-- Gerenciamento de Conteúdo - 7 botões em grid -->
+        <!-- Gerenciamento de Conteúdo - 8 botões em grid -->
         <section class="admin-section">
             <h2>Gerenciamento de Conteúdo</h2>
             <div class="buttons-grid">
@@ -489,8 +489,9 @@
                 <a href="{% url 'questoes:gerenciar_assuntos' %}" class="btn btn-primary">📚 Gerenciar Conteúdos</a>
                 <a href="{% url 'questoes:gerenciar_comentarios' %}" class="btn btn-primary">💬 Gerenciar Comentários</a>
                 <a href="{% url 'questoes:adicionar_questao' %}" class="btn btn-success">➕ Adicionar Questão</a>
-                <a href="{% url 'questoes:escolher_assunto' %}" class="btn btn-secondary">📝 Adicionar Conteúdo</a>
+                <a href="{% url 'questoes:adicionar_assunto' %}" class="btn btn-secondary">📝 Adicionar Conteúdo</a>
                 <a href="/admin/questoes/questao/import/" class="btn btn-primary" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">📥 Importar Questões</a>
+                <a href="/admin/questoes/alternativa/import/" class="btn btn-primary" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);">📥 Importar Alternativas</a>
                 <a href="{% url 'questoes:index' %}" class="btn btn-outline">🏠 Voltar ao Site</a>
             </div>
         </section>
