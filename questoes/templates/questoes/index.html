@@ -181,136 +181,266 @@
         }
     }
     
-    /* Ranking Semanal - Estilo da Imagem */
+    /* Ranking Semanal - Estilo Melhorado */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.05);
+        }
+    }
+    
+    @keyframes shimmer {
+        0% {
+            background-position: -1000px 0;
+        }
+        100% {
+            background-position: 1000px 0;
+        }
+    }
+    
     .ranking-card {
         max-width: 1050px;
         margin: 40px auto;
-        border-radius: 12px;
+        border-radius: 16px;
         overflow: hidden;
-        background: #fff;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        box-shadow: 0 8px 24px rgba(0, 114, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
         position: relative;
+        animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .ranking-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #0072FF 0%, #00C6FF 50%, #0072FF 100%);
+        background-size: 200% 100%;
+        animation: shimmer 3s infinite;
     }
     
     .ranking-header {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 20px 24px;
+        gap: 16px;
+        padding: 24px 28px;
         color: #fff;
-        background: linear-gradient(90deg, #0072FF 0%, #00C6FF 100%);
-        border-radius: 12px 12px 0 0;
+        background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%);
+        border-radius: 16px 16px 0 0;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .ranking-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+        animation: pulse 4s ease-in-out infinite;
+        z-index: 0;
+        opacity: 0.6;
     }
     
     .ranking-header .logo {
-        font-size: 28px;
+        font-size: 36px;
+        filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3));
+        animation: pulse 2s ease-in-out infinite;
+        z-index: 2;
+        position: relative;
     }
     
-    .ranking-header .title {
+    .ranking-header h2.title,
+    .ranking-header .title,
+    .ranking-card .ranking-header .title {
         flex: 1;
-        font-size: 22px;
+        font-size: 30px;
         font-weight: 700;
-        color: #fff;
+        color: #ffffff !important;
         margin: 0;
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        z-index: 2;
+        letter-spacing: 0px;
+        position: relative;
+        line-height: 1.3;
+        background: none !important;
+        background-image: none !important;
+        -webkit-background-clip: unset !important;
+        -webkit-text-fill-color: #ffffff !important;
+        background-clip: unset !important;
     }
     
-    .ranking-header .subtitle {
-        font-size: 13px;
-        color: #fff;
-        margin: 4px 0 0 0;
-        font-weight: 400;
+    .ranking-header p.subtitle,
+    .ranking-header .subtitle,
+    .ranking-card .ranking-header .subtitle {
+        font-size: 15px;
+        color: #ffffff !important;
+        margin: 8px 0 0 0;
+        font-weight: 500;
+        z-index: 2;
+        position: relative;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+        line-height: 1.4;
     }
     
     .ranking-list {
         list-style: none;
         margin: 0;
-        padding: 0;
+        padding: 8px 0;
     }
     
     .ranking-item {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 16px;
-        padding: 16px 24px;
+        gap: 20px;
+        padding: 18px 28px;
         background: #fff;
         border-bottom: 1px solid #f0f0f0;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .ranking-item:hover {
+        background: linear-gradient(90deg, #f8f9ff 0%, #ffffff 100%);
+        transform: translateX(4px);
+        box-shadow: -4px 0 12px rgba(0, 114, 255, 0.1);
     }
     
     .ranking-item:last-child {
         border-bottom: none;
     }
     
+    .ranking-item.is-current-user {
+        background: linear-gradient(90deg, #e3f2fd 0%, #ffffff 100%);
+        border-left: 4px solid #0072FF;
+    }
+    
+    .ranking-item.is-current-user::before {
+        content: '⭐';
+        position: absolute;
+        left: 8px;
+        font-size: 16px;
+        opacity: 0.6;
+    }
+    
     .ranking-left {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 16px;
         flex: 1;
         min-width: 0;
     }
     
     .rank-medal {
-        font-size: 20px;
-        width: 28px;
+        font-size: 32px;
+        width: 36px;
         text-align: center;
         flex-shrink: 0;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+        animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .ranking-item:nth-child(1) .rank-medal {
+        animation: pulse 2s ease-in-out infinite;
+    }
+    
+    .ranking-item:nth-child(2) .rank-medal,
+    .ranking-item:nth-child(3) .rank-medal {
+        animation: pulse 2.5s ease-in-out infinite;
     }
     
     .avatar {
-        width: 40px;
-        height: 40px;
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
-        background: #E8E9EB;
-        color: #333;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 600;
-        font-size: 14px;
+        font-weight: 700;
+        font-size: 16px;
         flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+        border: 3px solid #fff;
+    }
+    
+    .ranking-item:hover .avatar {
+        transform: scale(1.1) rotate(5deg);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    }
+    
+    .ranking-item.is-current-user .avatar {
+        background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%);
+        box-shadow: 0 4px 16px rgba(0, 114, 255, 0.3);
     }
     
     .name {
-        color: #333;
-        font-weight: 400;
-        font-size: 15px;
+        color: #2d3748;
+        font-weight: 500;
+        font-size: 16px;
         margin: 0;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         flex-wrap: wrap;
     }
     
     .name strong {
-        font-weight: 600;
+        font-weight: 700;
         margin-right: 4px;
+        color: #1a202c;
     }
     
     .you-badge {
-        padding: 2px 8px;
-        border-radius: 12px;
-        background: #C8D5E0;
-        color: #4A5568;
-        font-weight: 500;
+        padding: 4px 12px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        font-weight: 600;
         font-size: 11px;
         white-space: nowrap;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        animation: pulse 2s ease-in-out infinite;
     }
     
     .ranking-right {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 16px;
         flex-shrink: 0;
     }
     
     .bar {
         position: relative;
-        height: 4px;
-        border-radius: 2px;
-        background: #E8E9EB;
+        height: 6px;
+        border-radius: 10px;
+        background: #e8e9eb;
         overflow: hidden;
-        width: 120px;
+        width: 140px;
         flex-shrink: 0;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
     }
     
     .bar span {
@@ -319,90 +449,177 @@
         top: 0;
         height: 100%;
         background: linear-gradient(90deg, #0072FF 0%, #00C6FF 100%);
-        transition: width 0.6s ease;
-        border-radius: 2px;
+        transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0, 114, 255, 0.4);
+    }
+    
+    .ranking-item:nth-child(1) .bar span {
+        background: linear-gradient(90deg, #FFD700 0%, #FFA500 100%);
+        box-shadow: 0 2px 8px rgba(255, 215, 0, 0.5);
+    }
+    
+    .ranking-item:nth-child(2) .bar span {
+        background: linear-gradient(90deg, #C0C0C0 0%, #E8E8E8 100%);
+        box-shadow: 0 2px 8px rgba(192, 192, 192, 0.5);
+    }
+    
+    .ranking-item:nth-child(3) .bar span {
+        background: linear-gradient(90deg, #CD7F32 0%, #E6A85C 100%);
+        box-shadow: 0 2px 8px rgba(205, 127, 50, 0.5);
     }
     
     .count-badge {
-        padding: 0;
-        border-radius: 0;
-        font-weight: 400;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 600;
         font-size: 13px;
-        white-space: nowrap;
         background: transparent;
         border: none;
         box-shadow: none;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+    
+    .count-badge:hover {
+        transform: translateY(-2px);
     }
     
     .badge-total {
         color: #0072FF;
+        background: rgba(0, 114, 255, 0.1);
+    }
+    
+    .badge-total:hover {
+        background: rgba(0, 114, 255, 0.2);
     }
     
     .badge-acertos {
         color: #4CAF50;
+        background: rgba(76, 175, 80, 0.1);
+    }
+    
+    .badge-acertos:hover {
+        background: rgba(76, 175, 80, 0.2);
     }
     
     .badge-taxa {
-        color: #4CAF50;
+        color: #2196F3;
+        background: rgba(33, 150, 243, 0.1);
+        font-weight: 700;
+    }
+    
+    .badge-taxa:hover {
+        background: rgba(33, 150, 243, 0.2);
     }
     
     .your-rank-card {
         margin: 0;
-        padding: 16px 24px;
-        background: #fff;
+        padding: 20px 28px;
+        background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
+        border-top: 2px solid #0072FF;
+        border-radius: 0 0 16px 16px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        border-top: 1px solid #f0f0f0;
+        gap: 16px;
     }
     
     .your-rank-left {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 16px;
         flex: 1;
         min-width: 0;
     }
     
     .your-rank-left .avatar {
-        width: 40px;
-        height: 40px;
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
-        background: #E8E9EB;
-        color: #333;
+        background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%);
+        color: #fff;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 600;
-        font-size: 14px;
+        font-weight: 700;
+        font-size: 16px;
         flex-shrink: 0;
+        border: 3px solid #fff;
+        box-shadow: 0 4px 16px rgba(0, 114, 255, 0.3);
     }
     
     .your-rank-left .title {
-        font-weight: 400;
-        color: #333;
+        font-weight: 500;
+        color: #2d3748;
         margin: 0;
-        font-size: 15px;
+        font-size: 16px;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
+    }
+    
+    .your-rank-left .title strong {
+        font-weight: 700;
+        color: #1a202c;
     }
     
     .your-rank-left .details {
-        color: #666;
-        font-size: 13px;
+        color: #718096;
+        font-size: 14px;
         margin: 4px 0 0 0;
         font-weight: 400;
     }
     
     .ranking-empty {
-        padding: 40px 20px;
-        color: #666;
+        padding: 60px 20px;
+        color: #718096;
         text-align: center;
-        font-size: 15px;
-        font-weight: 400;
-        background: #fff;
+        font-size: 16px;
+    }
+    
+    .ranking-empty::before {
+        content: '📊';
+        display: block;
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+    
+    @media (max-width: 768px) {
+        .ranking-card {
+            margin: 20px auto;
+            border-radius: 12px;
+        }
+        
+        .ranking-header {
+            padding: 20px;
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .ranking-item {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 16px 20px;
+            gap: 12px;
+        }
+        
+        .ranking-right {
+            width: 100%;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        
+        .bar {
+            width: 100%;
+            order: -1;
+        }
+        
+        .count-badge {
+            font-size: 12px;
+            padding: 4px 8px;
+        }
     }
     
     .fade-in {
@@ -434,10 +651,12 @@
         
         .ranking-header .title {
             font-size: 20px;
+            color: #ffffff !important;
         }
         
         .ranking-header .subtitle {
             font-size: 12px;
+            color: #ffffff !important;
         }
         
         .ranking-item {
@@ -499,128 +718,6 @@
         <div class="stat-number">{{ total_alternativas }}</div>
         <div class="stat-label">Alternativas</div>
     </div>
-</div>
-
-<!-- Ranking Semanal -->
-<div class="ranking-card fade-in">
-    <div class="ranking-header">
-        <span class="logo">🏆</span>
-        <div>
-            <h2 class="title">Ranking semanal</h2>
-            <p class="subtitle">Top 5 que mais responderam questões na semana (segunda a domingo)</p>
-        </div>
-    </div>
-    
-    {% if ranking_semanal %}
-    <ul class="ranking-list">
-        {% for item in ranking_semanal %}
-        <li class="ranking-item {% if user.is_authenticated and item.id_usuario == user.id %}is-current-user{% endif %}">
-            <div class="ranking-left">
-                <span class="rank-medal">
-                    {% if forloop.counter == 1 %}🥇
-                    {% elif forloop.counter == 2 %}🥈
-                    {% elif forloop.counter == 3 %}🥉
-                    {% else %}🏅{% endif %}
-                </span>
-                <div class="avatar">
-                    {% if item.nome %}
-                        {{ item.nome|iniciais }}
-                    {% else %}
-                        {{ item.username|first|upper }}{{ item.username|first|upper }}
-                    {% endif %}
-                </div>
-                <span class="name">
-                    <strong>{% if item.nome %}{{ item.nome|iniciais }}{% else %}{{ item.username|first|upper }}{{ item.username|first|upper }}{% endif %}</strong>
-                    {{ item.nome|default:item.username|lower }}
-                    {% if user.is_authenticated and item.id_usuario == user.id %}
-                    <span class="you-badge">Você</span>
-                    {% endif %}
-                </span>
-            </div>
-            <div class="ranking-right">
-                <div class="bar">
-                    <span style="width: {% if max_total > 0 %}{% widthratio item.total max_total 100 %}{% else %}100{% endif %}%; min-width: 6%; max-width: 100%;"></span>
-                </div>
-                <span class="count-badge badge-total">{{ item.total }} respostas</span>
-                <span class="count-badge badge-acertos">{{ item.acertos }} acertos</span>
-                <span class="count-badge badge-taxa">{{ item.taxa_acerto }}%</span>
-            </div>
-        </li>
-        {% endfor %}
-    </ul>
-    
-    <!-- Card "Sua Posição" (se usuário não estiver no Top 5 ou não houver Top 5) -->
-    {% if dados_usuario %}
-    <div class="your-rank-card">
-        <div class="your-rank-left">
-            <div class="avatar">
-                {% if dados_usuario.nome %}
-                    {{ dados_usuario.nome|iniciais }}
-                {% else %}
-                    {{ dados_usuario.username|first|upper }}{{ dados_usuario.username|first|upper }}
-                {% endif %}
-            </div>
-            <div>
-                <p class="title">
-                    <strong>{% if dados_usuario.nome %}{{ dados_usuario.nome|iniciais }}{% else %}{{ dados_usuario.username|first|upper }}{{ dados_usuario.username|first|upper }}{% endif %}</strong>
-                    {{ dados_usuario.nome|default:dados_usuario.username|lower }}
-                    <span class="you-badge">Você</span>
-                </p>
-                <p class="details"></p>
-            </div>
-        </div>
-        <div class="ranking-right">
-            <div class="bar" style="max-width: 300px;">
-                <span style="width: {% if max_total > 0 %}{% widthratio dados_usuario.total max_total 100 %}{% else %}100{% endif %}%; min-width: 6%; max-width: 100%;"></span>
-            </div>
-            <span class="count-badge badge-total">{{ dados_usuario.total }} respostas</span>
-            <span class="count-badge badge-acertos">{{ dados_usuario.acertos }} acertos</span>
-            <span class="count-badge badge-taxa">{{ dados_usuario.taxa_acerto }}%</span>
-        </div>
-    </div>
-    {% endif %}
-    
-    {% else %}
-        <!-- Sem Top 5, mas pode ter dados do usuário -->
-        {% if dados_usuario %}
-            <!-- Exibir card do usuário mesmo sem Top 5 -->
-        {% else %}
-            <div class="ranking-empty">
-                Nenhuma atividade nesta semana para exibir o ranking.
-            </div>
-        {% endif %}
-    {% endif %}
-    
-    <!-- Card "Sua Posição" quando não há Top 5 mas há dados do usuário -->
-    {% if not ranking_semanal and dados_usuario %}
-    <div class="your-rank-card">
-        <div class="your-rank-left">
-            <div class="avatar">
-                {% if dados_usuario.nome %}
-                    {{ dados_usuario.nome|iniciais }}
-                {% else %}
-                    {{ dados_usuario.username|first|upper }}{{ dados_usuario.username|first|upper }}
-                {% endif %}
-            </div>
-            <div>
-                <p class="title">
-                    <strong>{% if dados_usuario.nome %}{{ dados_usuario.nome|iniciais }}{% else %}{{ dados_usuario.username|first|upper }}{{ dados_usuario.username|first|upper }}{% endif %}</strong>
-                    {{ dados_usuario.nome|default:dados_usuario.username|lower }}
-                    <span class="you-badge">Você</span>
-                </p>
-                <p class="details"></p>
-            </div>
-        </div>
-        <div class="ranking-right">
-            <div class="bar" style="max-width: 300px;">
-                <span style="width: {% if max_total > 0 %}{% widthratio dados_usuario.total max_total 100 %}{% else %}100{% endif %}%; min-width: 6%; max-width: 100%;"></span>
-            </div>
-            <span class="count-badge badge-total">{{ dados_usuario.total }} respostas</span>
-            <span class="count-badge badge-acertos">{{ dados_usuario.acertos }} acertos</span>
-            <span class="count-badge badge-taxa">{{ dados_usuario.taxa_acerto }}%</span>
-        </div>
-    </div>
-    {% endif %}
 </div>
 
 <!-- Cards de Ações -->
@@ -699,6 +796,128 @@
     <p>Faça login como administrador para acessar essas funcionalidades</p>
 </div>
 {% endif %}
+
+<!-- Ranking Semanal -->
+<div class="ranking-card fade-in" style="margin-top: 60px; margin-bottom: 40px;">
+    <div class="ranking-header">
+        <span class="logo">🏆</span>
+        <div>
+            <h2 class="title">Ranking semanal</h2>
+            <p class="subtitle">Top 5 que mais responderam questões na semana (domingo a sábado)</p>
+        </div>
+    </div>
+    
+    {% if ranking_semanal %}
+    <ul class="ranking-list">
+        {% for item in ranking_semanal %}
+        <li class="ranking-item {% if user.is_authenticated and item.id_usuario == user.id %}is-current-user{% endif %}">
+            <div class="ranking-left">
+                <span class="rank-medal">
+                    {% if forloop.counter == 1 %}🥇
+                    {% elif forloop.counter == 2 %}🥈
+                    {% elif forloop.counter == 3 %}🥉
+                    {% else %}🏅{% endif %}
+                </span>
+                <div class="avatar">
+                    {% if item.nome %}
+                        {{ item.nome|iniciais }}
+                    {% else %}
+                        {{ item.username|first|upper }}{{ item.username|first|upper }}
+                    {% endif %}
+                </div>
+                <span class="name">
+                    <strong>{% if item.nome %}{{ item.nome|iniciais }}{% else %}{{ item.username|first|upper }}{{ item.username|first|upper }}{% endif %}</strong>
+                    {{ item.nome|default:item.username|lower }}
+                    {% if user.is_authenticated and item.id_usuario == user.id %}
+                    <span class="you-badge">Você</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="ranking-right">
+                <div class="bar">
+                    <span style="width: {% if max_total > 0 %}{% widthratio item.total max_total 100 %}{% else %}100{% endif %}%; min-width: 6%; max-width: 100%;"></span>
+                </div>
+                <span class="count-badge badge-total">{{ item.total }} respostas</span>
+                <span class="count-badge badge-acertos">{{ item.acertos }} acertos</span>
+                <span class="count-badge badge-taxa">{{ item.taxa_acerto }}%</span>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    
+    <!-- Card "Sua Posição" (se usuário não estiver no Top 5 ou não houver Top 5) -->
+    {% if dados_usuario %}
+    <div class="your-rank-card">
+        <div class="your-rank-left">
+            <div class="avatar">
+                {% if dados_usuario.nome %}
+                    {{ dados_usuario.nome|iniciais }}
+                {% else %}
+                    {{ dados_usuario.username|first|upper }}{{ dados_usuario.username|first|upper }}
+                {% endif %}
+            </div>
+            <div>
+                <p class="title">
+                    <strong>{% if dados_usuario.nome %}{{ dados_usuario.nome|iniciais }}{% else %}{{ dados_usuario.username|first|upper }}{{ dados_usuario.username|first|upper }}{% endif %}</strong>
+                    {{ dados_usuario.nome|default:dados_usuario.username|lower }}
+                    <span class="you-badge">Você</span>
+                </p>
+                <p class="details"></p>
+            </div>
+        </div>
+        <div class="ranking-right">
+            <div class="bar">
+                <span style="width: {% if max_total > 0 %}{% widthratio dados_usuario.total max_total 100 %}{% else %}100{% endif %}%; min-width: 6%; max-width: 100%;"></span>
+            </div>
+            <span class="count-badge badge-total">{{ dados_usuario.total }} respostas</span>
+            <span class="count-badge badge-acertos">{{ dados_usuario.acertos }} acertos</span>
+            <span class="count-badge badge-taxa">{{ dados_usuario.taxa_acerto }}%</span>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% else %}
+        <!-- Sem Top 5, mas pode ter dados do usuário -->
+        {% if dados_usuario %}
+            <!-- Exibir card do usuário mesmo sem Top 5 -->
+        {% else %}
+            <div class="ranking-empty">
+                Nenhuma atividade nesta semana para exibir o ranking.
+            </div>
+        {% endif %}
+    {% endif %}
+    
+    <!-- Card "Sua Posição" quando não há Top 5 mas há dados do usuário -->
+    {% if not ranking_semanal and dados_usuario %}
+    <div class="your-rank-card">
+        <div class="your-rank-left">
+            <div class="avatar">
+                {% if dados_usuario.nome %}
+                    {{ dados_usuario.nome|iniciais }}
+                {% else %}
+                    {{ dados_usuario.username|first|upper }}{{ dados_usuario.username|first|upper }}
+                {% endif %}
+            </div>
+            <div>
+                <p class="title">
+                    <strong>{% if dados_usuario.nome %}{{ dados_usuario.nome|iniciais }}{% else %}{{ dados_usuario.username|first|upper }}{{ dados_usuario.username|first|upper }}{% endif %}</strong>
+                    {{ dados_usuario.nome|default:dados_usuario.username|lower }}
+                    <span class="you-badge">Você</span>
+                </p>
+                <p class="details"></p>
+            </div>
+        </div>
+        <div class="ranking-right">
+            <div class="bar">
+                <span style="width: {% if max_total > 0 %}{% widthratio dados_usuario.total max_total 100 %}{% else %}100{% endif %}%; min-width: 6%; max-width: 100%;"></span>
+            </div>
+            <span class="count-badge badge-total">{{ dados_usuario.total }} respostas</span>
+            <span class="count-badge badge-acertos">{{ dados_usuario.acertos }} acertos</span>
+            <span class="count-badge badge-taxa">{{ dados_usuario.taxa_acerto }}%</span>
+        </div>
+    </div>
+    {% endif %}
+</div>
 
 <script>
 // Cards clicáveis

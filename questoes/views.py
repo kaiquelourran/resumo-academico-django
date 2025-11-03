@@ -48,15 +48,24 @@ def index_view(request):
     total_questoes = Questao.objects.count()
     total_alternativas = Alternativa.objects.count()
     
-    # Cálculo da semana atual (Segunda-feira a Domingo)
+    # Cálculo da semana atual (Domingo à meia-noite até Sábado 23:59:59)
     hoje = timezone.now().date()
     # weekday() retorna: 0=Segunda, 1=Terça, ..., 6=Domingo
-    dias_desde_segunda = hoje.weekday()  # 0 para segunda, 6 para domingo
-    inicio_semana = hoje - timedelta(days=dias_desde_segunda)
+    # Ajustar para semana começar no domingo (0=Domingo, 1=Segunda, ..., 6=Sábado)
+    dia_semana_atual = hoje.weekday()  # 0=Seg, 1=Ter, ..., 6=Dom
+    # Converte para: 0=Domingo, 1=Segunda, ..., 6=Sábado
+    if dia_semana_atual == 6:  # Se é domingo
+        dias_desde_domingo = 0
+    else:  # Se é segunda a sábado
+        dias_desde_domingo = dia_semana_atual + 1  # +1 porque domingo é o dia 0
+    
+    inicio_semana = hoje - timedelta(days=dias_desde_domingo)
     fim_semana = inicio_semana + timedelta(days=7)
     
     # Converter para datetime para comparar com data_resposta (DateTimeField)
+    # Início: Domingo à meia-noite (00:00:00)
     inicio_semana_dt = timezone.make_aware(datetime.combine(inicio_semana, datetime.min.time()))
+    # Fim: Próximo domingo à meia-noite (00:00:00) - isso garante que sábado 23:59:59 ainda está incluído
     fim_semana_dt = timezone.make_aware(datetime.combine(fim_semana, datetime.min.time()))
     
     # Query para Top 5 ranking semanal
@@ -161,8 +170,8 @@ def index_view(request):
         'max_total': max_total,
         'posicao_usuario': posicao_usuario,
         'dados_usuario': dados_usuario,
-        'inicio_semana': inicio_semana,
-        'fim_semana': fim_semana - timedelta(days=1),  # Domingo da semana
+        'inicio_semana': inicio_semana,  # Domingo da semana
+        'fim_semana': fim_semana - timedelta(days=1),  # Sábado da semana
         'notificacoes': notificacoes,
         'is_admin': is_admin,
         'user': request.user
