@@ -1,5 +1,6 @@
 {% extends 'questoes/base.html' %}
 {% load static %}
+{% load questao_filters %}
 
 {% block title %}Início - Resumo Acadêmico{% endblock %}
 
@@ -179,6 +180,306 @@
             max-width: calc(100% - 20px);
         }
     }
+    
+    /* Ranking Semanal - Estilo da Imagem */
+    .ranking-card {
+        max-width: 1050px;
+        margin: 40px auto;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        position: relative;
+    }
+    
+    .ranking-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 20px 24px;
+        color: #fff;
+        background: linear-gradient(90deg, #0072FF 0%, #00C6FF 100%);
+        border-radius: 12px 12px 0 0;
+    }
+    
+    .ranking-header .logo {
+        font-size: 28px;
+    }
+    
+    .ranking-header .title {
+        flex: 1;
+        font-size: 22px;
+        font-weight: 700;
+        color: #fff;
+        margin: 0;
+    }
+    
+    .ranking-header .subtitle {
+        font-size: 13px;
+        color: #fff;
+        margin: 4px 0 0 0;
+        font-weight: 400;
+    }
+    
+    .ranking-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .ranking-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 24px;
+        background: #fff;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .ranking-item:last-child {
+        border-bottom: none;
+    }
+    
+    .ranking-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .rank-medal {
+        font-size: 20px;
+        width: 28px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    
+    .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #E8E9EB;
+        color: #333;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+    
+    .name {
+        color: #333;
+        font-weight: 400;
+        font-size: 15px;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .name strong {
+        font-weight: 600;
+        margin-right: 4px;
+    }
+    
+    .you-badge {
+        padding: 2px 8px;
+        border-radius: 12px;
+        background: #C8D5E0;
+        color: #4A5568;
+        font-weight: 500;
+        font-size: 11px;
+        white-space: nowrap;
+    }
+    
+    .ranking-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+    }
+    
+    .bar {
+        position: relative;
+        height: 4px;
+        border-radius: 2px;
+        background: #E8E9EB;
+        overflow: hidden;
+        width: 120px;
+        flex-shrink: 0;
+    }
+    
+    .bar span {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        background: linear-gradient(90deg, #0072FF 0%, #00C6FF 100%);
+        transition: width 0.6s ease;
+        border-radius: 2px;
+    }
+    
+    .count-badge {
+        padding: 0;
+        border-radius: 0;
+        font-weight: 400;
+        font-size: 13px;
+        white-space: nowrap;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+    }
+    
+    .badge-total {
+        color: #0072FF;
+    }
+    
+    .badge-acertos {
+        color: #4CAF50;
+    }
+    
+    .badge-taxa {
+        color: #4CAF50;
+    }
+    
+    .your-rank-card {
+        margin: 0;
+        padding: 16px 24px;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-top: 1px solid #f0f0f0;
+    }
+    
+    .your-rank-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .your-rank-left .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #E8E9EB;
+        color: #333;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+    
+    .your-rank-left .title {
+        font-weight: 400;
+        color: #333;
+        margin: 0;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .your-rank-left .details {
+        color: #666;
+        font-size: 13px;
+        margin: 4px 0 0 0;
+        font-weight: 400;
+    }
+    
+    .ranking-empty {
+        padding: 40px 20px;
+        color: #666;
+        text-align: center;
+        font-size: 15px;
+        font-weight: 400;
+        background: #fff;
+    }
+    
+    .fade-in {
+        animation: fadeInUp 0.4s ease-out;
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .ranking-card {
+            margin: 20px 10px;
+            border-radius: 8px;
+        }
+        
+        .ranking-header {
+            padding: 16px 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .ranking-header .title {
+            font-size: 20px;
+        }
+        
+        .ranking-header .subtitle {
+            font-size: 12px;
+        }
+        
+        .ranking-item {
+            padding: 14px 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .ranking-left {
+            min-width: 0;
+            flex: 1 1 100%;
+        }
+        
+        .ranking-right {
+            flex-wrap: wrap;
+            gap: 8px;
+            width: 100%;
+        }
+        
+        .bar {
+            width: 100%;
+            max-width: 100%;
+        }
+        
+        .count-badge {
+            font-size: 12px;
+        }
+        
+        .your-rank-card {
+            padding: 14px 20px;
+            flex-wrap: wrap;
+        }
+        
+        .your-rank-left {
+            flex: 1 1 100%;
+            margin-bottom: 8px;
+        }
+        
+        .your-rank-left .title {
+            flex-wrap: wrap;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -198,6 +499,128 @@
         <div class="stat-number">{{ total_alternativas }}</div>
         <div class="stat-label">Alternativas</div>
     </div>
+</div>
+
+<!-- Ranking Semanal -->
+<div class="ranking-card fade-in">
+    <div class="ranking-header">
+        <span class="logo">🏆</span>
+        <div>
+            <h2 class="title">Ranking semanal</h2>
+            <p class="subtitle">Top 5 que mais responderam questões na semana (segunda a domingo)</p>
+        </div>
+    </div>
+    
+    {% if ranking_semanal %}
+    <ul class="ranking-list">
+        {% for item in ranking_semanal %}
+        <li class="ranking-item {% if user.is_authenticated and item.id_usuario == user.id %}is-current-user{% endif %}">
+            <div class="ranking-left">
+                <span class="rank-medal">
+                    {% if forloop.counter == 1 %}🥇
+                    {% elif forloop.counter == 2 %}🥈
+                    {% elif forloop.counter == 3 %}🥉
+                    {% else %}🏅{% endif %}
+                </span>
+                <div class="avatar">
+                    {% if item.nome %}
+                        {{ item.nome|iniciais }}
+                    {% else %}
+                        {{ item.username|first|upper }}{{ item.username|first|upper }}
+                    {% endif %}
+                </div>
+                <span class="name">
+                    <strong>{% if item.nome %}{{ item.nome|iniciais }}{% else %}{{ item.username|first|upper }}{{ item.username|first|upper }}{% endif %}</strong>
+                    {{ item.nome|default:item.username|lower }}
+                    {% if user.is_authenticated and item.id_usuario == user.id %}
+                    <span class="you-badge">Você</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="ranking-right">
+                <div class="bar">
+                    <span style="width: {% if max_total > 0 %}{% widthratio item.total max_total 100 %}{% else %}100{% endif %}%; min-width: 6%; max-width: 100%;"></span>
+                </div>
+                <span class="count-badge badge-total">{{ item.total }} respostas</span>
+                <span class="count-badge badge-acertos">{{ item.acertos }} acertos</span>
+                <span class="count-badge badge-taxa">{{ item.taxa_acerto }}%</span>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    
+    <!-- Card "Sua Posição" (se usuário não estiver no Top 5 ou não houver Top 5) -->
+    {% if dados_usuario %}
+    <div class="your-rank-card">
+        <div class="your-rank-left">
+            <div class="avatar">
+                {% if dados_usuario.nome %}
+                    {{ dados_usuario.nome|iniciais }}
+                {% else %}
+                    {{ dados_usuario.username|first|upper }}{{ dados_usuario.username|first|upper }}
+                {% endif %}
+            </div>
+            <div>
+                <p class="title">
+                    <strong>{% if dados_usuario.nome %}{{ dados_usuario.nome|iniciais }}{% else %}{{ dados_usuario.username|first|upper }}{{ dados_usuario.username|first|upper }}{% endif %}</strong>
+                    {{ dados_usuario.nome|default:dados_usuario.username|lower }}
+                    <span class="you-badge">Você</span>
+                </p>
+                <p class="details"></p>
+            </div>
+        </div>
+        <div class="ranking-right">
+            <div class="bar" style="max-width: 300px;">
+                <span style="width: {% if max_total > 0 %}{% widthratio dados_usuario.total max_total 100 %}{% else %}100{% endif %}%; min-width: 6%; max-width: 100%;"></span>
+            </div>
+            <span class="count-badge badge-total">{{ dados_usuario.total }} respostas</span>
+            <span class="count-badge badge-acertos">{{ dados_usuario.acertos }} acertos</span>
+            <span class="count-badge badge-taxa">{{ dados_usuario.taxa_acerto }}%</span>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% else %}
+        <!-- Sem Top 5, mas pode ter dados do usuário -->
+        {% if dados_usuario %}
+            <!-- Exibir card do usuário mesmo sem Top 5 -->
+        {% else %}
+            <div class="ranking-empty">
+                Nenhuma atividade nesta semana para exibir o ranking.
+            </div>
+        {% endif %}
+    {% endif %}
+    
+    <!-- Card "Sua Posição" quando não há Top 5 mas há dados do usuário -->
+    {% if not ranking_semanal and dados_usuario %}
+    <div class="your-rank-card">
+        <div class="your-rank-left">
+            <div class="avatar">
+                {% if dados_usuario.nome %}
+                    {{ dados_usuario.nome|iniciais }}
+                {% else %}
+                    {{ dados_usuario.username|first|upper }}{{ dados_usuario.username|first|upper }}
+                {% endif %}
+            </div>
+            <div>
+                <p class="title">
+                    <strong>{% if dados_usuario.nome %}{{ dados_usuario.nome|iniciais }}{% else %}{{ dados_usuario.username|first|upper }}{{ dados_usuario.username|first|upper }}{% endif %}</strong>
+                    {{ dados_usuario.nome|default:dados_usuario.username|lower }}
+                    <span class="you-badge">Você</span>
+                </p>
+                <p class="details"></p>
+            </div>
+        </div>
+        <div class="ranking-right">
+            <div class="bar" style="max-width: 300px;">
+                <span style="width: {% if max_total > 0 %}{% widthratio dados_usuario.total max_total 100 %}{% else %}100{% endif %}%; min-width: 6%; max-width: 100%;"></span>
+            </div>
+            <span class="count-badge badge-total">{{ dados_usuario.total }} respostas</span>
+            <span class="count-badge badge-acertos">{{ dados_usuario.acertos }} acertos</span>
+            <span class="count-badge badge-taxa">{{ dados_usuario.taxa_acerto }}%</span>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Cards de Ações -->

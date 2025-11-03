@@ -42,15 +42,27 @@ error_logger = logging.getLogger('questoes.errors')
 
 def index_view(request):
     """View da página inicial do sistema"""
+    from datetime import datetime, timedelta
+    
     total_assuntos = Assunto.objects.count()
     total_questoes = Questao.objects.count()
     total_alternativas = Alternativa.objects.count()
     
-    semana_inicio = timezone.now() - timedelta(days=7)
+    # Cálculo da semana atual (Segunda-feira a Domingo)
+    hoje = timezone.now().date()
+    # weekday() retorna: 0=Segunda, 1=Terça, ..., 6=Domingo
+    dias_desde_segunda = hoje.weekday()  # 0 para segunda, 6 para domingo
+    inicio_semana = hoje - timedelta(days=dias_desde_segunda)
+    fim_semana = inicio_semana + timedelta(days=7)
     
-    # Usando 'id_usuario' (FK) para agrupar e contar
-    respostas_semana = RespostaUsuario.objects.filter(
-        data_resposta__gte=semana_inicio,
+    # Converter para datetime para comparar com data_resposta (DateTimeField)
+    inicio_semana_dt = timezone.make_aware(datetime.combine(inicio_semana, datetime.min.time()))
+    fim_semana_dt = timezone.make_aware(datetime.combine(fim_semana, datetime.min.time()))
+    
+    # Query para Top 5 ranking semanal
+    ranking_query = RespostaUsuario.objects.filter(
+        data_resposta__gte=inicio_semana_dt,
+        data_resposta__lt=fim_semana_dt,
         id_usuario__isnull=False
     ).values('id_usuario').annotate(
         total=Count('id'),
@@ -58,24 +70,80 @@ def index_view(request):
     ).order_by('-total', '-acertos')[:5]
     
     ranking_semanal = []
-    for item in respostas_semana:
+    for item in ranking_query:
         if item['id_usuario']:
             try:
-                # Otimização: buscar pelo ID. O Django User model tem 'id' como PK
                 usuario = User.objects.get(pk=item['id_usuario'])
+                taxa_acerto = round((item['acertos'] / item['total']) * 100) if item['total'] > 0 else 0
                 ranking_semanal.append({
                     'id_usuario': usuario.id,
                     'nome': usuario.first_name or usuario.username,
+                    'username': usuario.username,
                     'total': item['total'],
-                    'acertos': item['acertos']
+                    'acertos': item['acertos'],
+                    'taxa_acerto': taxa_acerto
                 })
             except User.DoesNotExist:
-                # O except também deve estar alinhado com o try
                 continue
+    
+    # Calcular posição do usuário atual (se logado e não estiver no Top 5)
+    posicao_usuario = None
+    dados_usuario = None
+    
+    if request.user.is_authenticated:
+        # Verifica se usuário está no Top 5
+        usuario_no_top5 = any(item['id_usuario'] == request.user.id for item in ranking_semanal)
+        
+        if not usuario_no_top5:
+            # Buscar dados do usuário na semana atual
+            dados_usuario_semana = RespostaUsuario.objects.filter(
+                data_resposta__gte=inicio_semana_dt,
+                data_resposta__lt=fim_semana_dt,
+                id_usuario=request.user
+            ).aggregate(
+                total=Count('id'),
+                acertos=Count('id', filter=Q(acertou=True))
+            )
+            
+            # Se o usuário tem dados da semana, calcular posição
+            if dados_usuario_semana['total'] and dados_usuario_semana['total'] > 0:
+                # Buscar todos os dados para calcular posição completa
+                todos_rankings = RespostaUsuario.objects.filter(
+                    data_resposta__gte=inicio_semana_dt,
+                    data_resposta__lt=fim_semana_dt,
+                    id_usuario__isnull=False
+                ).values('id_usuario').annotate(
+                    total=Count('id'),
+                    acertos=Count('id', filter=Q(acertou=True))
+                ).order_by('-total', '-acertos')
+                
+                # Encontrar posição do usuário
+                for idx, item in enumerate(todos_rankings, start=1):
+                    if item['id_usuario'] == request.user.id:
+                        taxa_acerto = round((item['acertos'] / item['total']) * 100) if item['total'] > 0 else 0
+                        posicao_usuario = idx
+                        dados_usuario = {
+                            'id_usuario': request.user.id,
+                            'nome': request.user.first_name or request.user.username,
+                            'username': request.user.username,
+                            'total': item['total'],
+                            'acertos': item['acertos'],
+                            'taxa_acerto': taxa_acerto,
+                            'posicao': idx
+                        }
+                        break
+    
+    # Calcular max_total para barras de progresso
+    if ranking_semanal:
+        max_total = ranking_semanal[0]['total']
+        if max_total == 0:
+            max_total = 1
+    else:
+        # Se não há ranking mas há dados do usuário, usa o total do usuário
+        max_total = dados_usuario['total'] if dados_usuario and dados_usuario.get('total', 0) > 0 else 1
     
     notificacoes = []
     if request.user.is_authenticated:
-        # Usando o objeto User diretamente na query
         notificacoes = RelatorioBug.objects.filter(
             id_usuario=request.user, 
             resposta_admin__isnull=False,
@@ -90,6 +158,11 @@ def index_view(request):
         'total_questoes': total_questoes,
         'total_alternativas': total_alternativas,
         'ranking_semanal': ranking_semanal,
+        'max_total': max_total,
+        'posicao_usuario': posicao_usuario,
+        'dados_usuario': dados_usuario,
+        'inicio_semana': inicio_semana,
+        'fim_semana': fim_semana - timedelta(days=1),  # Domingo da semana
         'notificacoes': notificacoes,
         'is_admin': is_admin,
         'user': request.user
@@ -282,6 +355,7 @@ def estatisticas_questao(request, questao_id):
 
 def escolher_assunto_view(request):
     """View para escolher o assunto antes de iniciar o quiz"""
+    
     assuntos = Assunto.objects.annotate(
         total_questoes=Count('questoes')
     ).order_by('tipo_assunto', 'nome')
@@ -294,7 +368,7 @@ def escolher_assunto_view(request):
     
     context = {
         'categorias': categorias,
-        'total_assuntos': assuntos.count()
+        'total_assuntos': assuntos.count(),
     }
     
     return render(request, 'questoes/escolher_assunto.html', context)

@@ -1,5 +1,6 @@
 {% extends 'questoes/base.html' %}
 {% load static %}
+{% load questao_filters %}
 
 {% block title %}Escolher Conteúdo{% endblock %}
 
@@ -206,13 +207,21 @@
             gap: 20px;
         }
     }
+    
+    @media (max-width: 1024px) {
+        .categorias-container {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="subjects-toolbar">
-    <input id="search-assunto" class="search-input" type="text" placeholder="Buscar conteúdo...">
-</div>
+
+    <div class="subjects-toolbar">
+        <input id="search-assunto" class="search-input" type="text" placeholder="Buscar conteúdo...">
+    </div>
     
     {% if categorias.temas or categorias.concursos or categorias.profissionais %}
         <div class="categorias-container">
