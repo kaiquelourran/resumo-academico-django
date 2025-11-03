@@ -15,6 +15,8 @@ urlpatterns = [
     
     # Desempenho do usuário
     path('desempenho/', views.desempenho_view, name='desempenho'),
+    path('relatorio-topico/<int:assunto_id>/', views.relatorio_topico_view, name='relatorio_topico'),
+    path('quiz-erros-frequentes/', views.quiz_erros_frequentes_view, name='quiz_erros_frequentes'),
     
     # Gerenciar questões (admin)
     path('gerenciar/', views.gerenciar_questoes_view, name='gerenciar_questoes'),

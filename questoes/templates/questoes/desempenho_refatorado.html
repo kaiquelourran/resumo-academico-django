@@ -52,12 +52,12 @@
     /* Hierarquia: Card de Correção Geral no topo (Pirâmide Invertida) */
     .accuracy-hero-card {
         background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%);
-        border-radius: 16px;
-        padding: 24px 28px;
+        border-radius: 20px;
+        padding: 40px;
         margin: 30px 0;
         text-align: center;
         color: white;
-        box-shadow: 0 8px 25px rgba(0, 114, 255, 0.25);
+        box-shadow: 0 12px 35px rgba(0, 114, 255, 0.3);
         position: relative;
         overflow: hidden;
     }
@@ -74,35 +74,35 @@
     }
     
     .accuracy-hero-card .hero-icon {
-        font-size: 40px;
-        margin-bottom: 12px;
-        filter: drop-shadow(0 3px 6px rgba(0,0,0,0.2));
+        font-size: 64px;
+        margin-bottom: 20px;
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
         position: relative;
         z-index: 1;
     }
     
     .accuracy-hero-card .hero-percentage {
-        font-size: 3rem;
+        font-size: 5rem;
         font-weight: 900;
-        margin: 8px 0;
-        text-shadow: 0 3px 10px rgba(0,0,0,0.3);
+        margin: 20px 0;
+        text-shadow: 0 4px 12px rgba(0,0,0,0.3);
         position: relative;
         z-index: 1;
         line-height: 1;
     }
     
     .accuracy-hero-card .hero-label {
-        font-size: 1.1rem;
+        font-size: 1.5rem;
         font-weight: 600;
-        margin-top: 8px;
+        margin-top: 10px;
         text-shadow: 0 2px 6px rgba(0,0,0,0.2);
         position: relative;
         z-index: 1;
     }
     
     .accuracy-hero-card .hero-subtitle {
-        font-size: 0.85rem;
-        margin-top: 8px;
+        font-size: 1rem;
+        margin-top: 12px;
         opacity: 0.9;
         position: relative;
         z-index: 1;
@@ -700,24 +700,11 @@
         }
         
         .accuracy-hero-card {
-            padding: 20px 16px;
-        }
-        
-        .accuracy-hero-card .hero-icon {
-            font-size: 32px;
-            margin-bottom: 8px;
+            padding: 30px 20px;
         }
         
         .accuracy-hero-card .hero-percentage {
-            font-size: 2.5rem;
-        }
-        
-        .accuracy-hero-card .hero-label {
-            font-size: 1rem;
-        }
-        
-        .accuracy-hero-card .hero-subtitle {
-            font-size: 0.8rem;
+            font-size: 3.5rem;
         }
         
         .stats-grid {
@@ -818,7 +805,7 @@
                 <i class="fas fa-question-circle"></i>
             </div>
             <div class="stat-info">
-            <div class="stat-number">{{ total_respostas }}</div>
+                <div class="stat-number">{{ total_respostas }}</div>
                 <div class="stat-label">QUESTÕES RESPONDIDAS</div>
             </div>
             <div class="stat-trend">
@@ -832,9 +819,9 @@
                 <i class="fas fa-check-circle"></i>
             </div>
             <div class="stat-info">
-            <div class="stat-number">{{ respostas_corretas }}</div>
+                <div class="stat-number">{{ respostas_corretas }}</div>
                 <div class="stat-label">ACERTOS</div>
-        </div>
+            </div>
             <div class="stat-trend">
                 <i class="fas fa-arrow-up"></i>
                 <span>Total de acertos</span>
@@ -846,7 +833,7 @@
                 <i class="fas fa-book"></i>
             </div>
             <div class="stat-info">
-            <div class="stat-number">{{ stats_assuntos|length }}</div>
+                <div class="stat-number">{{ stats_assuntos|length }}</div>
                 <div class="stat-label">CONTEÚDOS ESTUDADOS</div>
             </div>
             <div class="stat-trend">
@@ -882,7 +869,7 @@
         <div class="chart-card">
             <h3>Últimas 24 Horas</h3>
             <div class="period-stat">
-            <div class="period-number">{{ questoes_24h }}</div>
+                <div class="period-number">{{ questoes_24h }}</div>
                 <div class="period-label">Questões Respondidas</div>
             </div>
         </div>
@@ -890,7 +877,7 @@
         <div class="chart-card">
             <h3>Últimos 7 Dias</h3>
             <div class="period-stat">
-            <div class="period-number">{{ questoes_7d }}</div>
+                <div class="period-number">{{ questoes_7d }}</div>
                 <div class="period-label">Questões Respondidas</div>
             </div>
         </div>
@@ -898,11 +885,11 @@
         <div class="chart-card">
             <h3>Últimos 365 Dias</h3>
             <div class="period-stat">
-            <div class="period-number">{{ questoes_365d }}</div>
+                <div class="period-number">{{ questoes_365d }}</div>
                 <div class="period-label">Questões Respondidas</div>
+            </div>
         </div>
-    </div>
-    
+        
         <div class="chart-card">
             <h3>Sempre</h3>
             <div class="period-stat">
@@ -930,8 +917,8 @@
                 </h3>
             </div>
             <div class="chart-container">
-            <canvas id="donutChart"></canvas>
-        </div>
+                <canvas id="donutChart"></canvas>
+            </div>
             <p style="text-align: center; margin-top: 10px; font-size: 0.85rem; color: #718096;">
                 <i class="fas fa-mouse-pointer"></i> Clique em um conteúdo para ver detalhes
             </p>
@@ -945,10 +932,10 @@
                 </h3>
             </div>
             <div class="chart-container">
-            <canvas id="contentChart"></canvas>
+                <canvas id="contentChart"></canvas>
+            </div>
         </div>
     </div>
-</div>
 </section>
 
 <!-- Seção: Grid de Desempenho por Conteúdo com Média da Comunidade -->
@@ -1220,9 +1207,9 @@
     if (pizzaCtx && labelsPizza.length > 0) {
         const pizzaChart = new Chart(pizzaCtx.getContext('2d'), {
             type: 'pie',
-        data: {
+            data: {
                 labels: labelsPizza,
-            datasets: [{
+                datasets: [{
                     data: valoresPizza,
                     backgroundColor: [
                         '#0072FF', '#00C6FF', '#667eea', '#764ba2', 
@@ -1232,10 +1219,10 @@
                     hoverOffset: 8,
                     borderWidth: 2,
                     borderColor: '#ffffff'
-            }]
-        },
-        options: {
-            responsive: true,
+                }]
+            },
+            options: {
+                responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {

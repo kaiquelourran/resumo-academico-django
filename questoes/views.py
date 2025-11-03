@@ -978,49 +978,335 @@ def logout_view(request):
 
 @login_required
 def desempenho_view(request):
-    """View de desempenho do usuário"""
+    """View de desempenho do usuário - Refatorada com novas funcionalidades"""
+    from datetime import datetime, timedelta
+    
     user = request.user
+    agora = timezone.now()
+    
+    # Respostas do usuário
     respostas = RespostaUsuario.objects.filter(id_usuario=user)
     
     total_respostas = respostas.count()
     respostas_corretas = respostas.filter(acertou=True).count()
+    percentual_acerto = (respostas_corretas / total_respostas * 100) if total_respostas > 0 else 0
     
-    if total_respostas == 0:
-        percentual_acerto = 0
-        assuntos_stats = []
-        messages.info(request, "Você ainda não respondeu a nenhuma questão. Comece um quiz para ver seu desempenho!")
-    else:
-        percentual_acerto = (respostas_corretas / total_respostas * 100)
+    # Dados por período (24h, 7d, 365d) para mini-gráfico
+    periodo_24h = agora - timedelta(hours=24)
+    periodo_7d = agora - timedelta(days=7)
+    periodo_365d = agora - timedelta(days=365)
     
-        # Otimização: Agrupar por id_assunto e anotar os resultados
-        respostas_por_assunto = respostas.values('id_questao__id_assunto__nome').annotate(
+    questoes_24h = respostas.filter(data_resposta__gte=periodo_24h).count()
+    questoes_7d = respostas.filter(data_resposta__gte=periodo_7d).count()
+    questoes_365d = respostas.filter(data_resposta__gte=periodo_365d).count()
+    
+    # Dados para mini-gráfico de tendência (últimos 7 dias, por dia)
+    dados_tendencia_7d = []
+    for i in range(6, -1, -1):  # Últimos 7 dias (do mais antigo ao mais recente)
+        dia = agora - timedelta(days=i)
+        inicio_dia = timezone.make_aware(datetime.combine(dia.date(), datetime.min.time()))
+        fim_dia = timezone.make_aware(datetime.combine(dia.date(), datetime.max.time()))
+        total_dia = respostas.filter(data_resposta__gte=inicio_dia, data_resposta__lt=fim_dia).count()
+        dados_tendencia_7d.append({
+            'dia': dia.strftime('%d/%m'),
+            'total': total_dia
+        })
+    
+    # Calcular Streak (dias consecutivos estudando)
+    streak = 0
+    if total_respostas > 0:
+        dia_atual = agora.date()
+        dias_verificados = 0
+        max_dias_verificar = 365  # Limitar busca aos últimos 365 dias
+        
+        while dias_verificados < max_dias_verificar:
+            data_verificar = timezone.make_aware(datetime.combine(dia_atual, datetime.min.time()))
+            fim_dia = timezone.make_aware(datetime.combine(dia_atual, datetime.max.time()))
+            
+            respostas_dia = respostas.filter(data_resposta__gte=data_verificar, data_resposta__lt=fim_dia)
+            
+            if respostas_dia.exists():
+                streak += 1
+                dia_atual -= timedelta(days=1)
+            else:
+                # Se o dia de hoje não tem respostas mas há respostas anteriores, não conta como quebra
+                if dias_verificados == 0:
+                    # Verifica se há respostas hoje ou ontem
+                    if agora.hour < 2:  # Se for muito cedo, considera ainda dentro do dia anterior
+                        dia_atual -= timedelta(days=1)
+                        continue
+                break
+            
+            dias_verificados += 1
+    
+    # Estatísticas por assunto com média da comunidade
+    assuntos_stats = []
+    if total_respostas > 0:
+        # Buscar ID dos assuntos para melhor performance
+        respostas_por_assunto = respostas.values('id_questao__id_assunto').annotate(
             total=Count('id'),
             acertos=Count('id', filter=Q(acertou=True))
-        ).order_by('id_questao__id_assunto__nome')
+        ).order_by('id_questao__id_assunto')
         
-        assuntos_stats = []
         for item in respostas_por_assunto:
-            nome = item['id_questao__id_assunto__nome']
-            total = item['total']
-            acertos = item['acertos']
-            percentual = (acertos / total * 100) if total > 0 else 0
-            
-            assuntos_stats.append({
-                'nome_assunto': nome,
-                'total_questoes': total,
-                'acertos': acertos,
-                'percentual': round(percentual, 1)
-            })
+            assunto_id = item['id_questao__id_assunto']
+            if assunto_id is None:
+                continue
+                
+            try:
+                assunto = Assunto.objects.get(id=assunto_id)
+                total = item['total']
+                acertos = item['acertos']
+                percentual = (acertos / total * 100) if total > 0 else 0
+                
+                # Calcular média da comunidade para este assunto
+                todas_respostas_assunto = RespostaUsuario.objects.filter(
+                    id_questao__id_assunto=assunto_id
+                )
+                total_comunidade = todas_respostas_assunto.count()
+                acertos_comunidade = todas_respostas_assunto.filter(acertou=True).count()
+                media_comunidade = (acertos_comunidade / total_comunidade * 100) if total_comunidade > 0 else 0
+                
+                assuntos_stats.append({
+                    'id_assunto': assunto_id,
+                    'nome_assunto': assunto.nome,
+                    'total_questoes': total,
+                    'acertos': acertos,
+                    'percentual': round(percentual, 1),
+                    'media_comunidade': round(media_comunidade, 1)
+                })
+            except Assunto.DoesNotExist:
+                continue
+    
+    # Determinar Foco do Dia (conteúdo com menor acerto)
+    foco_do_dia = None
+    if assuntos_stats:
+        assunto_menor_acerto = min(assuntos_stats, key=lambda x: x['percentual'])
+        if assunto_menor_acerto['total_questoes'] > 0:  # Só sugerir se já tiver questões respondidas
+            foco_do_dia = {
+                'nome': assunto_menor_acerto['nome_assunto'],
+                'id': assunto_menor_acerto['id_assunto'],
+                'percentual': assunto_menor_acerto['percentual'],
+                'total': assunto_menor_acerto['total_questoes'],
+                'acertos': assunto_menor_acerto['acertos']
+            }
+    
+    # Atividades recentes (últimas 10 respostas)
+    atividades_recentes = respostas.select_related('id_questao__id_assunto')[:10]
+    atividades_formatadas = []
+    for resposta in atividades_recentes:
+        atividades_formatadas.append({
+            'id': resposta.id,
+            'questao_id': resposta.id_questao.id,
+            'questao_texto': resposta.id_questao.texto[:100] + '...' if len(resposta.id_questao.texto) > 100 else resposta.id_questao.texto,
+            'assunto_nome': resposta.id_questao.id_assunto.nome if resposta.id_questao.id_assunto else 'Sem assunto',
+            'assunto_id': resposta.id_questao.id_assunto.id if resposta.id_questao.id_assunto else None,
+            'acertou': resposta.acertou,
+            'data_resposta': resposta.data_resposta
+        })
+    
+    # Dados para gráfico de pizza (por assunto) - para drill-down
+    dados_pizza = []
+    for assunto in assuntos_stats:
+        dados_pizza.append({
+            'nome': assunto['nome_assunto'],
+            'id': assunto['id_assunto'],
+            'total': assunto['total_questoes']
+        })
+    
+    # Serializar dados para JavaScript (JSON)
+    import json
+    dados_tendencia_json = json.dumps(dados_tendencia_7d)
+    dados_pizza_json = json.dumps(dados_pizza)
     
     context = {
         'total_respostas': total_respostas,
         'respostas_corretas': respostas_corretas,
         'percentual_acerto': round(percentual_acerto, 1),
         'stats_assuntos': assuntos_stats,
-        'usuario': user
+        'usuario': user,
+        # Dados por período
+        'questoes_24h': questoes_24h,
+        'questoes_7d': questoes_7d,
+        'questoes_365d': questoes_365d,
+        # Dados para gráficos (JSON serializado)
+        'dados_tendencia_7d': dados_tendencia_json,
+        'dados_pizza': dados_pizza_json,
+        # Novas funcionalidades
+        'streak': streak,
+        'foco_do_dia': foco_do_dia,
+        'atividades_recentes': atividades_formatadas,
     }
     
+    if total_respostas == 0:
+        messages.info(request, "Você ainda não respondeu a nenhuma questão. Comece um quiz para ver seu desempenho!")
+    
     return render(request, 'questoes/desempenho.html', context)
+
+
+@login_required
+def relatorio_topico_view(request, assunto_id):
+    """View de relatório detalhado de um tópico específico (drill-down)"""
+    from datetime import datetime, timedelta
+    
+    user = request.user
+    assunto = get_object_or_404(Assunto, id=assunto_id)
+    agora = timezone.now()
+    
+    # Respostas do usuário para este assunto
+    respostas = RespostaUsuario.objects.filter(
+        id_usuario=user,
+        id_questao__id_assunto=assunto
+    )
+    
+    total_respostas = respostas.count()
+    respostas_corretas = respostas.filter(acertou=True).count()
+    percentual_acerto = (respostas_corretas / total_respostas * 100) if total_respostas > 0 else 0
+    
+    # Questões mais erradas por este usuário
+    questoes_erradas = respostas.filter(acertou=False).values('id_questao').annotate(
+        vezes_errou=Count('id')
+    ).order_by('-vezes_errou')[:10]
+    
+    questoes_erradas_detalhes = []
+    for item in questoes_erradas:
+        questao_id = item['id_questao']
+        vezes = item['vezes_errou']
+        try:
+            questao = Questao.objects.get(id=questao_id)
+            questoes_erradas_detalhes.append({
+                'id': questao.id,
+                'texto': questao.texto,
+                'vezes_errou': vezes
+            })
+        except Questao.DoesNotExist:
+            continue
+    
+    # Adicionar `assunto` ao contexto para uso no template
+    
+    # Estatísticas por período
+    periodo_24h = agora - timedelta(hours=24)
+    periodo_7d = agora - timedelta(days=7)
+    periodo_365d = agora - timedelta(days=365)
+    
+    questoes_24h = respostas.filter(data_resposta__gte=periodo_24h).count()
+    questoes_7d = respostas.filter(data_resposta__gte=periodo_7d).count()
+    questoes_365d = respostas.filter(data_resposta__gte=periodo_365d).count()
+    
+    # Média da comunidade para este assunto
+    todas_respostas_assunto = RespostaUsuario.objects.filter(
+        id_questao__id_assunto=assunto
+    )
+    total_comunidade = todas_respostas_assunto.count()
+    acertos_comunidade = todas_respostas_assunto.filter(acertou=True).count()
+    media_comunidade = (acertos_comunidade / total_comunidade * 100) if total_comunidade > 0 else 0
+    
+    # Histórico de desempenho (últimos 30 dias)
+    historico_30d = []
+    for i in range(29, -1, -1):
+        dia = agora - timedelta(days=i)
+        inicio_dia = timezone.make_aware(datetime.combine(dia.date(), datetime.min.time()))
+        fim_dia = timezone.make_aware(datetime.combine(dia.date(), datetime.max.time()))
+        respostas_dia = respostas.filter(data_resposta__gte=inicio_dia, data_resposta__lt=fim_dia)
+        total_dia = respostas_dia.count()
+        acertos_dia = respostas_dia.filter(acertou=True).count()
+        percentual_dia = (acertos_dia / total_dia * 100) if total_dia > 0 else 0
+        
+        historico_30d.append({
+            'dia': dia.strftime('%d/%m'),
+            'total': total_dia,
+            'acertos': acertos_dia,
+            'percentual': round(percentual_dia, 1)
+        })
+    
+    # Serializar histórico para JavaScript
+    import json
+    historico_json = json.dumps(historico_30d)
+    
+    context = {
+        'assunto': assunto,
+        'total_respostas': total_respostas,
+        'respostas_corretas': respostas_corretas,
+        'percentual_acerto': round(percentual_acerto, 1),
+        'media_comunidade': round(media_comunidade, 1),
+        'questoes_24h': questoes_24h,
+        'questoes_7d': questoes_7d,
+        'questoes_365d': questoes_365d,
+        'questoes_erradas': questoes_erradas_detalhes,
+        'historico_30d': historico_json,
+    }
+    
+    return render(request, 'questoes/relatorio_topico.html', context)
+
+
+@login_required
+def quiz_erros_frequentes_view(request):
+    """View para gerar quiz com todas as questões erradas, agrupadas por assunto"""
+    user = request.user
+    
+    # Buscar TODAS as questões erradas pelo usuário (pelo menos uma vez)
+    questoes_erradas = RespostaUsuario.objects.filter(
+        id_usuario=user,
+        acertou=False
+    ).values('id_questao').annotate(
+        vezes_errou=Count('id')
+    ).order_by('-vezes_errou', 'id_questao')
+    
+    # Buscar todas as questões relacionadas
+    ids_questoes = [item['id_questao'] for item in questoes_erradas]
+    questoes = Questao.objects.filter(id__in=ids_questoes).select_related('id_assunto')
+    
+    # Criar dicionário de questões com frequência de erros
+    questoes_dict = {}
+    for item in questoes_erradas:
+        questao_id = item['id_questao']
+        vezes = item['vezes_errou']
+        questoes_dict[questao_id] = vezes
+    
+    # Agrupar questões por assunto
+    questoes_por_assunto = {}
+    for questao in questoes:
+        if questao.id in questoes_dict:
+            assunto_id = questao.id_assunto.id
+            assunto_nome = questao.id_assunto.nome
+            
+            if assunto_id not in questoes_por_assunto:
+                questoes_por_assunto[assunto_id] = {
+                    'assunto_nome': assunto_nome,
+                    'assunto_id': assunto_id,
+                    'questoes': []
+                }
+            
+            questoes_por_assunto[assunto_id]['questoes'].append({
+                'questao': questao,
+                'vezes_errou': questoes_dict[questao.id]
+            })
+    
+    # Ordenar questões dentro de cada assunto por frequência de erros
+    for assunto_data in questoes_por_assunto.values():
+        assunto_data['questoes'].sort(key=lambda x: x['vezes_errou'], reverse=True)
+    
+    # Ordenar assuntos pelo total de questões erradas
+    questoes_por_assunto_ordenados = sorted(
+        questoes_por_assunto.items(),
+        key=lambda x: len(x[1]['questoes']),
+        reverse=True
+    )
+    
+    # Converter para lista de dicionários
+    questoes_agrupadas = []
+    total_questoes = 0
+    for assunto_id, assunto_data in questoes_por_assunto_ordenados:
+        questoes_agrupadas.append(assunto_data)
+        total_questoes += len(assunto_data['questoes'])
+    
+    context = {
+        'questoes_por_assunto': questoes_agrupadas,
+        'total_questoes': total_questoes,
+        'total_assuntos': len(questoes_agrupadas)
+    }
+    
+    return render(request, 'questoes/quiz_erros_frequentes.html', context)
 
 
 # ==============================================================================

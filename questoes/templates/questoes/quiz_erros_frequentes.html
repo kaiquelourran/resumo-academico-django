@@ -1,0 +1,397 @@
+{% extends 'questoes/base.html' %}
+{% load static %}
+
+{% block title %}Quiz de Erros Frequentes - Resumo Acadêmico{% endblock %}
+
+{% block breadcrumb %}
+<!-- Breadcrumb Navigation -->
+<div class="breadcrumb">
+    <div class="header-container">
+        <nav class="breadcrumb-nav">
+            <a href="{% url 'questoes:index' %}" class="breadcrumb-link">🏠 Início</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <a href="{% url 'questoes:desempenho' %}" class="breadcrumb-link">📊 Desempenho</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <span class="breadcrumb-current">🔄 Revisão Inteligente</span>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_header %}
+<!-- Page Title Section -->
+<div class="page-header">
+    <div class="header-container">
+        <h1 class="page-title">Quiz de Erros Frequentes</h1>
+        <p class="page-subtitle">Pratique questões que você errou mais de uma vez</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    body {
+        background-image: linear-gradient(to top, #00C6FF, #0072FF);
+        min-height: 100vh;
+        margin: 0;
+    }
+    
+    .main-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        background: #FFFFFF;
+        border-radius: 16px;
+        border: 1px solid transparent;
+        background-image: linear-gradient(#FFFFFF, #FFFFFF), linear-gradient(to top, #00C6FF, #0072FF);
+        background-origin: border-box;
+        background-clip: padding-box, border-box;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        padding: 0 30px 30px 30px;
+    }
+    
+    .info-card {
+        background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
+        border-radius: 16px;
+        padding: 24px;
+        margin: 30px 0 40px 0;
+        color: white;
+        box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
+    }
+    
+    .info-card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .info-card-header i {
+        font-size: 2rem;
+    }
+    
+    .info-card-header h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    
+    .info-card-content {
+        margin-top: 16px;
+        opacity: 0.95;
+    }
+    
+    .stats-summary {
+        display: flex;
+        gap: 24px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.95;
+        margin-bottom: 4px;
+        color: #ffffff !important;
+        font-weight: 500;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+    
+    .questions-container {
+        margin-top: 0;
+    }
+    
+    .subject-section {
+        margin-bottom: 50px;
+    }
+    
+    .subject-section:last-child {
+        margin-bottom: 0;
+    }
+    
+    .subject-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .subject-section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1a202c;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .subject-section-title i {
+        color: #0072FF;
+        font-size: 1.3rem;
+    }
+    
+    .question-count-badge {
+        background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
+    .btn-study-all {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        font-size: 0.95rem;
+    }
+    
+    .btn-study-all:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(40, 167, 69, 0.4);
+        filter: brightness(1.05);
+    }
+    
+    .question-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+    }
+    
+    .question-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 35px rgba(0,114,255,0.12);
+        border-color: #0072FF;
+    }
+    
+    .question-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    
+    .question-id {
+        font-size: 0.9rem;
+        color: #718096;
+        font-weight: 600;
+    }
+    
+    .error-badge {
+        background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .question-text {
+        font-size: 1.1rem;
+        color: #1a202c;
+        line-height: 1.6;
+        margin-bottom: 20px;
+    }
+    
+    
+    .action-buttons {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+    }
+    
+    .btn-action {
+        background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 18px rgba(0,114,255,0.28);
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 26px rgba(0,114,255,0.32);
+        filter: brightness(1.05);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #718096;
+    }
+    
+    .empty-icon {
+        font-size: 4rem;
+        color: #cbd5e0;
+        margin-bottom: 16px;
+    }
+    
+    .empty-state h3 {
+        font-size: 1.3rem;
+        color: #4a5568;
+        margin-bottom: 8px;
+    }
+    
+    .empty-state p {
+        font-size: 1rem;
+        margin-bottom: 24px;
+    }
+    
+    @media (max-width: 768px) {
+        .main-container {
+            padding: 15px 15px 20px 15px;
+        }
+        
+        .info-card {
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .subject-section {
+            margin-bottom: 40px;
+        }
+        
+        .subject-section-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+        }
+        
+        .subject-section-title {
+            font-size: 1.3rem;
+        }
+        
+        .btn-study-all {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .stats-summary {
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+        
+        .btn-action {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <!-- Card de Informação -->
+    <div class="info-card">
+        <div class="info-card-header">
+            <i class="fas fa-redo"></i>
+            <h2>Revisão Inteligente</h2>
+        </div>
+        <div class="info-card-content">
+            <p>Este quiz contém todas as questões que você errou, organizadas por assunto. Pratique-as para consolidar seu conhecimento e melhorar seu desempenho!</p>
+            <div class="stats-summary">
+                <div class="stat-item">
+                    <span class="stat-label">Total de Questões</span>
+                    <span class="stat-value">{{ total_questoes }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Assuntos</span>
+                    <span class="stat-value">{{ total_assuntos }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lista de Questões Agrupadas por Assunto -->
+    {% if questoes_por_assunto %}
+        {% for assunto_data in questoes_por_assunto %}
+        <div class="subject-section">
+            <div class="subject-section-header">
+                <h2 class="subject-section-title">
+                    <i class="fas fa-book"></i>
+                    {{ assunto_data.assunto_nome }}
+                    <span class="question-count-badge">{{ assunto_data.questoes|length }} questão{{ assunto_data.questoes|length|pluralize:"ões" }}</span>
+                </h2>
+                <a href="{% url 'questoes:quiz_vertical_filtros' assunto_data.assunto_id %}" class="btn-study-all">
+                    <i class="fas fa-play"></i>
+                    Estudar Todo o Conteúdo
+                </a>
+            </div>
+            <div class="questions-container">
+                {% for item in assunto_data.questoes %}
+                <div class="question-card">
+                    <div class="question-header">
+                        <span class="question-id">ID: {{ item.questao.id }}</span>
+                        <span class="error-badge">
+                            <i class="fas fa-times-circle"></i> Errou {{ item.vezes_errou }} vez{{ item.vezes_errou|pluralize:"es" }}
+                        </span>
+                    </div>
+                    <div class="question-text">
+                        {{ item.questao.texto }}
+                    </div>
+                    <div class="action-buttons">
+                        <a href="{% url 'questoes:quiz_vertical_filtros' assunto_data.assunto_id %}?questao_inicial={{ item.questao.id }}" class="btn-action">
+                            <i class="fas fa-play"></i>
+                            Praticar esta Questão
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3>Nenhuma questão encontrada</h3>
+                <p>Você não possui questões que foram erradas mais de uma vez. Parabéns!</p>
+                <a href="{% url 'questoes:escolher_assunto' %}" class="btn-action">
+                    <i class="fas fa-play"></i>
+                    Começar a Estudar
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
