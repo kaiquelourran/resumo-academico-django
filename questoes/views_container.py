@@ -925,7 +925,7 @@ def gerenciar_relatorios_view(request):
     if filtro_prioridade != 'todos':
         relatorios = relatorios.filter(prioridade=filtro_prioridade)
     
-    relatorios = relatorios.select_related('id_usuario').order_by('-data_relatorio')
+    relatorios = relatorios.select_related('id_usuario').order_by('-data_criacao')
     
     # MELHORIA: Uso de agregação para obter as estatísticas em uma query
     stats_query = RelatorioBug.objects.values('status').annotate(count=Count('status'))
@@ -1000,3 +1000,51 @@ def responder_relatorio_view(request):
             messages.error(request, 'A resposta e o ID do relatório não podem estar vazios.')
     
     return redirect('questoes:gerenciar_relatorios')
+
+
+@login_required
+@csrf_exempt
+def marcar_notificacao_lida_view(request, relatorio_id):
+    """Marca uma notificação como lida"""
+    if request.method == 'POST':
+        try:
+            relatorio = get_object_or_404(RelatorioBug, pk=relatorio_id)
+            
+            # Verificar se o relatório pertence ao usuário
+            if relatorio.id_usuario != request.user:
+                return JsonResponse({'success': False, 'message': 'Você não tem permissão para marcar esta notificação como lida.'}, status=403)
+            
+            relatorio.usuario_viu_resposta = True
+            relatorio.save()
+            
+            return JsonResponse({'success': True, 'message': 'Notificação marcada como lida.'})
+        except Exception as e:
+            error_logger.error(f'Erro ao marcar notificação como lida {relatorio_id}: {e}', exc_info=True)
+            return JsonResponse({'success': False, 'message': f'Erro ao marcar notificação como lida: {str(e)}'}, status=500)
+    
+    return JsonResponse({'success': False, 'message': 'Método não permitido.'}, status=405)
+
+
+@login_required
+@csrf_exempt
+def marcar_todas_notificacoes_lidas_view(request):
+    """Marca todas as notificações do usuário como lidas"""
+    if request.method == 'POST':
+        try:
+            # Buscar todas as notificações não lidas do usuário
+            relatorios = RelatorioBug.objects.filter(
+                id_usuario=request.user,
+                resposta_admin__isnull=False,
+                resposta_admin__gt='',
+                usuario_viu_resposta=False
+            )
+            
+            # Marcar todas como lidas
+            count = relatorios.update(usuario_viu_resposta=True)
+            
+            return JsonResponse({'success': True, 'message': f'{count} notificação(ões) marcada(s) como lida(s).', 'count': count})
+        except Exception as e:
+            error_logger.error(f'Erro ao marcar todas as notificações como lidas: {e}', exc_info=True)
+            return JsonResponse({'success': False, 'message': f'Erro ao marcar notificações como lidas: {str(e)}'}, status=500)
+    
+    return JsonResponse({'success': False, 'message': 'Método não permitido.'}, status=405)

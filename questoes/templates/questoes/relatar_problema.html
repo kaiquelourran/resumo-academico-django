@@ -221,10 +221,12 @@
     </div>
 
     <div class="form-container">
-        {% if mensagem %}
-            <div class="alert alert-{{ tipo_mensagem }}">
-                {{ mensagem }}
-            </div>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
         {% endif %}
 
         <form method="POST" action="{% url 'questoes:relatar_problema' %}">

@@ -104,6 +104,62 @@
             {% endfor %}
         {% endif %}
         
+        <!-- Indicador de Mensagens (fora do header) -->
+        {% if user.is_authenticated %}
+        <div class="message-indicator-container">
+            <div class="message-indicator" id="messageIndicator" onclick="toggleNotifications()">
+                <span class="message-icon">🔔</span>
+                <span class="message-text">
+                    {% if total_notificacoes > 0 %}
+                        {{ total_notificacoes }} mensagem{{ total_notificacoes|pluralize:"ns" }}
+                    {% else %}
+                        Sem mensagem
+                    {% endif %}
+                </span>
+                {% if total_notificacoes > 0 %}
+                    <span class="message-badge">{{ total_notificacoes }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Caixa de Notificações (oculta por padrão) -->
+        {% if user.is_authenticated and notificacoes_globais %}
+        <div class="notifications-container-base" id="notificationsContainer" style="display: none;">
+            <div class="notifications-header">
+                <h3 class="notifications-title">
+                    <span class="notification-icon">🔔</span>
+                    Novas Mensagens ({{ total_notificacoes }})
+                </h3>
+                <button class="close-all-notifications" onclick="marcarTodasComoLidas()" title="Marcar todas como lidas">
+                    ✕
+                </button>
+            </div>
+            <div class="notifications-list">
+                {% for notificacao in notificacoes_globais %}
+                <div class="notification-item" data-notificacao-id="{{ notificacao.id }}">
+                    <div class="notification-content">
+                        <div class="notification-header-item">
+                            <span class="notification-type">
+                                {% if notificacao.tipo_problema == 'bug' %}🐛 Bug
+                                {% elif notificacao.tipo_problema == 'melhoria' %}💡 Melhoria
+                                {% elif notificacao.tipo_problema == 'duvida' %}❓ Dúvida
+                                {% else %}📝 Outro{% endif %}
+                            </span>
+                            <span class="notification-date">{{ notificacao.data_atualizacao|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        <h4 class="notification-subject">{{ notificacao.titulo }}</h4>
+                        <p class="notification-message">{{ notificacao.resposta_admin|truncatewords:30 }}</p>
+                    </div>
+                    <button class="notification-close" onclick="marcarComoLida({{ notificacao.id }})" title="Marcar como lida">
+                        ✕
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
         <!-- Conteúdo Principal -->
         {% block content %}
         {% endblock %}
@@ -114,6 +170,83 @@
     
     <!-- JavaScript -->
     <script src="{% static 'js/quiz.js' %}"></script>
+    <script>
+        // Função para alternar exibição da caixa de notificações
+        function toggleNotifications() {
+            const container = document.getElementById('notificationsContainer');
+            if (container) {
+                if (container.style.display === 'none' || container.style.display === '') {
+                    container.style.display = 'block';
+                    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    container.style.display = 'none';
+                }
+            }
+        }
+        
+        // Funções para marcar notificações como lidas
+        function marcarComoLida(relatorioId) {
+            fetch(`/questoes/admin/relatorios/${relatorioId}/marcar-lida/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const item = document.querySelector(`[data-notificacao-id="${relatorioId}"]`);
+                    if (item) {
+                        item.style.opacity = '0.5';
+                        setTimeout(() => item.remove(), 300);
+                        
+                        // Atualizar contador
+                        const total = document.querySelectorAll('.notification-item').length - 1;
+                        if (total === 0) {
+                            document.getElementById('notificationsContainer').style.display = 'none';
+                            // Recarregar página para atualizar o indicador
+                            setTimeout(() => window.location.reload(), 500);
+                        }
+                    }
+                }
+            })
+            .catch(error => console.error('Erro:', error));
+        }
+        
+        function marcarTodasComoLidas() {
+            fetch('/questoes/admin/relatorios/marcar-todas-lidas/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('notificationsContainer').style.display = 'none';
+                    setTimeout(() => window.location.reload(), 500);
+                }
+            })
+            .catch(error => console.error('Erro:', error));
+        }
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

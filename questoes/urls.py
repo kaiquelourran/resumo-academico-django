@@ -70,4 +70,13 @@ urlpatterns = [
     path('admin/gerenciar-comentarios/', views.gerenciar_comentarios_view, name='gerenciar_comentarios'),
     path('admin/comentarios/<int:comentario_id>/toggle/', views.toggle_comentario_view, name='toggle_comentario'),
     path('admin/comentarios/<int:comentario_id>/deletar/', views.deletar_comentario_view, name='deletar_comentario'),
+    
+    # Gerenciar relatórios (admin)
+    path('admin/gerenciar-relatorios/', views.gerenciar_relatorios_view, name='gerenciar_relatorios'),
+    path('admin/relatorios/<int:relatorio_id>/atualizar-status/', views.atualizar_status_relatorio_view, name='atualizar_status_relatorio'),
+    path('admin/relatorios/responder/', views.responder_relatorio_view, name='responder_relatorio'),
+    
+    # Marcar notificações como lidas
+    path('admin/relatorios/<int:relatorio_id>/marcar-lida/', views.marcar_notificacao_lida_view, name='marcar_notificacao_lida'),
+    path('admin/relatorios/marcar-todas-lidas/', views.marcar_todas_notificacoes_lidas_view, name='marcar_todas_notificacoes_lidas'),
 ]

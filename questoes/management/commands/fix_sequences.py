@@ -20,6 +20,7 @@ class Command(BaseCommand):
                 ('questoes_alternativa', 'id'),
                 ('questoes_respostausuario', 'id'),
                 ('questoes_assunto', 'id'),
+                ('questoes_relatoriobug', 'id'),
             ]
             
             self.stdout.write(self.style.SUCCESS('Corrigindo sequencias do PostgreSQL...\n'))

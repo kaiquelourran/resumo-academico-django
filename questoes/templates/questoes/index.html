@@ -64,6 +64,16 @@
         color: #333;
     }
     
+    @media (max-width: 768px) {
+        .stat-card {
+            min-width: 150px;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+        }
+    }
+    
     /* Cards */
     .cards-container {
         display: flex;
@@ -777,15 +787,12 @@
             <a href="{% url 'questoes:adicionar_questao' %}" class="btn">Nova Questão</a>
         </div>
 
-        {% comment %}
-        Rota não implementada ainda
         <div class="card" style="background: linear-gradient(to top, #FF6B6B, #FF8E53); color: white;">
             <span class="card-icon">🐛</span>
             <h3 class="card-title" style="color:#fff;">Gerenciar Relatórios</h3>
             <p class="card-description" style="color:#f8f9fa;">Visualize e responda relatórios de bugs e sugestões.</p>
             <a href="{% url 'questoes:gerenciar_relatorios' %}" class="btn">Gerenciar</a>
         </div>
-        {% endcomment %}
     </div>
 </div>
 {% else %}
@@ -932,7 +939,113 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+    
+    // Adicionar índice para animação das notificações
+    const notificationItems = document.querySelectorAll('.notification-item');
+    notificationItems.forEach((item, index) => {
+        item.style.setProperty('--index', index);
+    });
 });
+
+// Função para marcar notificação como lida
+function marcarComoLida(notificacaoId) {
+    const notificationItem = document.querySelector(`[data-notificacao-id="${notificacaoId}"]`);
+    
+    if (notificationItem) {
+        // Adicionar classe de fade-out
+        notificationItem.classList.add('fade-out');
+        
+        // Fazer requisição AJAX para marcar como lida
+        fetch(`/questoes/admin/relatorios/${notificacaoId}/marcar-lida/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remover elemento após animação
+                setTimeout(() => {
+                    notificationItem.remove();
+                    
+                    // Se não houver mais notificações, ocultar container
+                    const notificationsList = document.querySelector('.notifications-list');
+                    if (notificationsList && notificationsList.children.length === 0) {
+                        const container = document.querySelector('.notifications-container');
+                        if (container) {
+                            container.style.display = 'none';
+                        }
+                    }
+                }, 300);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao marcar notificação como lida:', error);
+            // Remover classe de fade-out em caso de erro
+            notificationItem.classList.remove('fade-out');
+        });
+    }
+}
+
+// Função para marcar todas as notificações como lidas
+function marcarTodasComoLidas() {
+    const notificationItems = document.querySelectorAll('.notification-item');
+    const notificationIds = Array.from(notificationItems).map(item => 
+        parseInt(item.getAttribute('data-notificacao-id'))
+    );
+    
+    if (notificationIds.length === 0) return;
+    
+    // Fazer requisição AJAX para marcar todas como lidas
+    fetch('/questoes/admin/relatorios/marcar-todas-lidas/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ids: notificationIds }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Adicionar fade-out em todas as notificações
+            notificationItems.forEach((item, index) => {
+                setTimeout(() => {
+                    item.classList.add('fade-out');
+                }, index * 50);
+            });
+            
+            // Remover container após animação
+            setTimeout(() => {
+                const container = document.querySelector('.notifications-container');
+                if (container) {
+                    container.remove();
+                }
+            }, notificationIds.length * 50 + 300);
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao marcar todas as notificações como lidas:', error);
+    });
+}
+
+// Função auxiliar para obter cookie CSRF
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 </script>
 
 {% endblock %}

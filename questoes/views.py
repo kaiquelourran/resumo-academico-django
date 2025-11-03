@@ -28,11 +28,16 @@ from .filters import QuestaoFilter
 # Importar views de gerenciamento de comentários e assuntos do views_container
 from .views_container import (
     gerenciar_comentarios_view,
+    gerenciar_relatorios_view,
+    atualizar_status_relatorio_view,
+    responder_relatorio_view,
     toggle_comentario_view,
     deletar_comentario_view,
     adicionar_assunto_view,
     gerenciar_assuntos_view,
-    deletar_assunto_view
+    deletar_assunto_view,
+    marcar_notificacao_lida_view,
+    marcar_todas_notificacoes_lidas_view
 )
 
 error_logger = logging.getLogger('questoes.errors')
@@ -1028,17 +1033,17 @@ def desempenho_view(request):
             if respostas_dia.exists():
                 streak += 1
                 dia_atual -= timedelta(days=1)
+                dias_verificados += 1
             else:
                 # Se o dia de hoje não tem respostas mas há respostas anteriores, não conta como quebra
                 if dias_verificados == 0:
                     # Verifica se há respostas hoje ou ontem
                     if agora.hour < 2:  # Se for muito cedo, considera ainda dentro do dia anterior
                         dia_atual -= timedelta(days=1)
+                        dias_verificados += 1
                         continue
                 break
-            
-            dias_verificados += 1
-    
+        
     # Estatísticas por assunto com média da comunidade
     assuntos_stats = []
     if total_respostas > 0:
@@ -1315,7 +1320,53 @@ def quiz_erros_frequentes_view(request):
 
 def relatar_problema_view(request):
     """View para o usuário relatar um problema."""
-    # A lógica para processar o POST do formulário deve ser adicionada aqui.
+    if request.method == 'POST':
+        try:
+            # Coletar dados do formulário
+            nome = request.POST.get('nome', '').strip()
+            email = request.POST.get('email', '').strip()
+            tipo_problema = request.POST.get('tipo_problema', 'bug').strip()
+            titulo = request.POST.get('titulo', '').strip()
+            descricao = request.POST.get('descricao', '').strip()
+            pagina_erro = request.POST.get('pagina_erro', '').strip() or None
+            
+            # Validação básica
+            if not nome or not email or not titulo or not descricao:
+                messages.error(request, 'Por favor, preencha todos os campos obrigatórios.')
+                return render(request, 'questoes/relatar_problema.html', {
+                    'mensagem': 'Por favor, preencha todos os campos obrigatórios.',
+                    'tipo_mensagem': 'error'
+                })
+            
+            # Validar tipo de problema
+            if tipo_problema not in ['bug', 'melhoria', 'duvida', 'outro']:
+                tipo_problema = 'bug'
+            
+            # Criar relatório
+            relatorio = RelatorioBug.objects.create(
+                id_usuario=request.user if request.user.is_authenticated else None,
+                nome_usuario=nome,
+                email_usuario=email,
+                tipo_problema=tipo_problema,
+                titulo=titulo,
+                descricao=descricao,
+                pagina_erro=pagina_erro,
+                status='aberto',
+                prioridade='media'
+            )
+            
+            messages.success(request, 'Problema reportado com sucesso! Nossa equipe irá analisar em breve.')
+            return redirect('questoes:relatar_problema')
+            
+        except Exception as e:
+            error_logger.error(f'Erro ao criar relatório de bug: {e}', exc_info=True)
+            messages.error(request, f'Erro ao enviar relatório. Por favor, tente novamente. Erro: {str(e)}')
+            return render(request, 'questoes/relatar_problema.html', {
+                'mensagem': f'Erro ao enviar relatório. Por favor, tente novamente.',
+                'tipo_mensagem': 'error'
+            })
+    
+    # Se for GET, apenas exibir o formulário
     return render(request, 'questoes/relatar_problema.html', {})
 
 
@@ -2094,7 +2145,6 @@ def api_curtir_comentario(request):
             'total_curtidas': total_curtidas,
             'message': 'Curtida atualizada com sucesso!'
         }, status=200)
-        
     except Exception as e:
         error_logger.error(f'Erro ao curtir comentário: {str(e)}', exc_info=True)
         return JsonResponse({
@@ -2158,7 +2208,6 @@ def api_reportar_abuso(request):
             'success': True,
             'message': 'Comentário reportado com sucesso! Nossa equipe irá analisar.'
         }, status=200)
-        
     except Exception as e:
         error_logger.error(f'Erro ao reportar abuso: {str(e)}', exc_info=True)
         return JsonResponse({
