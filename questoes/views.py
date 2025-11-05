@@ -45,8 +45,9 @@ error_logger = logging.getLogger('questoes.errors')
 # ---
 ## ===== VIEWS PÚBLICAS =====
 
+@login_required
 def index_view(request):
-    """View da página inicial do sistema"""
+    """View da página inicial do sistema - Requer login"""
     from datetime import datetime, timedelta
     
     total_assuntos = Assunto.objects.count()
@@ -187,6 +188,7 @@ def index_view(request):
 # ---
 ## ===== VIEWS DE QUIZ/QUESTÕES =====
 
+@login_required
 def estatisticas_questao(request, questao_id):
     """
     Estatísticas de uma questão específica:
@@ -367,8 +369,9 @@ def estatisticas_questao(request, questao_id):
 
     return render(request, 'questoes/estatisticas_detalhe.html', context)
 
+@login_required
 def escolher_assunto_view(request):
-    """View para escolher o assunto antes de iniciar o quiz"""
+    """View para escolher o assunto antes de iniciar o quiz - Requer login"""
     
     assuntos = Assunto.objects.annotate(
         total_questoes=Count('questoes')
@@ -388,8 +391,9 @@ def escolher_assunto_view(request):
     return render(request, 'questoes/escolher_assunto.html', context)
 
 
+@login_required
 def quiz_view(request, assunto_id):
-    """View que exibe as questões de um assunto específico"""
+    """View que exibe as questões de um assunto específico - Requer login"""
     assunto = get_object_or_404(Assunto, pk=assunto_id)
     questoes = Questao.objects.filter(id_assunto=assunto).prefetch_related('alternativas')
     
@@ -406,10 +410,12 @@ def quiz_view(request, assunto_id):
     return render(request, 'questoes/quiz.html', context)
 
 
+@login_required
 def listar_questoes_view(request, assunto_id):
     """
     Lista questões de um assunto. A filtragem de exibição é delegada ao JS.
     O backend apenas calcula e associa o STATUS de cada questão.
+    Requer login
     """
     assunto = get_object_or_404(Assunto, pk=assunto_id)
     
@@ -564,8 +570,9 @@ def listar_questoes_view(request, assunto_id):
 # 🟢 NOVAS VIEWS - QUIZ E SIMULADO
 # ==============================================================================
 
+@login_required
 @require_POST
-@csrf_exempt # Use apenas se a view não estiver autenticada ou for uma API
+@csrf_exempt
 def validar_resposta_view(request):
     """View que processa a resposta do quiz via AJAX/POST."""
     from django.db import IntegrityError
@@ -666,6 +673,7 @@ def validar_resposta_view(request):
         return JsonResponse(error_details, status=500)
 
 
+@login_required
 def quiz_vertical_filtros_view(request, assunto_id):
     """Quiz vertical com filtros dinâmicos - envia todas as questões para o frontend."""
     assunto = get_object_or_404(Assunto, pk=assunto_id)
@@ -812,6 +820,7 @@ def quiz_vertical_filtros_view(request, assunto_id):
     
     return render(request, 'questoes/quiz_vertical_filtros.html', context)
     
+@login_required
 def simulado_online_view(request, assunto_id):
     """Simulado online com estrutura similar ao PHP - todas as questões em uma página."""
     # A lógica é quase idêntica a quiz_vertical_filtros_view, mas sem foco na questão inicial
@@ -1367,6 +1376,7 @@ def quiz_erros_frequentes_view(request):
 # 🟢 NOVAS VIEWS - RELATÓRIOS (Usuário)
 # ==============================================================================
 
+@login_required
 def relatar_problema_view(request):
     """View para o usuário relatar um problema."""
     if request.method == 'POST':
@@ -1970,6 +1980,7 @@ def editar_questao_view(request, questao_id):
 # 🟢 VIEWS - APIs
 # ==============================================================================
 
+@login_required
 @csrf_exempt
 def api_comentarios(request):
     """API para listar comentários de uma questão com ordenação"""
@@ -2317,6 +2328,7 @@ def api_curtir_comentario(request):
             'message': f'Erro ao curtir comentário: {str(e)}'
         }, status=500)
 
+@login_required
 @csrf_exempt
 def api_reportar_abuso(request):
     """API para reportar um comentário por abuso"""
@@ -2389,12 +2401,14 @@ def get_client_ip(request):
         ip = request.META.get('REMOTE_ADDR')
     return ip
 
+@login_required
 @csrf_exempt
 def api_estatisticas(request):
     """Placeholder para a API que lida com estatísticas."""
     # Lógica da API de estatísticas (ex: taxa de acerto por assunto, ranking)
     return JsonResponse({'status': 'ok', 'data': {}}, status=200)
 
+@login_required
 @csrf_exempt
 def api_notificacoes(request):
     """Placeholder para a API de notificações."""

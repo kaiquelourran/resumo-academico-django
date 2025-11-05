@@ -1809,7 +1809,9 @@ footer .footer-tech-item {
     border: 1px solid #e9eef3; 
     color: #0072FF;
     border-radius: 10px;
+    font-size: 18px;
     transition: transform .2s ease, background-color .2s ease;
+    cursor: pointer;
 }
 
 footer .footer-tech-item:hover { 
