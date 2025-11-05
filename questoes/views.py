@@ -895,6 +895,18 @@ def simulado_online_view(request, assunto_id):
 
 # ===== VIEWS DE AUTENTICAÇÃO E PERFIL =====
 
+def google_login_view(request):
+    """View para login com Google usando biblioteca oficial do Google"""
+    from .google_auth import google_login_redirect
+    return google_login_redirect(request)
+
+
+def google_callback_view(request):
+    """View para processar callback do Google OAuth2"""
+    from .google_auth import google_callback
+    return google_callback(request)
+
+
 def login_view(request):
     """View de login"""
     if request.user.is_authenticated:
@@ -912,7 +924,22 @@ def login_view(request):
         else:
             try:
                 # Tenta encontrar o usuário pelo email
-                user = User.objects.get(email=email)
+                # Pode haver múltiplos usuários com o mesmo email, então usamos filter().first()
+                existing_users = User.objects.filter(email=email).order_by('date_joined')
+                
+                if not existing_users.exists():
+                    # Email não encontrado
+                    messages.error(request, 'Email ou senha incorretos.')
+                    return render(request, 'questoes/login.html')
+                
+                # Usa o usuário mais antigo (primeiro criado) se houver múltiplos
+                user = existing_users.filter(is_active=True).first()
+                if not user:
+                    user = existing_users.first()
+                
+                # Se há múltiplos usuários, loga um aviso (mas não bloqueia o login)
+                if existing_users.count() > 1:
+                    error_logger.warning(f'⚠️ AVISO: Encontrados {existing_users.count()} usuários com o email {email} durante login. Usando o mais antigo (ID: {user.id})')
                 
                 # Validação: Se selecionou "admin", o usuário DEVE ser admin
                 if user_type == 'admin' and not user.is_staff:
@@ -929,8 +956,9 @@ def login_view(request):
                 else:
                     # Falha de senha
                     messages.error(request, 'Email ou senha incorretos.')
-            except User.DoesNotExist:
-                # Falha de email
+            except Exception as e:
+                # Qualquer outro erro
+                error_logger.error(f'Erro no login: {e}', exc_info=True)
                 messages.error(request, 'Email ou senha incorretos.')
     
     return render(request, 'questoes/login.html')
@@ -953,18 +981,39 @@ def cadastro_view(request):
             messages.error(request, 'A senha deve ter pelo menos 6 caracteres.')
         else: # <--- AGORA CORRETAMENTE ALINHADO COM O 'IF' E 'ELIF'
             try:
-                if User.objects.filter(email=email).exists():
-                    messages.error(request, 'Este e-mail já está cadastrado.')
+                # VALIDAÇÃO: Verifica se o email já existe (cadastro manual ou Google)
+                existing_users = User.objects.filter(email=email)
+                
+                if existing_users.exists():
+                    # Email já cadastrado - não permite criar novo usuário
+                    messages.error(request, f'Este e-mail já está cadastrado no sistema. Por favor, faça login.')
+                    messages.info(request, 'Se você se cadastrou com Google, use o botão "Continuar com Google" para fazer login.')
+                    return render(request, 'questoes/cadastro.html')
+                
+                # Verifica se o username (email) já existe
+                if User.objects.filter(username=email).exists():
+                    # Se o username já existe, gera um username único
+                    base_username = email.split('@')[0][:150]
+                    username = base_username
+                    counter = 1
+                    
+                    while User.objects.filter(username=username).exists():
+                        username = f"{base_username}_{counter}"[:150]
+                        counter += 1
                 else:
-                    # MELHORIA: Usar o email como username para garantir unicidade.
-                    user = User.objects.create_user(
-                        username=email, 
-                        email=email,
-                        password=password,
-                        first_name=nome[:30]
-                    )
-                    messages.success(request, 'Cadastro realizado com sucesso! Você já pode fazer login.')
-                    return redirect('questoes:login')
+                    username = email
+                
+                # Cria o novo usuário
+                user = User.objects.create_user(
+                    username=username, 
+                    email=email,
+                    password=password,
+                    first_name=nome[:30]
+                )
+                
+                messages.success(request, 'Cadastro realizado com sucesso! Você já pode fazer login.')
+                return redirect('questoes:login')
+                
             except Exception as e:
                 # Log do erro para depuração
                 error_logger.error(f'Erro no cadastro de usuário {email}: {e}', exc_info=True)
@@ -1473,6 +1522,102 @@ def admin_dashboard_view(request):
     }
     
     return render(request, 'questoes/admin_dashboard.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def gerenciar_usuarios_view(request):
+    """View para gerenciar usuários - listar e deletar contas"""
+    from django.core.paginator import Paginator
+    from questoes.models import RespostaUsuario, ComentarioQuestao, RelatorioBug
+    
+    # Buscar usuários
+    search_query = request.GET.get('search', '').strip()
+    
+    if search_query:
+        usuarios = User.objects.filter(
+            Q(username__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query)
+        ).order_by('-date_joined')
+    else:
+        usuarios = User.objects.all().order_by('-date_joined')
+    
+    # Adicionar dados associados a cada usuário
+    usuarios_com_dados = []
+    for usuario in usuarios:
+        respostas_count = RespostaUsuario.objects.filter(id_usuario=usuario).count()
+        comentarios_count = ComentarioQuestao.objects.filter(id_usuario=usuario).count()
+        relatorios_count = RelatorioBug.objects.filter(id_usuario=usuario).count()
+        total_dados = respostas_count + comentarios_count + relatorios_count
+        
+        usuarios_com_dados.append({
+            'usuario': usuario,
+            'respostas': respostas_count,
+            'comentarios': comentarios_count,
+            'relatorios': relatorios_count,
+            'total_dados': total_dados,
+        })
+    
+    # Paginação
+    paginator = Paginator(usuarios_com_dados, 20)  # 20 usuários por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'search_query': search_query,
+        'total_usuarios': usuarios.count(),
+    }
+    
+    return render(request, 'questoes/gerenciar_usuarios.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+@require_POST
+def deletar_usuario_view(request, user_id):
+    """View para deletar uma conta de usuário"""
+    from questoes.models import RespostaUsuario, ComentarioQuestao, RelatorioBug
+    
+    try:
+        usuario = User.objects.get(id=user_id)
+        
+        # Verificar se não é o próprio admin tentando deletar a si mesmo
+        if usuario.id == request.user.id:
+            messages.error(request, 'Você não pode deletar sua própria conta!')
+            return redirect('questoes:gerenciar_usuarios')
+        
+        # Verificar se não é um superuser deletando outro superuser
+        if usuario.is_superuser and not request.user.is_superuser:
+            messages.error(request, 'Você não tem permissão para deletar um superusuário!')
+            return redirect('questoes:gerenciar_usuarios')
+        
+        # Contar dados associados antes de deletar
+        respostas_count = RespostaUsuario.objects.filter(id_usuario=usuario).count()
+        comentarios_count = ComentarioQuestao.objects.filter(id_usuario=usuario).count()
+        relatorios_count = RelatorioBug.objects.filter(id_usuario=usuario).count()
+        total_dados = respostas_count + comentarios_count + relatorios_count
+        
+        # Deletar o usuário (CASCADE irá deletar dados associados automaticamente)
+        email_usuario = usuario.email
+        username_usuario = usuario.username
+        usuario.delete()
+        
+        messages.success(request, f'Conta do usuário "{username_usuario}" ({email_usuario}) deletada com sucesso!')
+        messages.info(request, f'Foram removidos {total_dados} registros associados (respostas, comentários, relatórios).')
+        messages.info(request, 'O usuário agora pode se cadastrar novamente com o mesmo email.')
+        
+        error_logger.info(f'Admin {request.user.username} deletou o usuário ID {user_id} ({email_usuario}) com {total_dados} registros associados.')
+        
+    except User.DoesNotExist:
+        messages.error(request, 'Usuário não encontrado!')
+    except Exception as e:
+        error_logger.error(f'Erro ao deletar usuário {user_id}: {e}', exc_info=True)
+        messages.error(request, f'Erro ao deletar usuário: {str(e)}')
+    
+    return redirect('questoes:gerenciar_usuarios')
 
 
 @login_required

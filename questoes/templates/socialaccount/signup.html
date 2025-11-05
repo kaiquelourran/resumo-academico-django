@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block head_title %}{% trans "Entre com Google" %}{% endblock %}
+
+{% block content %}
+<style>
+.social-signup-container {
+    max-width: 500px;
+    margin: 60px auto;
+    padding: 40px;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 12px 40px rgba(0, 114, 255, 0.15), 
+                0 4px 16px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.social-signup-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #00C6FF 0%, #0072FF 50%, #667eea 100%);
+    z-index: 1;
+}
+
+.social-signup-header {
+    text-align: center;
+    margin-bottom: 30px;
+    position: relative;
+    z-index: 2;
+}
+
+.social-signup-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 4px 8px rgba(0, 114, 255, 0.3));
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.social-signup-title {
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+}
+
+.social-signup-subtitle {
+    font-size: 1rem;
+    color: #718096;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.social-signup-form {
+    position: relative;
+    z-index: 2;
+}
+
+.social-signup-form .form-group {
+    margin-bottom: 20px;
+}
+
+.social-signup-form label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 8px;
+}
+
+.social-signup-form input[type="text"],
+.social-signup-form input[type="email"] {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid #e1e8ed;
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.social-signup-form input[type="text"]:focus,
+.social-signup-form input[type="email"]:focus {
+    outline: none;
+    border-color: #0072FF;
+    box-shadow: 0 0 0 4px rgba(0, 114, 255, 0.1);
+}
+
+.social-signup-button {
+    width: 100%;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(0, 114, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.social-signup-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.social-signup-button:hover::before {
+    left: 100%;
+}
+
+.social-signup-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(0, 114, 255, 0.4);
+}
+
+.social-signup-button:active {
+    transform: translateY(0);
+}
+
+.social-signup-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+@media (max-width: 768px) {
+    .social-signup-container {
+        margin: 40px 20px;
+        padding: 30px 24px;
+    }
+    
+    .social-signup-title {
+        font-size: 1.6rem;
+    }
+    
+    .social-signup-icon {
+        font-size: 3rem;
+    }
+}
+</style>
+
+<div class="social-signup-container">
+    <div class="social-signup-header">
+        <div class="social-signup-icon">🔐</div>
+        <h1 class="social-signup-title">{% trans "Entre com Google" %}</h1>
+        <p class="social-signup-subtitle">
+            {% trans "Você está prestes a se logar usando uma conta externa do provedor Google." %}
+        </p>
+    </div>
+    
+    {% if form %}
+    <form method="post" id="social-signup-form" class="social-signup-form" action=".">
+        {% csrf_token %}
+        
+        {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <div style="color: #e53e3e; font-size: 0.875rem; margin-top: 4px;">
+                {{ field.errors|first }}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        
+        <button type="submit" class="social-signup-button">
+            {% trans "Continuar" %} →
+        </button>
+    </form>
+    {% else %}
+    <div style="text-align: center; padding: 20px;">
+        <p style="color: #718096;">{% trans "Processando..." %}</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Auto-submit imediatamente quando a página carregar
+(function() {
+    function autoSubmit() {
+        const form = document.getElementById('social-signup-form');
+        if (form) {
+            const button = form.querySelector('.social-signup-button');
+            if (button) {
+                button.disabled = true;
+                button.textContent = '{% trans "Processando..." %}';
+            }
+            form.submit();
+            return true;
+        }
+        return false;
+    }
+    
+    // Tenta imediatamente
+    if (!autoSubmit()) {
+        // Se não encontrou, tenta quando DOM estiver pronto
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', autoSubmit);
+        } else {
+            // DOM já está pronto, tenta novamente
+            setTimeout(autoSubmit, 10);
+        }
+    }
+    
+    // Também tenta quando a página estiver completamente carregada
+    window.addEventListener('load', autoSubmit);
+})();
+</script>
+{% endblock %}
+

@@ -11,6 +11,9 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('cadastro/', views.cadastro_view, name='cadastro'),
     path('logout/', views.logout_view, name='logout'),
+    # Login com Google (versão simplificada)
+    path('google/login/', views.google_login_view, name='google_login'),
+    path('google/callback/', views.google_callback_view, name='google_callback'),
    
     
     # Desempenho do usuário
@@ -79,4 +82,8 @@ urlpatterns = [
     # Marcar notificações como lidas
     path('admin/relatorios/<int:relatorio_id>/marcar-lida/', views.marcar_notificacao_lida_view, name='marcar_notificacao_lida'),
     path('admin/relatorios/marcar-todas-lidas/', views.marcar_todas_notificacoes_lidas_view, name='marcar_todas_notificacoes_lidas'),
+    
+    # Gerenciar usuários (admin)
+    path('admin/gerenciar-usuarios/', views.gerenciar_usuarios_view, name='gerenciar_usuarios'),
+    path('admin/usuarios/<int:user_id>/deletar/', views.deletar_usuario_view, name='deletar_usuario'),
 ]

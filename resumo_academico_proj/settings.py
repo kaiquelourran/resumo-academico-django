@@ -51,7 +51,7 @@ SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 # Sessões seguras
 SESSION_COOKIE_SECURE = not DEBUG  # HTTPS apenas em produção
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Strict'
+SESSION_COOKIE_SAMESITE = 'Lax'  # Alterado de 'Strict' para 'Lax' para permitir cookies em redirects do Google OAuth
 
 # ==========================================
 # PERFORMANCE (Equivalente ao .htaccess PHP)
@@ -70,8 +70,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',  # Necessário para django-allauth
+    
+    # Third-party apps
     'django_filters',  # Adicionar esta linha obrigatoriamente
     'import_export',  # django-import-export para importação em lote
+    'allauth',  # django-allauth
+    'allauth.account',  # django-allauth account management
+    'allauth.socialaccount',  # django-allauth social accounts
+    'allauth.socialaccount.providers.google',  # Google OAuth provider
+    
+    # Local apps
     'questoes',  # App de questões
     'institucional',  # App de páginas institucionais
 ]
@@ -84,6 +93,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',  # Django-allauth middleware
     'questoes.middleware.SecurityHeadersMiddleware',  # Headers de segurança customizados
 ]
 
@@ -142,8 +152,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Authentication backends (para suportar hashes do PHP)
+# Authentication backends (para suportar hashes do PHP e OAuth)
 AUTHENTICATION_BACKENDS = [
+    # Django-allauth backends (deve vir primeiro para OAuth)
+    'allauth.account.auth_backends.AuthenticationBackend',
+    # Backends customizados
     'questoes.auth_backends.PHPPasswordBackend',  # Backend customizado para PHP
     'django.contrib.auth.backends.ModelBackend',  # Backend padrão do Django
 ]
@@ -181,7 +194,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Configuração de redirecionamento após login
-LOGIN_REDIRECT_URL = '/questoes/index/'
+# LOGIN_REDIRECT_URL será definido na seção django-allauth abaixo
 LOGIN_URL = '/questoes/login/'
 
 # ==================== CONFIGURAÇÕES DE SEGURANÇA ADICIONAL ====================
@@ -213,3 +226,49 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # ID do site Django
 SITE_ID = 1
 # ==================== FIM CONFIGURAÇÕES DE COMENTÁRIOS ====================
+
+# ==================== CONFIGURAÇÕES DJANGO-ALLAUTH ====================
+# Configurações de Account (django-allauth)
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # 'mandatory' para produção, 'none' para desenvolvimento
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_ADAPTER = 'allauth.account.adapter.DefaultAccountAdapter'
+ACCOUNT_SIGNUP_EMAIL_ENTER_TWICE = False
+ACCOUNT_SESSION_REMEMBER = True
+ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 5
+ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = 300
+
+# Configurações de Social Account (Google OAuth)
+# NOTA: As credenciais do Google devem ser configuradas no Django Admin
+# em Social Accounts > Social applications
+# Variáveis de ambiente são opcionais, mas recomendadas para produção
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'VERIFIED_EMAIL': True,  # Considera emails do Google como verificados
+        # O APP será configurado automaticamente via Django Admin
+        # ou via SocialApplication model no banco de dados
+    }
+}
+
+# Após login com Google, redirecionar para:
+LOGIN_REDIRECT_URL = '/questoes/index/'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/questoes/index/'
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_REQUIRED = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
+SOCIALACCOUNT_QUERY_EMAIL = True
+SOCIALACCOUNT_STORE_TOKENS = False
+# Pular página de confirmação ao fazer login com Google (adapter customizado)
+SOCIALACCOUNT_ADAPTER = 'questoes.socialaccount_adapter.CustomSocialAccountAdapter'
+# Não mostrar formulário de confirmação - fazer login automático
+SOCIALACCOUNT_FORMS = {}
+# ==================== FIM CONFIGURAÇÕES DJANGO-ALLAUTH ====================

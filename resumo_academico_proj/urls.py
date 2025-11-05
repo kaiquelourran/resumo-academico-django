@@ -9,6 +9,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('institucional.urls')), 
     path('questoes/', include('questoes.urls')),
+    # Django-allauth URLs
+    path('accounts/', include('allauth.urls')),
 ]
 
 # Servir arquivos de media durante desenvolvimento
