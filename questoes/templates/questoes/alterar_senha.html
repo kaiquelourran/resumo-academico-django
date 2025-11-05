@@ -1,0 +1,376 @@
+{% extends 'questoes/base.html' %}
+{% load static %}
+
+{% block title %}Alterar Senha - Resumo Acadêmico{% endblock %}
+
+{% block breadcrumb %}
+<!-- Breadcrumb Navigation -->
+<div class="breadcrumb">
+    <div class="header-container">
+        <nav class="breadcrumb-nav">
+            <a href="{% url 'questoes:index' %}" class="breadcrumb-link">🏠 Início</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <a href="{% url 'questoes:privacidade' %}" class="breadcrumb-link">🔒 Privacidade</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <span class="breadcrumb-current">🔐 Alterar Senha</span>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_header %}
+<!-- Page Title Section -->
+<div class="page-header">
+    <div class="header-container">
+        <h1 class="page-title">🔐 Alterar Senha</h1>
+        <p class="page-subtitle">Altere sua senha de acesso (apenas para cadastro manual)</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background-image: linear-gradient(to top, #00C6FF, #0072FF);
+        min-height: 100vh;
+        margin: 0;
+    }
+    
+    .main-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #FFFFFF;
+        border-radius: 16px;
+        border: 1px solid transparent;
+        background-image: linear-gradient(#FFFFFF, #FFFFFF), linear-gradient(to top, #00C6FF, #0072FF);
+        background-origin: border-box;
+        background-clip: padding-box, border-box;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        padding: 0 30px 30px 30px;
+    }
+    
+    .password-container {
+        margin-top: 30px;
+    }
+    
+    .password-form {
+        background: #FFFFFF;
+        border: 1px solid #e1e5e9;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    
+    .form-group {
+        margin-bottom: 24px;
+    }
+    
+    .form-group label {
+        display: block;
+        color: #333;
+        font-weight: 600;
+        margin-bottom: 8px;
+        font-size: 1rem;
+    }
+    
+    .form-group input {
+        width: 100%;
+        padding: 14px;
+        border: 2px solid #e1e5e9;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        box-sizing: border-box;
+    }
+    
+    .form-group input:focus {
+        outline: none;
+        border-color: #0072FF;
+        box-shadow: 0 0 0 3px rgba(0,114,255,0.1);
+    }
+    
+    .form-group .help-text {
+        color: #666;
+        font-size: 0.85rem;
+        margin-top: 6px;
+        display: block;
+    }
+    
+    .password-strength {
+        margin-top: 8px;
+        height: 4px;
+        background: #e1e5e9;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    
+    .password-strength-bar {
+        height: 100%;
+        width: 0%;
+        background: #dc3545;
+        transition: all 0.3s ease;
+    }
+    
+    .password-strength-bar.medium {
+        background: #ffc107;
+    }
+    
+    .password-strength-bar.strong {
+        background: #28a745;
+    }
+    
+    .password-strength-text {
+        color: #666;
+        font-size: 0.85rem;
+        margin-top: 6px;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 30px;
+    }
+    
+    .btn {
+        padding: 14px 28px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%);
+        color: #FFFFFF;
+        flex: 1;
+    }
+    
+    .btn-primary:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 16px rgba(0,114,255,0.3);
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: #FFFFFF;
+    }
+    
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+    
+    .info-box {
+        background: #e7f3ff;
+        border-left: 4px solid #0072FF;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 24px;
+    }
+    
+    .info-box h3 {
+        color: #0072FF;
+        font-size: 1.1rem;
+        margin-bottom: 8px;
+    }
+    
+    .info-box p {
+        color: #333;
+        margin: 0;
+        font-size: 0.95rem;
+        line-height: 1.5;
+    }
+    
+    .password-toggle {
+        position: relative;
+    }
+    
+    .password-toggle-icon {
+        position: absolute;
+        right: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #666;
+        font-size: 1.2rem;
+    }
+    
+    .password-toggle-icon:hover {
+        color: #0072FF;
+    }
+    
+    @media (max-width: 768px) {
+        .form-actions {
+            flex-direction: column;
+        }
+        
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="password-container">
+    <div class="password-form">
+        <div class="info-box">
+            <h3>ℹ️ Informação</h3>
+            <p>Esta funcionalidade está disponível apenas para contas criadas com cadastro manual. Se você fez login com Google, use o botão "Continuar com Google" para fazer login.</p>
+        </div>
+        
+        {% if messages %}
+        <div style="margin-bottom: 24px;">
+            {% for message in messages %}
+            <div style="padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; 
+                        {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+                        {% elif message.tags == 'success' %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;
+                        {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+                        {% else %}background: #d1ecf1; color: #0c5460; border-left: 4px solid #17a2b8;
+                        {% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="{% url 'questoes:alterar_senha' %}" id="formAlterarSenha">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="senha_atual">Senha Atual *</label>
+                <div class="password-toggle">
+                    <input type="password" id="senha_atual" name="senha_atual" required autocomplete="current-password">
+                    <span class="password-toggle-icon" onclick="togglePassword('senha_atual', this)">
+                        <i class="fas fa-eye"></i>
+                    </span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="senha_nova">Nova Senha *</label>
+                <div class="password-toggle">
+                    <input type="password" id="senha_nova" name="senha_nova" required autocomplete="new-password" minlength="6" oninput="checkPasswordStrength(this.value)">
+                    <span class="password-toggle-icon" onclick="togglePassword('senha_nova', this)">
+                        <i class="fas fa-eye"></i>
+                    </span>
+                </div>
+                <span class="help-text">A senha deve ter pelo menos 6 caracteres</span>
+                <div class="password-strength">
+                    <div class="password-strength-bar" id="passwordStrengthBar"></div>
+                </div>
+                <div class="password-strength-text" id="passwordStrengthText"></div>
+            </div>
+            
+            <div class="form-group">
+                <label for="senha_nova_confirmacao">Confirmar Nova Senha *</label>
+                <div class="password-toggle">
+                    <input type="password" id="senha_nova_confirmacao" name="senha_nova_confirmacao" required autocomplete="new-password" minlength="6" oninput="checkPasswordMatch()">
+                    <span class="password-toggle-icon" onclick="togglePassword('senha_nova_confirmacao', this)">
+                        <i class="fas fa-eye"></i>
+                    </span>
+                </div>
+                <span class="help-text" id="passwordMatchText"></span>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-key"></i> Alterar Senha
+                </button>
+                <a href="{% url 'questoes:privacidade' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function togglePassword(inputId, icon) {
+    const input = document.getElementById(inputId);
+    const iconElement = icon.querySelector('i');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        iconElement.classList.remove('fa-eye');
+        iconElement.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        iconElement.classList.remove('fa-eye-slash');
+        iconElement.classList.add('fa-eye');
+    }
+}
+
+function checkPasswordStrength(password) {
+    const strengthBar = document.getElementById('passwordStrengthBar');
+    const strengthText = document.getElementById('passwordStrengthText');
+    
+    let strength = 0;
+    let text = '';
+    
+    if (password.length >= 6) strength += 20;
+    if (password.length >= 8) strength += 20;
+    if (/[a-z]/.test(password)) strength += 20;
+    if (/[A-Z]/.test(password)) strength += 20;
+    if (/[0-9]/.test(password)) strength += 10;
+    if (/[^a-zA-Z0-9]/.test(password)) strength += 10;
+    
+    strengthBar.style.width = strength + '%';
+    
+    if (strength < 40) {
+        strengthBar.className = 'password-strength-bar';
+        text = 'Senha fraca';
+    } else if (strength < 70) {
+        strengthBar.className = 'password-strength-bar medium';
+        text = 'Senha média';
+    } else {
+        strengthBar.className = 'password-strength-bar strong';
+        text = 'Senha forte';
+    }
+    
+    strengthText.textContent = text;
+}
+
+function checkPasswordMatch() {
+    const senhaNova = document.getElementById('senha_nova').value;
+    const senhaConfirmacao = document.getElementById('senha_nova_confirmacao').value;
+    const matchText = document.getElementById('passwordMatchText');
+    
+    if (senhaConfirmacao.length === 0) {
+        matchText.textContent = '';
+        return;
+    }
+    
+    if (senhaNova === senhaConfirmacao) {
+        matchText.textContent = '✓ Senhas coincidem';
+        matchText.style.color = '#28a745';
+    } else {
+        matchText.textContent = '✗ Senhas não coincidem';
+        matchText.style.color = '#dc3545';
+    }
+}
+
+// Validação antes de enviar
+document.getElementById('formAlterarSenha').addEventListener('submit', function(e) {
+    const senhaNova = document.getElementById('senha_nova').value;
+    const senhaConfirmacao = document.getElementById('senha_nova_confirmacao').value;
+    
+    if (senhaNova !== senhaConfirmacao) {
+        e.preventDefault();
+        alert('As senhas novas não coincidem. Por favor, verifique e tente novamente.');
+        return false;
+    }
+    
+    if (senhaNova.length < 6) {
+        e.preventDefault();
+        alert('A senha deve ter pelo menos 6 caracteres.');
+        return false;
+    }
+});
+</script>
+{% endblock %}
+

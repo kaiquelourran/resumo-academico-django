@@ -2414,3 +2414,380 @@ def api_notificacoes(request):
     """Placeholder para a API de notificações."""
     # Lógica da API de notificações (ex: notificações do admin)
     return JsonResponse({'status': 'ok', 'notifications': []}, status=200)
+
+# ==================== LGPD - SEGURANÇA E PRIVACIDADE ====================
+
+@login_required
+def privacidade_view(request):
+    """View para página de privacidade e configurações LGPD"""
+    return render(request, 'questoes/privacidade.html')
+
+@login_required
+def meus_dados_view(request):
+    """View para exibir todos os dados do usuário (LGPD - Acesso aos Dados)"""
+    from django.db.models import Count, Q
+    from datetime import datetime
+    
+    user = request.user
+    
+    # Dados pessoais
+    dados_pessoais = {
+        'nome': user.first_name or user.username,
+        'username': user.username,
+        'email': user.email,
+        'data_cadastro': user.date_joined,
+        'ultimo_login': user.last_login,
+        'ativo': user.is_active,
+        'staff': user.is_staff,
+    }
+    
+    # Foto do Google (se houver)
+    foto_google = None
+    if hasattr(user, 'perfil') and user.perfil.foto_google:
+        foto_google = user.perfil.foto_google
+    
+    # Dados de estudo
+    total_respostas = RespostaUsuario.objects.filter(id_usuario=user).count()
+    respostas_corretas = RespostaUsuario.objects.filter(
+        id_usuario=user,
+        acertou=True
+    ).count()
+    taxa_acerto_geral = (respostas_corretas / total_respostas * 100) if total_respostas > 0 else 0
+    
+    # Estatísticas por assunto
+    estatisticas_por_assunto = []
+    # Buscar assuntos através das respostas do usuário
+    assuntos_ids = RespostaUsuario.objects.filter(
+        id_usuario=user
+    ).values_list('id_questao__id_assunto', flat=True).distinct()
+    assuntos = Assunto.objects.filter(id__in=assuntos_ids)
+    
+    for assunto in assuntos:
+        total_assunto = RespostaUsuario.objects.filter(
+            id_usuario=user,
+            id_questao__id_assunto=assunto
+        ).count()
+        corretas_assunto = RespostaUsuario.objects.filter(
+            id_usuario=user,
+            id_questao__id_assunto=assunto,
+            acertou=True
+        ).count()
+        taxa_assunto = (corretas_assunto / total_assunto * 100) if total_assunto > 0 else 0
+        
+        estatisticas_por_assunto.append({
+            'assunto': assunto.nome,
+            'total': total_assunto,
+            'corretas': corretas_assunto,
+            'taxa': round(taxa_assunto, 2)
+        })
+    
+    # Dados de interação
+    total_comentarios = ComentarioQuestao.objects.filter(id_usuario=user).count()
+    total_relatorios = RelatorioBug.objects.filter(id_usuario=user).count()
+    total_curtidas = CurtidaComentario.objects.filter(id_usuario=user).count()
+    
+    # Última resposta
+    ultima_resposta = RespostaUsuario.objects.filter(id_usuario=user).order_by('-data_resposta').first()
+    ultima_resposta_data = ultima_resposta.data_resposta if ultima_resposta else None
+    
+    # Histórico de logins (últimos 10)
+    historico_logins = []
+    # Nota: Django não armazena histórico de logins por padrão
+    # Isso seria implementado com um modelo de LogLogin se necessário
+    
+    context = {
+        'dados_pessoais': dados_pessoais,
+        'foto_google': foto_google,
+        'total_respostas': total_respostas,
+        'respostas_corretas': respostas_corretas,
+        'taxa_acerto_geral': round(taxa_acerto_geral, 2),
+        'estatisticas_por_assunto': estatisticas_por_assunto,
+        'total_comentarios': total_comentarios,
+        'total_relatorios': total_relatorios,
+        'total_curtidas': total_curtidas,
+        'ultima_resposta_data': ultima_resposta_data,
+        'historico_logins': historico_logins,
+    }
+    
+    return render(request, 'questoes/meus_dados.html', context)
+
+@login_required
+def exportar_dados_view(request):
+    """View para exportar todos os dados do usuário (LGPD - Exportação de Dados)"""
+    from django.http import HttpResponse
+    from django.core.serializers.json import DjangoJSONEncoder
+    from datetime import datetime
+    
+    user = request.user
+    formato = request.GET.get('formato', 'json')  # json, csv
+    
+    # Coletar todos os dados
+    dados = {}
+    
+    # Dados pessoais
+    dados['usuario'] = {
+        'nome': user.first_name or user.username,
+        'username': user.username,
+        'email': user.email,
+        'data_cadastro': user.date_joined.isoformat() if user.date_joined else None,
+        'ultimo_login': user.last_login.isoformat() if user.last_login else None,
+        'ativo': user.is_active,
+        'staff': user.is_staff,
+    }
+    
+    # Foto do Google
+    if hasattr(user, 'perfil') and user.perfil.foto_google:
+        dados['usuario']['foto_google'] = user.perfil.foto_google
+    
+    # Estatísticas gerais
+    total_respostas = RespostaUsuario.objects.filter(id_usuario=user).count()
+    respostas_corretas = RespostaUsuario.objects.filter(
+        id_usuario=user,
+        acertou=True
+    ).count()
+    taxa_acerto_geral = (respostas_corretas / total_respostas * 100) if total_respostas > 0 else 0
+    
+    dados['estatisticas'] = {
+        'total_respostas': total_respostas,
+        'respostas_corretas': respostas_corretas,
+        'taxa_acerto_geral': round(taxa_acerto_geral, 2),
+        'total_comentarios': ComentarioQuestao.objects.filter(id_usuario=user).count(),
+        'total_relatorios': RelatorioBug.objects.filter(id_usuario=user).count(),
+        'total_curtidas': CurtidaComentario.objects.filter(id_usuario=user).count(),
+    }
+    
+    # Estatísticas por assunto
+    estatisticas_por_assunto = []
+    # Buscar assuntos através das respostas do usuário
+    assuntos_ids = RespostaUsuario.objects.filter(
+        id_usuario=user
+    ).values_list('id_questao__id_assunto', flat=True).distinct()
+    assuntos = Assunto.objects.filter(id__in=assuntos_ids)
+    for assunto in assuntos:
+        total_assunto = RespostaUsuario.objects.filter(
+            id_usuario=user,
+            id_questao__id_assunto=assunto
+        ).count()
+        corretas_assunto = RespostaUsuario.objects.filter(
+            id_usuario=user,
+            id_questao__id_assunto=assunto,
+            acertou=True
+        ).count()
+        taxa_assunto = (corretas_assunto / total_assunto * 100) if total_assunto > 0 else 0
+        
+        estatisticas_por_assunto.append({
+            'assunto': assunto.nome,
+            'total': total_assunto,
+            'corretas': corretas_assunto,
+            'taxa': round(taxa_assunto, 2)
+        })
+    dados['estatisticas']['por_assunto'] = estatisticas_por_assunto
+    
+    # Histórico de respostas (últimas 1000)
+    historico_respostas = RespostaUsuario.objects.filter(
+        id_usuario=user
+    ).order_by('-data_resposta')[:1000].values(
+        'id_questao__id',
+        'id_questao__texto',
+        'id_questao__id_assunto__nome',
+        'acertou',
+        'data_resposta'
+    )
+    
+    dados['historico_respostas'] = list(historico_respostas)
+    for item in dados['historico_respostas']:
+        if item.get('data_resposta'):
+            item['data_resposta'] = item['data_resposta'].isoformat()
+        # Renomear acertou para resposta_correta no JSON para melhor legibilidade
+        if 'acertou' in item:
+            item['resposta_correta'] = item.pop('acertou')
+    
+    # Comentários
+    comentarios = ComentarioQuestao.objects.filter(
+        id_usuario=user
+    ).order_by('-data_comentario').values(
+        'id_questao__id',
+        'comentario',
+        'data_comentario'
+    )
+    
+    dados['comentarios'] = list(comentarios)
+    for item in dados['comentarios']:
+        if item['data_comentario']:
+            item['data_comentario'] = item['data_comentario'].isoformat()
+    
+    # Relatórios
+    relatorios = RelatorioBug.objects.filter(
+        id_usuario=user
+    ).order_by('-data_criacao').values(
+        'titulo',
+        'descricao',
+        'tipo_problema',
+        'status',
+        'data_criacao',
+        'resposta_admin'
+    )
+    
+    dados['relatorios'] = list(relatorios)
+    for item in dados['relatorios']:
+        if item['data_criacao']:
+            item['data_criacao'] = item['data_criacao'].isoformat()
+    
+    # Adicionar metadados
+    dados['metadata'] = {
+        'data_exportacao': datetime.now().isoformat(),
+        'versao': '1.0'
+    }
+    
+    # Gerar resposta
+    if formato == 'json':
+        import json
+        response = HttpResponse(
+            json.dumps(dados, indent=2, ensure_ascii=False, cls=DjangoJSONEncoder),
+            content_type='application/json; charset=utf-8'
+        )
+        response['Content-Disposition'] = f'attachment; filename="meus_dados_{user.username}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json"'
+        return response
+    
+    elif formato == 'csv':
+        import csv
+        from io import StringIO
+        
+        output = StringIO()
+        writer = csv.writer(output)
+        
+        # Escrever dados pessoais
+        writer.writerow(['Dados Pessoais'])
+        writer.writerow(['Campo', 'Valor'])
+        for key, value in dados['usuario'].items():
+            writer.writerow([key, value])
+        
+        writer.writerow([])
+        writer.writerow(['Estatísticas'])
+        writer.writerow(['Campo', 'Valor'])
+        for key, value in dados['estatisticas'].items():
+            if key != 'por_assunto':
+                writer.writerow([key, value])
+        
+        writer.writerow([])
+        writer.writerow(['Estatísticas por Assunto'])
+        writer.writerow(['Assunto', 'Total', 'Corretas', 'Taxa (%)'])
+        for assunto in dados['estatisticas']['por_assunto']:
+            writer.writerow([
+                assunto['assunto'],
+                assunto['total'],
+                assunto['corretas'],
+                assunto['taxa']
+            ])
+        
+        response = HttpResponse(output.getvalue(), content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="meus_dados_{user.username}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        return response
+    
+    # Fallback para JSON
+    import json
+    response = HttpResponse(
+        json.dumps(dados, indent=2, ensure_ascii=False, cls=DjangoJSONEncoder),
+        content_type='application/json; charset=utf-8'
+    )
+    response['Content-Disposition'] = f'attachment; filename="meus_dados_{user.username}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json"'
+    return response
+
+@login_required
+@require_POST
+def excluir_conta_view(request):
+    """View para excluir conta do usuário (LGPD - Direito ao Esquecimento)"""
+    from django.contrib.auth import logout
+    from django.db import transaction
+    
+    # Verificar senha
+    senha = request.POST.get('senha', '')
+    if not senha:
+        messages.error(request, 'Por favor, digite sua senha para confirmar a exclusão.')
+        return redirect('questoes:privacidade')
+    
+    # Validar senha
+    user = authenticate(request, username=request.user.username, password=senha)
+    if not user or user.id != request.user.id:
+        messages.error(request, 'Senha incorreta. Por favor, tente novamente.')
+        return redirect('questoes:privacidade')
+    
+    # Contar dados antes de deletar
+    total_respostas = RespostaUsuario.objects.filter(id_usuario=user).count()
+    total_comentarios = ComentarioQuestao.objects.filter(id_usuario=user).count()
+    total_relatorios = RelatorioBug.objects.filter(id_usuario=user).count()
+    total_dados = total_respostas + total_comentarios + total_relatorios
+    
+    # Confirmar exclusão
+    confirmacao = request.POST.get('confirmacao', '')
+    if confirmacao != 'CONFIRMAR':
+        messages.error(request, 'Por favor, digite "CONFIRMAR" para confirmar a exclusão.')
+        return redirect('questoes:privacidade')
+    
+    try:
+        with transaction.atomic():
+            # Armazenar informações para log
+            email_usuario = user.email
+            username_usuario = user.username
+            
+            # Deletar o usuário (CASCADE irá deletar dados associados automaticamente)
+            user.delete()
+            
+            # Fazer logout
+            logout(request)
+            
+            # Log da exclusão
+            error_logger.info(f'Conta deletada: {username_usuario} ({email_usuario}) - {total_dados} registros removidos')
+            
+            messages.success(request, 'Sua conta foi excluída com sucesso. Todos os seus dados foram removidos permanentemente.')
+            messages.info(request, f'Foram removidos {total_dados} registros associados (respostas, comentários, relatórios).')
+            
+            return redirect('questoes:login')
+            
+    except Exception as e:
+        error_logger.error(f'Erro ao excluir conta do usuário {user.id}: {e}', exc_info=True)
+        messages.error(request, f'Erro ao excluir conta. Por favor, tente novamente. Erro: {str(e)}')
+        return redirect('questoes:privacidade')
+
+@login_required
+def alterar_senha_view(request):
+    """View para alterar senha do usuário (apenas para cadastro manual)"""
+    from django.contrib.auth import update_session_auth_hash
+    from django.contrib.auth.hashers import check_password
+    
+    # Verificar se o usuário tem senha (não é login apenas com Google)
+    if not request.user.has_usable_password():
+        messages.warning(request, 'Você não pode alterar a senha porque sua conta foi criada com Google. Use o botão "Continuar com Google" para fazer login.')
+        return redirect('questoes:privacidade')
+    
+    if request.method == 'POST':
+        senha_atual = request.POST.get('senha_atual', '')
+        senha_nova = request.POST.get('senha_nova', '')
+        senha_nova_confirmacao = request.POST.get('senha_nova_confirmacao', '')
+        
+        # Validações
+        if not senha_atual or not senha_nova or not senha_nova_confirmacao:
+            messages.error(request, 'Por favor, preencha todos os campos.')
+        elif not check_password(senha_atual, request.user.password):
+            messages.error(request, 'Senha atual incorreta.')
+        elif senha_nova != senha_nova_confirmacao:
+            messages.error(request, 'As senhas novas não coincidem.')
+        elif len(senha_nova) < 6:
+            messages.error(request, 'A senha deve ter pelo menos 6 caracteres.')
+        else:
+            try:
+                # Alterar senha
+                request.user.set_password(senha_nova)
+                request.user.save()
+                
+                # Atualizar sessão para não fazer logout
+                update_session_auth_hash(request, request.user)
+                
+                messages.success(request, 'Senha alterada com sucesso!')
+                return redirect('questoes:privacidade')
+                
+            except Exception as e:
+                error_logger.error(f'Erro ao alterar senha do usuário {request.user.id}: {e}', exc_info=True)
+                messages.error(request, f'Erro ao alterar senha. Por favor, tente novamente. Erro: {str(e)}')
+    
+    return render(request, 'questoes/alterar_senha.html')

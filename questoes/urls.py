@@ -86,4 +86,11 @@ urlpatterns = [
     # Gerenciar usuários (admin)
     path('admin/gerenciar-usuarios/', views.gerenciar_usuarios_view, name='gerenciar_usuarios'),
     path('admin/usuarios/<int:user_id>/deletar/', views.deletar_usuario_view, name='deletar_usuario'),
+    
+    # LGPD - Privacidade e Dados
+    path('privacidade/', views.privacidade_view, name='privacidade'),
+    path('meus-dados/', views.meus_dados_view, name='meus_dados'),
+    path('exportar-dados/', views.exportar_dados_view, name='exportar_dados'),
+    path('excluir-conta/', views.excluir_conta_view, name='excluir_conta'),
+    path('alterar-senha/', views.alterar_senha_view, name='alterar_senha'),
 ]

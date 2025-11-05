@@ -51,7 +51,12 @@
         <ul style="margin: 15px 0 15px 30px; line-height: 1.8;">
             <li><strong>E-mail de Cadastro:</strong> Para criar sua conta e permitir acesso ao sistema de questões</li>
             <li><strong>Nome de usuário:</strong> Para personalização da experiência</li>
+            <li><strong>Nome completo:</strong> Para personalização e identificação</li>
+            <li><strong>Senha:</strong> Para autenticação e segurança da conta (criptografada)</li>
             <li><strong>Respostas às questões:</strong> Para gerar estatísticas e acompanhar seu progresso</li>
+            <li><strong>Comentários:</strong> Comentários feitos nas questões</li>
+            <li><strong>Relatórios de problemas:</strong> Relatórios enviados através do sistema</li>
+            <li><strong>Foto de perfil:</strong> Se você fizer login com Google, coletamos sua foto de perfil</li>
             <li><strong>Dados de contato:</strong> Caso você entre em contato conosco através do formulário</li>
         </ul>
 
@@ -114,8 +119,25 @@
             <li>ℹ️ <strong>Informação:</strong> Obter informações sobre as entidades com as quais compartilhamos dados</li>
         </ul>
 
-        <p style="margin: 20px 0; padding: 15px; background: #f0f9ff; border-left: 4px solid #0072FF; border-radius: 5px;">
-            <strong>Para exercer seus direitos:</strong> Entre em contato conosco através do e-mail <a href="mailto:Cleicevitoria02@gmail.com" style="color: #0072FF; text-decoration: underline;">Cleicevitoria02@gmail.com</a> ou através do nosso <a href="{% url 'institucional:contato' %}" style="color: #0072FF; text-decoration: underline;">formulário de contato</a>.
+        <h4 style="color: #333; margin: 20px 0 10px;">5.1. Como Exercer seus Direitos no Sistema</h4>
+        <p>Você pode exercer seus direitos diretamente no sistema, sem precisar entrar em contato conosco:</p>
+        
+        <div style="margin: 20px 0; padding: 20px; background: #f0f9ff; border-left: 4px solid #0072FF; border-radius: 8px;">
+            <p style="margin-bottom: 12px;"><strong>📊 Acesso aos Dados:</strong></p>
+            <p style="margin-bottom: 16px;">Visualize todos os dados que temos sobre você diretamente no sistema. Acesse a página <strong>"Privacidade"</strong> no menu de navegação e clique em <strong>"Ver Meus Dados"</strong>.</p>
+            
+            <p style="margin-bottom: 12px;"><strong>📥 Exportar Dados:</strong></p>
+            <p style="margin-bottom: 16px;">Baixe todos os seus dados em formato JSON ou CSV. Acesse a página <strong>"Privacidade"</strong> e clique em <strong>"Exportar Dados"</strong>. Você receberá um arquivo com todos os seus dados pessoais, estatísticas, histórico de respostas, comentários e relatórios.</p>
+            
+            <p style="margin-bottom: 12px;"><strong>🗑️ Excluir Conta:</strong></p>
+            <p style="margin-bottom: 16px;">Remova sua conta e todos os dados associados permanentemente. Acesse a página <strong>"Privacidade"</strong> e clique em <strong>"Excluir Conta"</strong>. Esta ação não pode ser desfeita.</p>
+            
+            <p style="margin-bottom: 12px;"><strong>🔐 Alterar Senha:</strong></p>
+            <p style="margin-bottom: 0;">Altere sua senha de acesso a qualquer momento. Acesse a página <strong>"Privacidade"</strong> e clique em <strong>"Alterar Senha"</strong> (disponível apenas para contas criadas com cadastro manual).</p>
+        </div>
+        
+        <p style="margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 5px;">
+            <strong>Para outras solicitações:</strong> Entre em contato conosco através do e-mail <a href="mailto:Cleicevitoria02@gmail.com" style="color: #0072FF; text-decoration: underline;">Cleicevitoria02@gmail.com</a> ou através do nosso <a href="{% url 'institucional:contato' %}" style="color: #0072FF; text-decoration: underline;">formulário de contato</a>.
         </p>
 
         <hr style="margin: 30px 0; border: none; border-top: 2px solid #e5e7eb;">

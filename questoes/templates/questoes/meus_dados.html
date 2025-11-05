@@ -1,0 +1,374 @@
+{% extends 'questoes/base.html' %}
+{% load static %}
+
+{% block title %}Meus Dados - Resumo Acadêmico{% endblock %}
+
+{% block breadcrumb %}
+<!-- Breadcrumb Navigation -->
+<div class="breadcrumb">
+    <div class="header-container">
+        <nav class="breadcrumb-nav">
+            <a href="{% url 'questoes:index' %}" class="breadcrumb-link">🏠 Início</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <a href="{% url 'questoes:privacidade' %}" class="breadcrumb-link">🔒 Privacidade</a>
+            <i class="fas fa-chevron-right breadcrumb-separator"></i>
+            <span class="breadcrumb-current">📊 Meus Dados</span>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_header %}
+<!-- Page Title Section -->
+<div class="page-header">
+    <div class="header-container">
+        <h1 class="page-title">📊 Meus Dados Pessoais</h1>
+        <p class="page-subtitle">Visualize todos os dados que temos sobre você (LGPD - Acesso aos Dados)</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background-image: linear-gradient(to top, #00C6FF, #0072FF);
+        min-height: 100vh;
+        margin: 0;
+    }
+    
+    .main-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        background: #FFFFFF;
+        border-radius: 16px;
+        border: 1px solid transparent;
+        background-image: linear-gradient(#FFFFFF, #FFFFFF), linear-gradient(to top, #00C6FF, #0072FF);
+        background-origin: border-box;
+        background-clip: padding-box, border-box;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        padding: 0 30px 30px 30px;
+    }
+    
+    .data-container {
+        margin-top: 0;
+        padding-top: 0;
+    }
+    
+    /* Garantir que o page-header use o padrão global */
+    .page-header {
+        margin: 12px 0 20px 0;
+    }
+    
+    .data-section {
+        background: #FFFFFF;
+        border: 1px solid #e1e5e9;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 20px;
+        margin-top: 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    
+    .data-section:first-of-type {
+        margin-top: 0;
+    }
+    
+    .data-section h2 {
+        color: #0072FF;
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 2px solid #e1e5e9;
+        padding-bottom: 12px;
+    }
+    
+    .data-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .data-item:last-child {
+        border-bottom: none;
+    }
+    
+    .data-label {
+        color: #333;
+        font-weight: 600;
+        flex: 1;
+    }
+    
+    .data-value {
+        color: #666;
+        flex: 2;
+        text-align: right;
+    }
+    
+    .data-value strong {
+        color: #0072FF;
+    }
+    
+    .data-value img {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 16px;
+        text-align: center;
+    }
+    
+    .stat-value {
+        color: #0072FF;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+    
+    .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .assunto-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 8px;
+    }
+    
+    .assunto-nome {
+        color: #333;
+        font-weight: 600;
+        flex: 1;
+    }
+    
+    .assunto-stats {
+        display: flex;
+        gap: 16px;
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .assunto-stats span {
+        padding: 4px 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+    }
+    
+    .back-btn {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        color: #FFFFFF;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .back-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 16px rgba(108,117,125,0.3);
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .badge.active {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .badge.inactive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .badge.staff {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    @media (max-width: 768px) {
+        .data-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .data-value {
+            text-align: left;
+            margin-top: 8px;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .assunto-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .assunto-stats {
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="data-container" style="margin-top: 0;">
+    <!-- Dados Pessoais -->
+    <div class="data-section">
+        <h2>📝 Dados Pessoais</h2>
+        <div class="data-item">
+            <span class="data-label">Nome:</span>
+            <span class="data-value"><strong>{{ dados_pessoais.nome }}</strong></span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Username:</span>
+            <span class="data-value">{{ dados_pessoais.username }}</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Email:</span>
+            <span class="data-value">{{ dados_pessoais.email }}</span>
+        </div>
+        {% if foto_google %}
+        <div class="data-item">
+            <span class="data-label">Foto de Perfil:</span>
+            <span class="data-value"><img src="{{ foto_google }}" alt="Foto de Perfil"></span>
+        </div>
+        {% endif %}
+        <div class="data-item">
+            <span class="data-label">Data de Cadastro:</span>
+            <span class="data-value">{{ dados_pessoais.data_cadastro|date:"d/m/Y às H:i" }}</span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Último Login:</span>
+            <span class="data-value">
+                {% if dados_pessoais.ultimo_login %}
+                    {{ dados_pessoais.ultimo_login|date:"d/m/Y às H:i" }}
+                {% else %}
+                    Nunca
+                {% endif %}
+            </span>
+        </div>
+        <div class="data-item">
+            <span class="data-label">Status da Conta:</span>
+            <span class="data-value">
+                {% if dados_pessoais.ativo %}
+                    <span class="badge active">Ativa</span>
+                {% else %}
+                    <span class="badge inactive">Inativa</span>
+                {% endif %}
+                {% if dados_pessoais.staff %}
+                    <span class="badge staff">Staff</span>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+    
+    <!-- Dados de Estudo -->
+    <div class="data-section">
+        <h2>📊 Dados de Estudo</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_respostas }}</div>
+                <div class="stat-label">Total de Respostas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ respostas_corretas }}</div>
+                <div class="stat-label">Respostas Corretas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ taxa_acerto_geral }}%</div>
+                <div class="stat-label">Taxa de Acerto Geral</div>
+            </div>
+            {% if ultima_resposta_data %}
+            <div class="stat-card">
+                <div class="stat-value">{{ ultima_resposta_data|date:"d/m" }}</div>
+                <div class="stat-label">Última Resposta</div>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if estatisticas_por_assunto %}
+        <h3 style="color: #0072FF; margin-top: 24px; margin-bottom: 16px;">Estatísticas por Assunto</h3>
+        {% for assunto in estatisticas_por_assunto %}
+        <div class="assunto-item">
+            <div class="assunto-nome">{{ assunto.assunto }}</div>
+            <div class="assunto-stats">
+                <span>Total: {{ assunto.total }}</span>
+                <span>Corretas: {{ assunto.corretas }}</span>
+                <span>Taxa: {{ assunto.taxa }}%</span>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+    
+    <!-- Dados de Interação -->
+    <div class="data-section">
+        <h2>💬 Dados de Interação</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ total_comentarios }}</div>
+                <div class="stat-label">Comentários Feitos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ total_relatorios }}</div>
+                <div class="stat-label">Relatórios Enviados</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ total_curtidas }}</div>
+                <div class="stat-label">Curtidas Dadas</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ações -->
+    <div class="data-section">
+        <h2>⚙️ Ações</h2>
+        <p style="color: #666; margin-bottom: 20px;">Você pode exportar seus dados ou excluir sua conta a qualquer momento.</p>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="{% url 'questoes:exportar_dados' %}?formato=json" class="back-btn" style="background: linear-gradient(135deg, #0072FF 0%, #00C6FF 100%);">
+                <i class="fas fa-download"></i> Exportar Dados (JSON)
+            </a>
+            <a href="{% url 'questoes:exportar_dados' %}?formato=csv" class="back-btn" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <i class="fas fa-file-csv"></i> Exportar Dados (CSV)
+            </a>
+            <a href="{% url 'questoes:privacidade' %}" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Voltar para Privacidade
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
