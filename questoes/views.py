@@ -2097,6 +2097,15 @@ def api_comentarios(request):
                             except Exception:
                                 pass
                         
+                        # Obter foto do Google do usuário (se houver)
+                        avatar_url = None
+                        if resposta.id_usuario and hasattr(resposta.id_usuario, 'perfil'):
+                            try:
+                                if resposta.id_usuario.perfil.foto_google:
+                                    avatar_url = resposta.id_usuario.perfil.foto_google
+                            except Exception:
+                                pass
+                        
                         respostas_data.append({
                             'id_comentario': resposta.id,
                             'id': resposta.id,  # Fallback
@@ -2105,10 +2114,20 @@ def api_comentarios(request):
                             'data_formatada': resposta.data_comentario.strftime('%d/%m/%Y às %H:%M') if resposta.data_comentario else '',
                             'total_curtidas': resp_curtidas,
                             'curtido_pelo_usuario': resp_curtido_pelo_usuario,
+                            'avatar_url': avatar_url,
                         })
                     except Exception as e:
                         error_logger.error(f'Erro ao processar resposta: {str(e)}')
                         continue
+                
+                # Obter foto do Google do usuário (se houver)
+                avatar_url = None
+                if comentario.id_usuario and hasattr(comentario.id_usuario, 'perfil'):
+                    try:
+                        if comentario.id_usuario.perfil.foto_google:
+                            avatar_url = comentario.id_usuario.perfil.foto_google
+                    except Exception:
+                        pass
                 
                 comentarios_data.append({
                     'id_comentario': comentario.id,
@@ -2120,6 +2139,7 @@ def api_comentarios(request):
                     'curtido_pelo_usuario': curtido_pelo_usuario,
                     'total_respostas': total_respostas,
                     'respostas': respostas_data,
+                    'avatar_url': avatar_url,
                 })
             except Exception as e:
                 error_logger.error(f'Erro ao processar comentário {comentario.id if hasattr(comentario, "id") else "desconhecido"}: {str(e)}')

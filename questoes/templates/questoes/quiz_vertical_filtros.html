@@ -154,7 +154,11 @@
                         <div class="comment-user-info">
                             <div class="user-avatar">
                                 {% if user.is_authenticated %}
-                                    <i class="fas fa-user"></i>
+                                    {% if user.perfil.foto_google %}
+                                        <img src="{{ user.perfil.foto_google }}" alt="{{ user.first_name|default:user.username }}" class="avatar-img">
+                                    {% else %}
+                                        <i class="fas fa-user"></i>
+                                    {% endif %}
                                 {% else %}
                                     <i class="fas fa-user"></i>
                                 {% endif %}
@@ -484,7 +488,7 @@
                       <div class="add-comment-form">
                         <div class="comment-user-info">
                           <div class="user-avatar">
-                            <i class="fas fa-user"></i>
+                            ${userAuthenticated && userAvatarUrl ? `<img src="${userAvatarUrl}" alt="Avatar" class="avatar-img">` : `<i class="fas fa-user"></i>`}
                           </div>
                           <div class="user-name">Usuário</div>
                         </div>
@@ -1404,7 +1408,8 @@
     const assuntoId = {{ assunto.pk }};
     const filtroAtivo = '{{ filtro_ativo|escapejs }}';
     const questaoInicial = {{ questao_inicial }};
-    const userAuthenticated = {{ user_authenticated|yesno:"true,false" }};
+    const userAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
+    const userAvatarUrl = {% if user.is_authenticated and user.perfil.foto_google %}'{{ user.perfil.foto_google }}'{% else %}null{% endif %};
     const csrfToken = '{{ csrf_token|escapejs }}';
     
 </script>
@@ -1715,11 +1720,11 @@
 }
 
 .comment-avatar img, .user-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
-  display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
 }
 
 .user-status {

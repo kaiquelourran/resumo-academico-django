@@ -713,6 +713,24 @@
 {% endblock %}
 
 {% block content %}
+<!-- Indicador de Mensagens (apenas na página inicial) -->
+{% if user.is_authenticated %}
+<div class="message-indicator-container">
+    <div class="message-indicator" id="messageIndicator" onclick="toggleNotifications()">
+        <span class="message-icon">🔔</span>
+        <span class="message-text">
+            {% if total_notificacoes > 0 %}
+                {{ total_notificacoes }} mensagem{{ total_notificacoes|pluralize:"ns" }}
+            {% else %}
+                Sem mensagem
+            {% endif %}
+        </span>
+        {% if total_notificacoes > 0 %}
+            <span class="message-badge">{{ total_notificacoes }}</span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
 
 <!-- Estatísticas -->
 <div class="stats-container">

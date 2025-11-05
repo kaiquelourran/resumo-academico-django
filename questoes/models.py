@@ -331,3 +331,30 @@ class DenunciaComentario(models.Model):
     
     def __str__(self):
         return f"Denúncia #{self.id} no Comentário #{self.id_comentario_id}"
+
+
+class PerfilUsuario(models.Model):
+    """Modelo para armazenar informações adicionais do perfil do usuário, como foto do Google"""
+    
+    id_usuario = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='perfil',
+        verbose_name="Usuário"
+    )
+    foto_google = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name="Foto do Google",
+        help_text="URL da foto de perfil do Google"
+    )
+    atualizado_em = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
+    
+    class Meta:
+        verbose_name = "Perfil do Usuário"
+        verbose_name_plural = "Perfis dos Usuários"
+        ordering = ['-atualizado_em']
+    
+    def __str__(self):
+        return f"Perfil de {self.id_usuario.username}"

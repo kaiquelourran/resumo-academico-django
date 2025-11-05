@@ -290,6 +290,15 @@ def google_callback(request):
                 user.save()
                 logger.info(f'Informações do usuário atualizadas: {user.email}')
         
+        # Atualiza ou cria o perfil do usuário com a foto do Google
+        from .models import PerfilUsuario
+        perfil, perfil_created = PerfilUsuario.objects.get_or_create(id_usuario=user)
+        if picture and picture != perfil.foto_google:
+            perfil.foto_google = picture
+            perfil.save()
+            logger.info(f'Foto do Google salva no perfil: {user.email}')
+            print(f'✅ Foto do Google salva: {picture}')
+        
         # Faz login automático
         logger.info('Fazendo login do usuário...')
         print(f'Fazendo login do usuário ID: {user.id}, Email: {user.email}')

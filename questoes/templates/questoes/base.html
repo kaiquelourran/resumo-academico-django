@@ -57,7 +57,11 @@
                     {% if user.is_authenticated %}
                         <div class="user-profile">
                             <div class="user-avatar">
-                                {{ user.first_name|default:user.username|first|upper }}
+                                {% if user.perfil.foto_google %}
+                                    <img src="{{ user.perfil.foto_google }}" alt="{{ user.first_name|default:user.username }}" class="avatar-img">
+                                {% else %}
+                                    {{ user.first_name|default:user.username|first|upper }}
+                                {% endif %}
                             </div>
                             <span class="user-name">
                                 {{ user.first_name|default:user.username }}{% if user.is_staff %} Admin{% endif %}
@@ -102,25 +106,6 @@
                     {{ message }}
                 </div>
             {% endfor %}
-        {% endif %}
-        
-        <!-- Indicador de Mensagens (fora do header) -->
-        {% if user.is_authenticated %}
-        <div class="message-indicator-container">
-            <div class="message-indicator" id="messageIndicator" onclick="toggleNotifications()">
-                <span class="message-icon">🔔</span>
-                <span class="message-text">
-                    {% if total_notificacoes > 0 %}
-                        {{ total_notificacoes }} mensagem{{ total_notificacoes|pluralize:"ns" }}
-                    {% else %}
-                        Sem mensagem
-                    {% endif %}
-                </span>
-                {% if total_notificacoes > 0 %}
-                    <span class="message-badge">{{ total_notificacoes }}</span>
-                {% endif %}
-            </div>
-        </div>
         {% endif %}
         
         <!-- Caixa de Notificações (oculta por padrão) -->

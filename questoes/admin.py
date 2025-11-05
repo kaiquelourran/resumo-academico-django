@@ -2,7 +2,7 @@ from django.contrib import admin
 from import_export.admin import ImportExportModelAdmin
 from .models import (
     Assunto, Questao, Alternativa, RespostaUsuario, RelatorioBug,
-    ComentarioQuestao, CurtidaComentario, DenunciaComentario
+    ComentarioQuestao, CurtidaComentario, DenunciaComentario, PerfilUsuario
 )
 from .resources import QuestaoResource, AlternativaResource
 from django.db.models import Count
@@ -299,6 +299,28 @@ class DenunciaComentarioAdmin(admin.ModelAdmin):
             return f"IP: {obj.ip_usuario}"
         return 'Anônimo'
     identificacao_denunciante.short_description = 'Denunciante'
+
+# Customização do Admin Site
+@admin.register(PerfilUsuario)
+class PerfilUsuarioAdmin(admin.ModelAdmin):
+    """Admin para PerfilUsuario"""
+    list_display = ('id_usuario', 'foto_google', 'atualizado_em')
+    list_filter = ('atualizado_em',)
+    search_fields = ('id_usuario__username', 'id_usuario__email', 'id_usuario__first_name')
+    readonly_fields = ('atualizado_em',)
+    
+    fieldsets = (
+        ('Informações do Usuário', {
+            'fields': ('id_usuario',)
+        }),
+        ('Foto do Google', {
+            'fields': ('foto_google',)
+        }),
+        ('Informações do Sistema', {
+            'fields': ('atualizado_em',),
+            'classes': ('collapse',)
+        }),
+    )
 
 # Customização do Admin Site
 admin.site.site_header = "Resumo Acadêmico - Administração"
