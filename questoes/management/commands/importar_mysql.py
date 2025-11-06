@@ -90,14 +90,29 @@ class Command(BaseCommand):
                             self.stdout.write(self.style.WARNING(f"  Pulando questão {questao['id_questao']} - assunto não encontrado"))
                             continue
                         
+                        # Tentar múltiplos nomes de campo para o texto da questão
+                        # No MySQL o campo se chama 'enunciado', no Django é 'texto'
+                        texto_questao = (
+                            questao.get('enunciado') or  # Campo correto no MySQL
+                            questao.get('texto') or 
+                            questao.get('pergunta') or 
+                            questao.get('questao_texto') or
+                            ''
+                        )
+                        
                         obj, created = Questao.objects.get_or_create(
                             id=questao['id_questao'],
                             defaults={
-                                'texto': questao['texto'],
+                                'texto': texto_questao,
                                 'id_assunto': assunto,
                                 'explicacao': questao.get('explicacao', '')
                             }
                         )
+                        
+                        # Se a questão já existe mas o texto está vazio, atualizar
+                        if not created and not obj.texto and texto_questao:
+                            obj.texto = texto_questao
+                            obj.save()
                         questao_map[questao['id_questao']] = obj
                         if created and questao['id_questao'] % 10 == 0:
                             self.stdout.write(f"  + {questao['id_questao']} questões...")

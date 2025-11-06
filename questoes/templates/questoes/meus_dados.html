@@ -46,17 +46,63 @@
         background-origin: border-box;
         background-clip: padding-box, border-box;
         box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        padding: 0 30px 30px 30px;
+        padding: 0;
+        padding-bottom: 30px;
+        overflow: hidden;
     }
     
+    /* Garantir que o header fique dentro do card */
+    .main-container .header {
+        margin: 0;
+        padding: 0;
+        border-radius: 16px 16px 0 0;
+    }
+    
+    .main-container .header .header-topbar {
+        border-radius: 16px 16px 0 0;
+        padding: 12px 30px;
+    }
+    
+    /* Ajustes para telas grandes - melhor distribuição do espaço */
+    @media (min-width: 1200px) {
+        .main-container {
+            max-width: 1200px;
+        }
+        
+        .header-container {
+            max-width: 1200px;
+        }
+    }
+    
+    @media (min-width: 1400px) {
+        .main-container {
+            max-width: 1300px;
+        }
+        
+        .header-container {
+            max-width: 1300px;
+        }
+    }
+    
+    /* Garantir padding lateral no conteúdo */
     .data-container {
         margin-top: 0;
         padding-top: 0;
+        padding-left: 30px;
+        padding-right: 30px;
     }
     
     /* Garantir que o page-header use o padrão global */
     .page-header {
         margin: 12px 0 20px 0;
+        padding: 12px 30px;
+        background: transparent !important;
+        background-image: none !important;
+    }
+    
+    .header .page-header {
+        background: transparent !important;
+        background-image: none !important;
     }
     
     .data-section {

@@ -59,37 +59,137 @@ class Command(BaseCommand):
             
             # 2. Extrair e importar Questões
             self.stdout.write('Importando questões...')
-            questao_pattern = r"INSERT INTO `questoes`.*?VALUES\s+(.*?);"
-            questao_matches = re.findall(questao_pattern, sql_content, re.DOTALL)
+            # Buscar INSERT statements completos (incluindo quebras de linha)
+            questao_inserts = re.findall(r"INSERT INTO `questoes`[^;]+;", sql_content, re.DOTALL)
             
             questao_map = {}
             questao_count = 0
-            for match in questao_matches:
-                rows = re.findall(r"\(([^)]+)\)", match)
-                for row in rows:
-                    # Parse mais robusto para questões com vírgulas no texto
-                    parts = row.split("', '")
-                    if len(parts) >= 3:
-                        id_questao = int(parts[0].strip("'\""))
-                        texto = parts[1] if len(parts) > 1 else ''
-                        id_assunto = int(parts[2].strip("'\"")) if len(parts) > 2 else None
-                        explicacao = parts[3].strip("'\"") if len(parts) > 3 else ''
-                        
-                        if id_assunto and id_assunto in assunto_map:
-                            obj, created = Questao.objects.get_or_create(
-                                id=id_questao,
-                                defaults={
-                                    'texto': texto,
-                                    'id_assunto': assunto_map[id_assunto],
-                                    'explicacao': explicacao
-                                }
-                            )
-                            questao_map[id_questao] = obj
-                            questao_count += 1
-                            if questao_count % 10 == 0:
-                                self.stdout.write(f"  + {questao_count} questões...")
+            questao_atualizadas = 0
+            questao_erros = 0
+            
+            for insert in questao_inserts:
+                try:
+                    # Extrair id_questao (primeiro campo)
+                    id_match = re.search(r"VALUES\s*\(\s*'(\d+)'", insert)
+                    if not id_match:
+                        questao_erros += 1
+                        continue
+                    
+                    id_questao = int(id_match.group(1))
+                    
+                    # Extrair id_assunto (segundo campo)
+                    assunto_match = re.search(r"VALUES\s*\(\s*'\d+',\s*'(\d+)'", insert)
+                    if not assunto_match:
+                        questao_erros += 1
+                        continue
+                    
+                    id_assunto = int(assunto_match.group(1))
+                    if id_assunto not in assunto_map:
+                        questao_erros += 1
+                        continue
+                    
+                    # Extrair enunciado (terceiro campo) - pode ter quebras de linha
+                    # Padrão: 'id', 'assunto', 'enunciado...', 'explicacao', ...
+                    # Melhorar regex para capturar corretamente o enunciado com quebras de linha
+                    # Procura por: VALUES ('id', 'assunto', 'enunciado...', 'explicacao'
+                    enunciado_match = re.search(
+                        r"VALUES\s*\(\s*'\d+',\s*'\d+',\s*'((?:[^']|'')+?)',\s*'",
+                        insert, 
+                        re.DOTALL
+                    )
+                    
+                    enunciado = ''
+                    if enunciado_match:
+                        enunciado_raw = enunciado_match.group(1)
+                        # Limpar o enunciado (remover escapes de aspas simples)
+                        enunciado = enunciado_raw.replace("''", "'")
+                        # Normalizar quebras de linha e espaços extras
+                        # Preservar quebras de linha significativas, mas normalizar múltiplos espaços
+                        enunciado = re.sub(r'\s+', ' ', enunciado)  # Substituir múltiplos espaços/line breaks por um espaço
+                        enunciado = enunciado.strip()
+                    
+                    # Validação: garantir que o enunciado não seja uma string vazia
+                    if not enunciado or len(enunciado) == 0:
+                        # Log de depuração para questões sem enunciado
+                        self.stdout.write(self.style.WARNING(
+                            f"  ⚠ Questão ID {id_questao}: Enunciado vazio ou None no SQL"
+                        ))
+                        enunciado = ''  # Garantir que seja string vazia, não None
+                    
+                    # Log de depuração temporário (mostra início do texto lido)
+                    if enunciado:
+                        texto_preview = enunciado[:50] + '...' if len(enunciado) > 50 else enunciado
+                        self.stdout.write(self.style.SUCCESS(
+                            f"  DEBUG: Questão ID {id_questao} lida. Texto ({len(enunciado)} chars) começa com: '{texto_preview}'"
+                        ))
+                    
+                    # Extrair explicacao (quarto campo)
+                    explicacao_match = re.search(
+                        r"VALUES\s*\(\s*'\d+',\s*'\d+',\s*'[^']+',\s*'([^']*)'",
+                        insert,
+                        re.DOTALL
+                    )
+                    explicacao = explicacao_match.group(1) if explicacao_match else ''
+                    
+                    # Mapeamento crítico: Campo 'enunciado' do SQL → Campo 'texto' do Django
+                    # No Django, o campo é 'texto', mas no SQL é 'enunciado'
+                    
+                    # Buscar ou criar a questão
+                    obj, created = Questao.objects.get_or_create(
+                        id=id_questao,
+                        defaults={
+                            'texto': enunciado,  # Campo 'enunciado' do SQL vai para 'texto' no Django
+                            'id_assunto': assunto_map[id_assunto],
+                            'explicacao': explicacao if explicacao else ''
+                        }
+                    )
+                    
+                    # AÇÃO CRÍTICA: Se a questão já existe, SEMPRE atualizar o campo texto
+                    # se o enunciado do SQL tiver conteúdo válido
+                    if not created:
+                        # Sempre atualizar se houver enunciado válido no SQL
+                        if enunciado and len(enunciado) > 0:
+                            # Atualizar o campo texto explicitamente
+                            obj.texto = enunciado  # Mapeamento direto: enunciado (SQL) → texto (Django)
+                            obj.id_assunto = assunto_map[id_assunto]
+                            if explicacao:
+                                obj.explicacao = explicacao
+                            obj.save()
+                            questao_atualizadas += 1
+                            self.stdout.write(self.style.SUCCESS(
+                                f"  ✓ Questão ID {id_questao} ATUALIZADA: texto preenchido ({len(enunciado)} chars)"
+                            ))
+                        elif not obj.texto or len(obj.texto) == 0:
+                            # Log de aviso se a questão existente não tem texto e o SQL também não tem
+                            self.stdout.write(self.style.WARNING(
+                                f"  ⚠ Questão ID {id_questao}: Sem texto no banco e no SQL"
+                            ))
+                    else:
+                        # Questão criada com sucesso
+                        if enunciado:
+                            self.stdout.write(self.style.SUCCESS(
+                                f"  ✓ Questão ID {id_questao} CRIADA: texto preenchido ({len(enunciado)} chars)"
+                            ))
+                    
+                    questao_map[id_questao] = obj
+                    questao_count += 1
+                    
+                    if questao_count % 10 == 0:
+                        self.stdout.write(f"  → {questao_count} questões processadas...")
+                
+                except Exception as e:
+                    questao_erros += 1
+                    self.stdout.write(self.style.ERROR(
+                        f"  ✗ Erro ao processar questão: {str(e)}"
+                    ))
+                    import traceback
+                    self.stdout.write(traceback.format_exc())
             
             self.stdout.write(self.style.SUCCESS(f'✓ {questao_count} questões importadas'))
+            if questao_atualizadas > 0:
+                self.stdout.write(self.style.SUCCESS(f'✓ {questao_atualizadas} questões atualizadas'))
+            if questao_erros > 0:
+                self.stdout.write(self.style.WARNING(f'⚠ {questao_erros} questões com erro'))
             
             # 3. Extrair e importar Alternativas
             self.stdout.write('Importando alternativas...')

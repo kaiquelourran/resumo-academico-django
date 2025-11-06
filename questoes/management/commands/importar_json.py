@@ -66,14 +66,28 @@ class Command(BaseCommand):
                         ))
                         continue
                     
+                    # Tentar múltiplos nomes de campo para o texto da questão
+                    texto_questao = (
+                        questao.get('texto') or 
+                        questao.get('pergunta') or 
+                        questao.get('enunciado') or 
+                        questao.get('questao_texto') or
+                        ''
+                    )
+                    
                     obj, created = Questao.objects.get_or_create(
                         id=questao['id_questao'],
                         defaults={
-                            'texto': questao['texto'],
+                            'texto': texto_questao,
                             'id_assunto': assunto_map[assunto_id],
                             'explicacao': questao.get('explicacao', '') or ''
                         }
                     )
+                    
+                    # Se a questão já existe mas o texto está vazio, atualizar
+                    if not created and not obj.texto and texto_questao:
+                        obj.texto = texto_questao
+                        obj.save()
                     questao_map[questao['id_questao']] = obj
                     questao_count += 1
                     

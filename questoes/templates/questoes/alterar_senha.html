@@ -36,8 +36,9 @@
         margin: 0;
     }
     
+    /* EXATAMENTE IGUAL À INDEX - Apenas max-width ajustado para formulário */
     .main-container {
-        max-width: 600px;
+        max-width: 1100px;
         margin: 0 auto;
         background: #FFFFFF;
         border-radius: 16px;
@@ -46,11 +47,61 @@
         background-origin: border-box;
         background-clip: padding-box, border-box;
         box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        padding: 0 30px 30px 30px;
+        padding: 0;
+        padding-bottom: 30px;
+        overflow: hidden;
+    }
+    
+    /* Garantir que o header fique dentro do card */
+    .main-container .header {
+        margin: 0;
+        padding: 0;
+        border-radius: 16px 16px 0 0;
+    }
+    
+    .main-container .header .header-topbar {
+        border-radius: 16px 16px 0 0;
+        padding: 12px 30px;
+    }
+    
+    /* Garantir padding lateral no conteúdo */
+    .main-container > *:not(.header):not(.breadcrumb):not(.page-header) {
+        padding-left: 30px;
+        padding-right: 30px;
+    }
+    
+    .breadcrumb,
+    .page-header {
+        padding-left: 30px;
+        padding-right: 30px;
+    }
+    
+    /* Ajustes para telas grandes - melhor distribuição do espaço */
+    @media (min-width: 1200px) {
+        .main-container {
+            max-width: 1200px;
+        }
+        
+        .header-container {
+            max-width: 1200px;
+        }
+    }
+    
+    @media (min-width: 1400px) {
+        .main-container {
+            max-width: 1300px;
+        }
+        
+        .header-container {
+            max-width: 1300px;
+        }
     }
     
     .password-container {
-        margin-top: 30px;
+        margin-top: 0;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
     }
     
     .password-form {
@@ -204,12 +255,69 @@
     }
     
     @media (max-width: 768px) {
+        html, body { overflow-x: hidden; }
+        .main-container {
+            margin: 16px auto;
+            padding: 18px;
+            max-width: calc(100% - 32px);
+        }
+        
+        .main-container .header .header-topbar {
+            padding: 12px 18px;
+        }
+        
+        .breadcrumb,
+        .page-header {
+            padding-left: 18px;
+            padding-right: 18px;
+        }
+        
+        .main-container > *:not(.header):not(.breadcrumb):not(.page-header) {
+            padding-left: 18px;
+            padding-right: 18px;
+        }
+        
+        .password-container {
+            margin-top: 15px;
+        }
+        
+        .password-form {
+            padding: 20px;
+        }
+        
         .form-actions {
             flex-direction: column;
         }
         
         .btn {
             width: 100%;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .main-container {
+            margin: 10px auto;
+            padding: 15px;
+            max-width: calc(100% - 20px);
+        }
+        
+        .main-container .header .header-topbar {
+            padding: 10px 15px;
+        }
+        
+        .breadcrumb,
+        .page-header {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .main-container > *:not(.header):not(.breadcrumb):not(.page-header) {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .password-form {
+            padding: 16px;
         }
     }
 </style>
@@ -373,4 +481,3 @@ document.getElementById('formAlterarSenha').addEventListener('submit', function(
 });
 </script>
 {% endblock %}
-

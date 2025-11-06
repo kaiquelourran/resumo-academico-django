@@ -401,6 +401,113 @@ def quiz_view(request, assunto_id):
         messages.warning(request, f'Não há questões cadastradas para o assunto: {assunto.nome}')
         return redirect('questoes:escolher_assunto')
     
+    # INÍCIO DA LÓGICA DE SALVAMENTO DE RESPOSTA DO USUÁRIO
+    if request.method == 'POST':
+        try:
+            # Capturar o id da alternativa escolhida (que vem via request.POST.get('alternativa_escolhida'))
+            alternativa_id = request.POST.get('alternativa_escolhida')
+            questao_id = request.POST.get('questao_id')
+            
+            if not alternativa_id:
+                # Retorna feedback de erro se nada foi selecionado
+                messages.error(request, 'Por favor, selecione uma alternativa.')
+                context = {
+                    'assunto': assunto,
+                    'questoes': questoes,
+                    'total_questoes': questoes.count(),
+                    'erro': 'Por favor, selecione uma alternativa.'
+                }
+                return render(request, 'questoes/quiz.html', context)
+            
+            if not questao_id:
+                messages.error(request, 'ID da questão não fornecido.')
+                context = {
+                    'assunto': assunto,
+                    'questoes': questoes,
+                    'total_questoes': questoes.count(),
+                    'erro': 'ID da questão não fornecido.'
+                }
+                return render(request, 'questoes/quiz.html', context)
+            
+            # Buscar o objeto Questao correspondente
+            questao = get_object_or_404(Questao, pk=questao_id)
+            
+            # Buscar o objeto Alternativa correspondente
+            alternativa_escolhida = get_object_or_404(Alternativa, pk=alternativa_id)
+            
+            # VERIFICAÇÃO DE SEGURANÇA: Garante que a alternativa pertence à questão
+            if alternativa_escolhida.id_questao.id != questao.id:
+                messages.error(request, 'Alternativa não pertence à questão selecionada.')
+                context = {
+                    'assunto': assunto,
+                    'questoes': questoes,
+                    'total_questoes': questoes.count(),
+                    'erro': 'Alternativa não pertence à questão selecionada.'
+                }
+                return render(request, 'questoes/quiz.html', context)
+            
+            # PASSO CRUCIAL: Criação e salvamento do objeto de RespostaUsuario
+            # Mapeamento: alternativa_escolhida.eh_correta → acertou (boolean)
+            acertou = bool(alternativa_escolhida.eh_correta)
+            
+            RespostaUsuario.objects.create(
+                id_usuario=request.user,  # Usuário autenticado
+                id_questao=questao,
+                id_alternativa=alternativa_escolhida,
+                acertou=acertou,  # Baseado no campo eh_correta da alternativa
+                data_resposta=timezone.now()  # Data atual
+            )
+            
+            # Lógica para mostrar o resultado e feedback
+            context = {
+                'assunto': assunto,
+                'questoes': questoes,
+                'total_questoes': questoes.count(),
+                'questao': questao,
+                'alternativas': questao.alternativas.all(),
+                'resultado': 'Correta' if acertou else 'Incorreta',
+                'alternativa_selecionada_id': alternativa_escolhida.pk,
+                'acertou': acertou,
+                'explicacao': questao.explicacao or ''
+            }
+            
+            # Renderizar página de resultado ou mostrar feedback
+            messages.success(request, f'Resposta registrada! Você {"acertou" if acertou else "errou"} a questão.')
+            return render(request, 'questoes/quiz.html', context)
+            
+        except Alternativa.DoesNotExist:
+            # Tratamento de erro se o id da alternativa não for encontrado
+            messages.error(request, 'Alternativa não encontrada.')
+            context = {
+                'assunto': assunto,
+                'questoes': questoes,
+                'total_questoes': questoes.count(),
+                'erro': 'Alternativa não encontrada.'
+            }
+            return render(request, 'questoes/quiz.html', context)
+        except Questao.DoesNotExist:
+            # Tratamento de erro se o id da questão não for encontrado
+            messages.error(request, 'Questão não encontrada.')
+            context = {
+                'assunto': assunto,
+                'questoes': questoes,
+                'total_questoes': questoes.count(),
+                'erro': 'Questão não encontrada.'
+            }
+            return render(request, 'questoes/quiz.html', context)
+        except Exception as e:
+            # Captura erros gerais de banco de dados ou lógica
+            error_logger.error(f'Erro ao processar e salvar resposta: {e}', exc_info=True)
+            messages.error(request, 'Ocorreu um erro ao salvar sua resposta. Tente novamente.')
+            context = {
+                'assunto': assunto,
+                'questoes': questoes,
+                'total_questoes': questoes.count(),
+                'erro': 'Ocorreu um erro ao salvar sua resposta. Tente novamente.'
+            }
+            return render(request, 'questoes/quiz.html', context)
+    
+    # Método GET: exibir questões normalmente
     context = {
         'assunto': assunto,
         'questoes': questoes,

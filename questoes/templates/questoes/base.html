@@ -56,10 +56,11 @@
                     {% endif %}
                 </nav>
 
-                <!-- User Info Section -->
+                <!-- User Info Section com Dropdown -->
                 <div class="user-info">
                     {% if user.is_authenticated %}
-                        <div class="user-profile">
+                        <!-- Trigger do Dropdown -->
+                        <div class="user-profile dropdown-trigger" id="userProfileDropdown" onclick="toggleUserDropdown()">
                             <div class="user-avatar">
                                 {% if user.perfil.foto_google %}
                                     <img src="{{ user.perfil.foto_google }}" alt="{{ user.first_name|default:user.username }}" class="avatar-img">
@@ -68,13 +69,59 @@
                                 {% endif %}
                             </div>
                             <span class="user-name">
-                                {{ user.first_name|default:user.username }}{% if user.is_staff %} Admin{% endif %}
+                                {{ user.first_name|default:user.username }}
                             </span>
+                            {% if user.is_staff %}
+                            <span class="admin-badge">Admin</span>
+                            {% endif %}
+                            <i class="fas fa-chevron-down dropdown-arrow"></i>
                         </div>
-                        <a href="{% url 'questoes:logout' %}" class="header-btn">
-                            <i class="fas fa-sign-out-alt"></i>
-                            <span>Sair</span>
-                        </a>
+                        
+                        <!-- Dropdown Menu -->
+                        <div class="user-dropdown-menu" id="userDropdownMenu">
+                            <div class="dropdown-header">
+                                <div class="dropdown-avatar-large">
+                                    {% if user.perfil.foto_google %}
+                                        <img src="{{ user.perfil.foto_google }}" alt="{{ user.first_name|default:user.username }}" class="avatar-img-large">
+                                    {% else %}
+                                        <div class="avatar-initial-large">{{ user.first_name|default:user.username|first|upper }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="dropdown-user-info">
+                                    <div class="dropdown-user-name">{{ user.get_full_name|default:user.first_name|default:user.username }}</div>
+                                    <div class="dropdown-user-email">{{ user.email }}</div>
+                                    {% if user.is_staff %}
+                                    <span class="dropdown-admin-badge">Admin</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="dropdown-divider"></div>
+                            
+                            <div class="dropdown-links">
+                                <a href="{% url 'questoes:meus_dados' %}" class="dropdown-link">
+                                    <i class="fas fa-user"></i>
+                                    <span>Meu Perfil</span>
+                                </a>
+                                <a href="{% url 'questoes:desempenho' %}" class="dropdown-link">
+                                    <i class="fas fa-chart-line"></i>
+                                    <span>Meu Desempenho</span>
+                                </a>
+                                <a href="{% url 'questoes:privacidade' %}" class="dropdown-link">
+                                    <i class="fas fa-cog"></i>
+                                    <span>Configurações da Conta</span>
+                                </a>
+                            </div>
+                            
+                            <div class="dropdown-divider"></div>
+                            
+                            <div class="dropdown-footer">
+                                <a href="{% url 'questoes:logout' %}" class="dropdown-link logout-link">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    <span>Sair</span>
+                                </a>
+                            </div>
+                        </div>
                     {% else %}
                         <a href="{% url 'questoes:login' %}" class="header-btn primary">
                             <i class="fas fa-sign-in-alt"></i>
@@ -235,6 +282,57 @@
             }
             return cookieValue;
         }
+        
+        // Função para toggle do dropdown de perfil do usuário
+        function toggleUserDropdown() {
+            const dropdown = document.getElementById('userDropdownMenu');
+            const trigger = document.getElementById('userProfileDropdown');
+            
+            if (dropdown && trigger) {
+                const isActive = dropdown.classList.contains('active');
+                
+                // Fechar todos os dropdowns abertos
+                document.querySelectorAll('.user-dropdown-menu.active').forEach(menu => {
+                    if (menu !== dropdown) {
+                        menu.classList.remove('active');
+                        menu.previousElementSibling?.classList.remove('active');
+                    }
+                });
+                
+                // Toggle do dropdown atual
+                if (isActive) {
+                    dropdown.classList.remove('active');
+                    trigger.classList.remove('active');
+                } else {
+                    dropdown.classList.add('active');
+                    trigger.classList.add('active');
+                }
+            }
+        }
+        
+        // Fechar dropdown ao clicar fora
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('userDropdownMenu');
+            const trigger = document.getElementById('userProfileDropdown');
+            
+            if (dropdown && trigger && !dropdown.contains(event.target) && !trigger.contains(event.target)) {
+                dropdown.classList.remove('active');
+                trigger.classList.remove('active');
+            }
+        });
+        
+        // Fechar dropdown ao pressionar ESC
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const dropdown = document.getElementById('userDropdownMenu');
+                const trigger = document.getElementById('userProfileDropdown');
+                
+                if (dropdown && trigger) {
+                    dropdown.classList.remove('active');
+                    trigger.classList.remove('active');
+                }
+            }
+        });
     </script>
     {% block extra_js %}{% endblock %}
 </body>

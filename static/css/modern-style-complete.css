@@ -47,6 +47,12 @@
     box-sizing: border-box;
 }
 
+html {
+    overflow-x: hidden; /* Prevenir scroll horizontal global */
+    width: 100%;
+    max-width: 100vw; /* Garantir que não ultrapasse a largura da tela */
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
@@ -54,6 +60,9 @@ body {
     padding: 13px;
     margin: 20px 0 0 0;
     color: #333;
+    overflow-x: hidden; /* Prevenir scroll horizontal */
+    width: 100%;
+    max-width: 100vw; /* Garantir que não ultrapasse a largura da tela */
 }
 
 /* Espaçamento maior para telas grandes */
@@ -73,6 +82,7 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     min-height: calc(100vh - 40px);
+    box-sizing: border-box; /* Incluir padding no cálculo da largura */
 }
 
 /* Header */
@@ -81,6 +91,7 @@ body {
     margin-top: 10px;
     padding: 0;
     border: none;
+    position: relative; /* Garantir contexto de posicionamento para o dropdown */
 }
 
 .logo {
@@ -1004,54 +1015,51 @@ body {
     backdrop-filter: blur(15px);
     border: 1px solid rgba(255, 255, 255, 0.25);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    overflow: hidden;
+    overflow: visible; /* Mudado para visible para permitir dropdown */
+    z-index: 5000 !important; /* Garantir que o container do user-info fique acima do conteúdo e da caixa de mensagens */
 }
 
-.header .user-info::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.6s ease;
-}
-
-.header .user-info:hover::before {
-    left: 100%;
-}
-
-.header .user-info:hover {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    border-color: rgba(255, 255, 255, 0.35);
-}
+/* Removido efeitos hover do card user-info no header conforme solicitado */
 
 .header .user-profile { 
     display: flex; 
     align-items: center; 
     gap: 12px; 
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    min-width: 0;
+}
+
+.header .user-profile.dropdown-trigger {
+    cursor: pointer;
+    user-select: none;
 }
 
 .header .user-avatar {
-    width: 42px; 
-    height: 42px; 
+    width: 48px; 
+    height: 48px; 
     border-radius: 50%; 
     font-weight: 800; 
     color: #fff;
+    font-size: 20px;
     display: grid; 
     place-items: center;
-    background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
-    box-shadow: 0 6px 20px rgba(0, 114, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    border: 3px solid rgba(255, 255, 255, 0.4);
-    font-size: 18px;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    background: linear-gradient(135deg, #0072FF 0%, #0056CC 50%, #00C6FF 100%);
+    box-shadow: 
+        0 6px 20px rgba(0, 114, 255, 0.4),
+        inset 0 2px 4px rgba(255, 255, 255, 0.5),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+        0 0 0 4px rgba(255, 255, 255, 0.4),
+        0 0 20px rgba(0, 198, 255, 0.3);
+    border: 3px solid rgba(255, 255, 255, 0.8);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;
+    cursor: pointer;
+    z-index: 2;
 }
 
 .header .user-avatar img.avatar-img {
@@ -1060,30 +1068,75 @@ body {
     object-fit: cover;
     border-radius: 50%;
     display: block;
+    position: relative;
+    z-index: 3;
+    border: 3px solid rgba(255, 255, 255, 1);
+    box-shadow: 
+        inset 0 0 0 2px rgba(0, 114, 255, 0.3),
+        0 0 15px rgba(0, 198, 255, 0.2);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: brightness(1.05) contrast(1.1);
+}
+
+.header .user-avatar:hover img.avatar-img {
+    border-color: rgba(255, 255, 255, 1);
+    box-shadow: 
+        inset 0 0 0 3px rgba(0, 114, 255, 0.4),
+        0 0 25px rgba(0, 114, 255, 0.5),
+        0 0 40px rgba(0, 198, 255, 0.3);
+    filter: brightness(1.1) contrast(1.15);
+    transform: scale(1.05);
 }
 
 .header .user-avatar::before {
     content: '';
     position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transform: rotate(45deg);
-    transition: all 0.6s ease;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent, rgba(255, 255, 255, 0.6), transparent);
     opacity: 0;
+    transition: opacity 0.5s ease;
+    z-index: -1;
+    animation: rotateRing 3s linear infinite;
 }
 
 .header .user-avatar:hover::before {
     opacity: 1;
-    animation: shimmer 1.5s ease-in-out;
+}
+
+.header .user-avatar::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    transition: all 0.6s ease;
+    opacity: 0;
+    z-index: 1;
+}
+
+.header .user-avatar:hover::after {
+    width: 80px;
+    height: 80px;
+    opacity: 1;
 }
 
 .header .user-avatar:hover {
-    transform: scale(1.08) rotate(2deg);
-    box-shadow: 0 8px 25px rgba(0, 114, 255, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-    border-color: rgba(255, 255, 255, 0.6);
+    transform: scale(1.15) rotate(5deg);
+    box-shadow: 
+        0 8px 32px rgba(0, 114, 255, 0.5),
+        inset 0 2px 6px rgba(255, 255, 255, 0.7),
+        inset 0 -2px 6px rgba(0, 0, 0, 0.3),
+        0 0 0 5px rgba(255, 255, 255, 0.5),
+        0 0 30px rgba(0, 198, 255, 0.5);
+    border-color: rgba(255, 255, 255, 1);
 }
 
 @keyframes shimmer {
@@ -1093,36 +1146,67 @@ body {
 
 .header .user-name { 
     color: #FFFFFF !important; 
-    font-weight: 500; 
+    font-weight: 700; 
     font-size: 16px;
     font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-    letter-spacing: 0.2px;
-    transition: all 0.3s ease;
+    text-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.4),
+        0 0 8px rgba(255, 255, 255, 0.2),
+        0 1px 0 rgba(255, 255, 255, 0.5);
+    letter-spacing: 0.4px;
     position: relative;
     text-transform: capitalize;
-    line-height: 1.2;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+    display: inline-block;
+    z-index: 2;
 }
 
-.header .user-name::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #00C6FF, #0072FF);
-    transition: width 0.4s ease;
+/* Removido efeitos hover do nome do usuário conforme solicitado */
+
+/* Badge Admin no Header - Design Premium */
+.header .admin-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
+    color: #000;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 14px;
+    margin-left: 8px;
+    box-shadow: 
+        0 4px 12px rgba(255, 215, 0, 0.5),
+        inset 0 2px 4px rgba(255, 255, 255, 0.6),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+        0 0 0 2px rgba(255, 255, 255, 0.4),
+        0 0 15px rgba(255, 215, 0, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    animation: badgePulse 2s ease-in-out infinite;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2;
+    position: relative;
 }
 
-.header .user-info:hover .user-name::after {
-    width: 100%;
+.header .admin-badge:hover {
+    transform: scale(1.1);
+    box-shadow: 
+        0 6px 16px rgba(255, 215, 0, 0.6),
+        inset 0 2px 6px rgba(255, 255, 255, 0.7),
+        inset 0 -2px 6px rgba(0, 0, 0, 0.3),
+        0 0 0 3px rgba(255, 255, 255, 0.5),
+        0 0 20px rgba(255, 215, 0, 0.4);
 }
 
-.header .user-info:hover .user-name {
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-    transform: translateX(1px);
-    color: #FFFFFF !important;
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.9; }
 }
 
 .header .header-btn {
@@ -1188,7 +1272,7 @@ body {
     justify-content: flex-end;
     margin: 20px 40px 20px 40px;
     position: relative;
-    z-index: 10;
+    z-index: 1 !important; /* Reduzido para ficar abaixo do dropdown (10000) - importante para sobrescrever outros estilos */
 }
 
 /* Indicador de Mensagens */
@@ -1209,6 +1293,7 @@ body {
     position: relative;
     white-space: nowrap;
     flex-shrink: 0;
+    z-index: 1 !important; /* Garantir que fique abaixo do dropdown (10000) */
 }
 
 .message-indicator:hover {
@@ -1304,6 +1389,7 @@ body {
     width: auto !important;
     max-width: calc(100% - 80px) !important;
     box-sizing: border-box !important;
+    z-index: 1 !important; /* Reduzido para ficar abaixo do dropdown (10000) */
 }
 
 .notifications-container-base::before {
@@ -1568,7 +1654,8 @@ body {
 /* Header refeito: garantir separação total entre Topbar (azul) e seções brancas */
 .header .header-topbar { 
     position: relative; 
-    z-index: 2; 
+    overflow: visible; /* Permitir dropdown sair do header */ 
+    z-index: 1000; /* Garantir que header fique acima do conteúdo */
 }
 
 .header .breadcrumb, .header .page-header { 
@@ -1672,34 +1759,41 @@ body {
 /* Responsividade do Header */
 @media (max-width: 768px) {
     .header .header-topbar {
-        flex-wrap: wrap;
-        gap: 12px;
-        padding: 12px 14px;
+        flex-wrap: wrap; 
+        gap: 12px; 
+        padding: 12px 14px; 
     }
     
-    .header .header-nav {
-        flex-wrap: wrap;
+    .header .header-nav { 
+        flex-wrap: wrap; 
         width: 100%;
     }
     
-    .header .user-info {
-        padding: 8px 14px;
+    .header .user-info { 
+        padding: 8px 14px; 
         gap: 10px;
         border-radius: 25px;
     }
     
     .header .user-avatar {
-        width: 36px;
-        height: 36px;
-        font-size: 16px;
-        border-width: 2px;
+        width: 42px;
+        height: 42px;
+        font-size: 18px;
+        border-width: 2.5px;
     }
     
     .header .user-name {
         font-size: 15px;
-        letter-spacing: 0.1px;
-        font-weight: 500;
+        letter-spacing: 0.3px;
+        font-weight: 700;
         color: #FFFFFF !important;
+        max-width: 140px;
+    }
+    
+    .header .admin-badge {
+        font-size: 10px;
+        padding: 3px 8px;
+        margin-left: 6px;
     }
     
     .header .header-btn {
@@ -1720,9 +1814,9 @@ body {
     margin-bottom: 0;
     padding-bottom: 0;
     border-bottom: none;
-}
+    }
 
-.header .header-topbar {
+    .header .header-topbar {
     max-width: 1200px;
     margin: 0 auto;
     padding: 3px 18px;
@@ -1765,7 +1859,7 @@ body {
 
 .header .brand-info {
     display: flex;
-    flex-direction: column;
+        flex-direction: column;
 }
 
 .header .brand-title {
@@ -1779,7 +1873,7 @@ body {
 .header .brand-subtitle { color: #EAF6FF; font-size: 0.95rem; }
 
 /* Navegação */
-.header .header-nav {
+    .header .header-nav {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -1788,7 +1882,7 @@ body {
 .header .nav-link {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+        gap: 8px;
     padding: 8px 12px;
     border-radius: 8px;
     text-decoration: none;
@@ -1973,95 +2067,535 @@ body {
     font-size: 16px;
 }
 
-/* D. User Info (informações do usuário) */
+/* D. User Info (informações do usuário) - DESIGN REDESENHADO */
 .user-info {
     display: flex;
     align-items: center;
-    gap: 14px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
-    padding: 10px 20px;
-    border-radius: 30px;
-    backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    gap: 10px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.25) 100%);
+    padding: 6px 6px 6px 3px;
+    border-radius: 60px;
+    backdrop-filter: blur(25px);
+    border: 2.5px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 
+        0 10px 40px rgba(0, 0, 0, 0.15),
+        inset 0 2px 0 rgba(255, 255, 255, 0.6),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+        0 0 0 1px rgba(255, 255, 255, 0.2);
     position: relative;
-    overflow: hidden;
+    overflow: visible; /* Mudado para visible para permitir dropdown */
+    z-index: 5000 !important; /* Garantir que o container do user-info fique acima do conteúdo e da caixa de mensagens */
 }
 
-.user-info::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.6s ease;
-}
+/* Removido efeitos hover do card user-info conforme solicitado */
 
-.user-info:hover::before {
-    left: 100%;
-}
-
-.user-info:hover {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    border-color: rgba(255, 255, 255, 0.35);
-}
-
-/* E. Avatar do usuário */
+/* E. Avatar do usuário - DESIGN PREMIUM */
 .user-avatar {
-    width: 42px;
-    height: 42px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     font-weight: 800;
     color: #fff;
+    font-size: 20px;
     display: grid;
     place-items: center;
-    background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
-    box-shadow: 0 6px 20px rgba(0, 114, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    border: 3px solid rgba(255, 255, 255, 0.4);
-    font-size: 18px;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    background: linear-gradient(135deg, #0072FF 0%, #0056CC 50%, #00C6FF 100%);
+    box-shadow: 
+        0 6px 20px rgba(0, 114, 255, 0.4),
+        inset 0 2px 4px rgba(255, 255, 255, 0.5),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+        0 0 0 4px rgba(255, 255, 255, 0.4),
+        0 0 20px rgba(0, 198, 255, 0.3);
+    border: 3px solid rgba(255, 255, 255, 0.8);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+/* Anel animado ao redor do avatar */
+.user-avatar::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    z-index: -1;
+    animation: rotateRing 3s linear infinite;
+}
+
+.user-avatar:hover::before {
+    opacity: 1;
+}
+
+@keyframes rotateRing {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Brilho interno no hover */
+.user-avatar::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    transition: all 0.6s ease;
+    opacity: 0;
+    z-index: 1;
+}
+
+.user-avatar:hover::after {
+    width: 80px;
+    height: 80px;
+    opacity: 1;
 }
 
 .user-avatar:hover {
-    transform: scale(1.08) rotate(2deg);
-    box-shadow: 0 8px 25px rgba(0, 114, 255, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-    border-color: rgba(255, 255, 255, 0.6);
+    transform: scale(1.15) rotate(5deg);
+    box-shadow: 
+        0 8px 32px rgba(0, 114, 255, 0.5),
+        inset 0 2px 6px rgba(255, 255, 255, 0.7),
+        inset 0 -2px 6px rgba(0, 0, 0, 0.3),
+        0 0 0 5px rgba(255, 255, 255, 0.5),
+        0 0 30px rgba(0, 198, 255, 0.5);
+    border-color: rgba(255, 255, 255, 1);
 }
 
-/* F. Nome do usuário */
+/* F. Nome do usuário - DESIGN PREMIUM */
 .user-name {
     color: #FFFFFF !important;
-    font-weight: 500;
+    font-weight: 700;
     font-size: 16px;
     font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-    letter-spacing: 0.2px;
-    transition: all 0.3s ease;
+    text-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.4),
+        0 0 8px rgba(255, 255, 255, 0.2),
+        0 1px 0 rgba(255, 255, 255, 0.5);
+    letter-spacing: 0.4px;
     position: relative;
     text-transform: capitalize;
-    line-height: 1.2;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+    display: inline-block;
+    z-index: 2;
 }
 
-.user-name::after {
+/* Removido efeitos hover do nome do usuário conforme solicitado */
+
+/* Avatar com imagem do Google - Design Premium */
+.user-avatar img.avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+    position: relative;
+    z-index: 3;
+    border: 3px solid rgba(255, 255, 255, 1);
+    box-shadow: 
+        inset 0 0 0 2px rgba(0, 114, 255, 0.3),
+        0 0 15px rgba(0, 198, 255, 0.2);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: brightness(1.05) contrast(1.1);
+}
+
+.user-avatar:hover img.avatar-img {
+    border-color: rgba(255, 255, 255, 1);
+    box-shadow: 
+        inset 0 0 0 3px rgba(0, 114, 255, 0.4),
+        0 0 25px rgba(0, 114, 255, 0.5),
+        0 0 40px rgba(0, 198, 255, 0.3);
+    filter: brightness(1.1) contrast(1.15);
+    transform: scale(1.05);
+}
+
+/* User Profile Container - Melhorado */
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    min-width: 0;
+}
+
+/* User Profile como trigger do dropdown */
+.user-profile.dropdown-trigger {
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Badge Admin - Estilo Moderno */
+.user-name:contains("Admin")::after,
+.user-profile:has(.user-name:contains("Admin"))::after {
+    content: ' 👑';
+    font-size: 14px;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+    animation: badgePulse 2s ease-in-out infinite;
+    margin-left: 4px;
+}
+
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.9; }
+}
+
+/* Badge Admin - Design Premium */
+.admin-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
+    color: #000;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 14px;
+    margin-left: 8px;
+    box-shadow: 
+        0 4px 12px rgba(255, 215, 0, 0.5),
+        inset 0 2px 4px rgba(255, 255, 255, 0.6),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+        0 0 0 2px rgba(255, 255, 255, 0.4),
+        0 0 15px rgba(255, 215, 0, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    animation: badgePulse 2s ease-in-out infinite;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2;
+    position: relative;
+}
+
+.admin-badge:hover {
+    transform: scale(1.1);
+    box-shadow: 
+        0 6px 16px rgba(255, 215, 0, 0.6),
+        inset 0 2px 6px rgba(255, 255, 255, 0.7),
+        inset 0 -2px 6px rgba(0, 0, 0, 0.3),
+        0 0 0 3px rgba(255, 255, 255, 0.5),
+        0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+/* ============================================
+   USER DROPDOWN MENU - MENU DE PERFIL
+   ============================================ */
+
+/* Container do user-profile com dropdown */
+.user-profile.dropdown-trigger {
+    cursor: pointer;
+    position: relative;
+}
+
+/* Seta do dropdown */
+.dropdown-arrow {
+    font-size: 12px;
+    margin-left: 8px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.user-profile.dropdown-trigger.active .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+/* Menu Dropdown */
+.user-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    left: auto; /* Garantir que não use left por padrão */
+    min-width: 280px;
+    max-width: calc(100vw - 20px); /* Prevenir que ultrapasse bordas em telas pequenas */
+    width: auto; /* Permitir que o dropdown se ajuste ao conteúdo */
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
+    backdrop-filter: blur(30px);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: 20px;
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.2),
+        0 8px 24px rgba(0, 114, 255, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px) scale(0.95);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10000 !important; /* Garantir que fique acima de tudo, incluindo caixa de mensagens */
+    overflow: hidden;
+    overflow-x: hidden; /* Prevenir scroll horizontal dentro do dropdown */
+    pointer-events: none; /* Desabilitar interação quando fechado */
+    isolation: isolate; /* Criar novo contexto de empilhamento */
+    color: #1F2937 !important; /* Cor padrão escura para todo o texto dentro do dropdown */
+    box-sizing: border-box; /* Incluir padding e border no cálculo da largura */
+}
+
+.user-dropdown-menu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    pointer-events: auto; /* Habilitar interação quando aberto */
+}
+
+/* Header do Dropdown (Foto + Nome + Email) */
+.dropdown-header {
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(0, 114, 255, 0.05) 0%, rgba(0, 198, 255, 0.05) 100%);
+    border-bottom: 1px solid rgba(0, 114, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.dropdown-avatar-large {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #0072FF 0%, #0056CC 50%, #00C6FF 100%);
+    box-shadow: 
+        0 8px 24px rgba(0, 114, 255, 0.4),
+        inset 0 2px 4px rgba(255, 255, 255, 0.5),
+        0 0 0 4px rgba(255, 255, 255, 0.5);
+    border: 3px solid rgba(255, 255, 255, 0.9);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+}
+
+.avatar-img-large {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
+
+.avatar-initial-large {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-weight: 800;
+    font-size: 28px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dropdown-user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.dropdown-user-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827 !important; /* Cor escura para garantir visibilidade */
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropdown-user-email {
+    font-size: 13px;
+    color: #4B5563 !important; /* Cor escura para garantir visibilidade */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropdown-admin-badge {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 3px 10px;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
+    color: #000;
+    font-size: 10px;
+    font-weight: 800;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+}
+
+/* Divisor */
+.dropdown-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0, 114, 255, 0.2), transparent);
+    margin: 8px 0;
+}
+
+/* Links do Dropdown */
+.dropdown-links {
+    padding: 8px 0;
+    color: #1F2937 !important; /* Garantir cor escura para o container de links */
+}
+
+.dropdown-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    color: #1F2937 !important; /* Cor escura para garantir visibilidade */
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.dropdown-link::before {
     content: '';
     position: absolute;
-    bottom: -2px;
     left: 0;
+    top: 0;
+    bottom: 0;
     width: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #00C6FF, #0072FF);
-    transition: width 0.4s ease;
+    background: linear-gradient(90deg, rgba(0, 114, 255, 0.1), transparent);
+    transition: width 0.3s ease;
 }
 
-.user-info:hover .user-name::after {
-    width: 100%;
+.dropdown-link:hover::before {
+    width: 4px;
+}
+
+.dropdown-link:hover {
+    background: linear-gradient(90deg, rgba(0, 114, 255, 0.08) 0%, transparent 100%);
+    color: #0072FF;
+    transform: translateX(4px);
+}
+
+.dropdown-link i {
+    width: 20px;
+    text-align: center;
+    color: #4B5563 !important; /* Cor escura para garantir visibilidade dos ícones */
+    transition: color 0.3s ease;
+}
+
+.dropdown-link:hover i {
+    color: #0072FF;
+}
+
+.dropdown-link span {
+    color: #1F2937 !important; /* Garantir que o texto do span seja escuro e visível */
+    font-weight: 600;
+}
+
+/* Link de Logout */
+.dropdown-footer {
+    padding: 8px 0;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(220, 38, 38, 0.05) 100%);
+}
+
+.logout-link {
+    color: #DC2626 !important; /* Cor vermelha para logout */
+}
+
+.logout-link:hover {
+    background: linear-gradient(90deg, rgba(220, 38, 38, 0.1) 0%, transparent 100%);
+    color: #DC2626 !important;
+}
+
+.logout-link i {
+    color: #DC2626 !important;
+}
+
+.logout-link span {
+    color: #DC2626 !important; /* Garantir que o texto "Sair" seja vermelho e visível */
+}
+
+/* Responsividade do Dropdown */
+@media (max-width: 768px) {
+    .user-dropdown-menu {
+        min-width: 260px;
+        max-width: calc(100vw - 20px) !important; /* Garantir que não ultrapasse a borda esquerda */
+        width: auto !important; /* Permitir que se ajuste */
+        right: 10px !important; /* Margem da direita para não cortar */
+        left: auto !important; /* Resetar left para não interferir */
+        box-sizing: border-box !important; /* Incluir padding e border */
+    }
+    
+    .dropdown-header {
+        padding: 16px;
+        gap: 12px;
+    }
+    
+    .dropdown-avatar-large {
+        width: 56px;
+        height: 56px;
+    }
+    
+    .avatar-initial-large {
+        font-size: 24px;
+    }
+    
+    .dropdown-user-name {
+        font-size: 15px;
+    }
+    
+    .dropdown-user-email {
+        font-size: 12px;
+    }
+    
+    .dropdown-link {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+}
+
+/* Ajustes adicionais para telas muito pequenas */
+@media (max-width: 480px) {
+    .user-dropdown-menu {
+        min-width: 240px;
+        max-width: calc(100vw - 16px) !important; /* Margem ainda menor em telas pequenas */
+        width: auto !important; /* Permitir que se ajuste */
+        right: 8px !important;
+        left: auto !important;
+        box-sizing: border-box !important; /* Incluir padding e border */
+    }
+    
+    .dropdown-header {
+        padding: 14px;
+        gap: 10px;
+    }
+    
+    .dropdown-avatar-large {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .avatar-initial-large {
+        font-size: 20px;
+    }
+    
+    .dropdown-user-name {
+        font-size: 14px;
+    }
+    
+    .dropdown-user-email {
+        font-size: 11px;
+    }
+    
+    .dropdown-link {
+        padding: 8px 14px;
+        font-size: 12px;
+    }
 }
 
 /* G. Botões do header */
