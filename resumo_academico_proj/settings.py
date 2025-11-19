@@ -30,7 +30,8 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-9!n#rv)tdbj5ye2$5(#if!aegl
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Hosts permitidos - necessário para o servidor aceitar requisições
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
 # ==========================================
 # SEGURANÇA ADICIONAL (Equivalente ao .htaccess PHP)
