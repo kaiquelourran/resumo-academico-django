@@ -1,0 +1,128 @@
+# Docker Compose v2 - Configuração completa para Django + PostgreSQL
+# Versão: 3.9 (compatível com Docker Compose v2)
+
+version: '3.9'
+
+services:
+  # ==========================================
+  # Serviço: Banco de Dados PostgreSQL
+  # ==========================================
+  db:
+    image: postgres:14-alpine
+    container_name: resumo_academico_db
+    restart: unless-stopped
+    
+    # Variáveis de ambiente do PostgreSQL
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-resumo_academico_db}
+      POSTGRES_USER: ${POSTGRES_USER:-resumo_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-senha_super_segura_123}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    
+    # Volumes para persistência de dados
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups  # Para backups manuais
+    
+    # Portas (expor apenas se necessário para acesso externo)
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    
+    # Healthcheck para garantir que o banco está pronto
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-resumo_user} -d ${POSTGRES_DB:-resumo_academico_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    
+    # Configurações de rede
+    networks:
+      - resumo_network
+
+  # ==========================================
+  # Serviço: Aplicação Django
+  # ==========================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: resumo_academico_web
+    restart: unless-stopped
+    command: python manage.py runserver 0.0.0.0:8000
+    
+    # Variáveis de ambiente
+    environment:
+      # Django
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-9!n#rv)tdbj5ye2$5(#if!aegl2c+fvmakkr3a924sccmwumj9}
+      DEBUG: ${DEBUG:-True}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,web}
+      
+      # PostgreSQL
+      POSTGRES_DB: ${POSTGRES_DB:-resumo_academico_db}
+      POSTGRES_USER: ${POSTGRES_USER:-resumo_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-senha_super_segura_123}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      
+      # Timezone
+      TZ: America/Sao_Paulo
+    
+    # Volumes para desenvolvimento (montar código local)
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      # Excluir arquivos que não devem ser sincronizados
+      - /app/venv
+      - /app/__pycache__
+      - /app/.git
+    
+    # Portas
+    ports:
+      - "${DJANGO_PORT:-8000}:8000"
+    
+    # Dependências
+    depends_on:
+      db:
+        condition: service_healthy
+    
+    # Healthcheck
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Configurações de rede
+    networks:
+      - resumo_network
+
+# ==========================================
+# Volumes nomeados para persistência
+# ==========================================
+volumes:
+  # Dados do PostgreSQL
+  postgres_data:
+    driver: local
+    name: resumo_academico_postgres_data
+  
+  # Arquivos estáticos coletados
+  static_volume:
+    driver: local
+    name: resumo_academico_static
+  
+  # Arquivos de mídia (uploads)
+  media_volume:
+    driver: local
+    name: resumo_academico_media
+
+# ==========================================
+# Redes
+# ==========================================
+networks:
+  resumo_network:
+    driver: bridge
+    name: resumo_academico_network
+
