@@ -31,7 +31,25 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-9!n#rv)tdbj5ye2$5(#if!aegl
 DEBUG = True
 
 # Hosts permitidos - necessário para o servidor aceitar requisições
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+# --- CÓDIGO FINAL DE CONFIGURAÇÃO DE ALLOWED_HOSTS ---
+ALLOWED_HOSTS_ENV = os.environ.get('ALLOWED_HOSTS')
+
+if DEBUG:
+    # Se estiver em modo DEBUG, aceitamos *qualquer* host para evitar o erro DisallowedHost.
+    ALLOWED_HOSTS = ['*']
+else:
+    # Em produção (DEBUG=False), usamos os hosts seguros da variável de ambiente.
+    if ALLOWED_HOSTS_ENV:
+        # Converte a string do Docker ('host1,host2') em uma lista Python
+        ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
+    else:
+        # Fallback seguro se não houver variável de ambiente
+        ALLOWED_HOSTS = []
+
+# PARA DEBUG: Imprime a lista final no log do Docker
+print(f"DEBUG: ALLOWED_HOSTS final: {ALLOWED_HOSTS}")
+
+# --- FIM DO CÓDIGO ---
 
 # ==========================================
 # SEGURANÇA ADICIONAL (Equivalente ao .htaccess PHP)
