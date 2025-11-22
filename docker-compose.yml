@@ -1,5 +1,4 @@
 version: '3.9'
-
 services:
   # ==========================================
   # Serviço: Aplicação Django
@@ -34,7 +33,10 @@ services:
       - media_volume:/app/media
     
     ports:
-      - "${DJANGO_PORT:-8000}:8000"
+      - "8001:8000"  # Porta externa 8001, interna 8000
+    
+    networks:
+      - global_network  # Adicionado
     
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
@@ -54,3 +56,10 @@ volumes:
   media_volume:
     driver: local
     name: resumo_academico_media
+
+# ==========================================
+# Rede compartilhada
+# ==========================================
+networks:
+  global_network:
+    external: true  # Usa a rede já existente
