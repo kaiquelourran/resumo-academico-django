@@ -1,42 +1,35 @@
 version: '3.9'
 services:
-  # ==========================================
-  # Serviço: Aplicação Django
-  # ==========================================
   web:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: resumo_academico_web
     restart: unless-stopped
-    command: python manage.py runserver 0.0.0.0:8000
     
     environment:
-      # Django
       SECRET_KEY: ${SECRET_KEY:-django-insecure-9!n#rv)tdbj5ye2$5(#if!aegl2c+fvmakkr3a924sccmwumj9}
       DEBUG: ${DEBUG:-True}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,web}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,web,72.61.54.207}
       
-      # PostgreSQL (configurado via .env)
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
       
-      # Timezone
       TZ: ${TZ:-America/Sao_Paulo}
     
     volumes:
-      - .:/app
+      # - .:/app  ← REMOVA ESTA LINHA
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     
     ports:
-      - "8001:8000"  # Porta externa 8001, interna 8000
+      - "8001:8000"
     
     networks:
-      - global_network  # Adicionado
+      - global_network
     
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
@@ -45,9 +38,6 @@ services:
       retries: 3
       start_period: 40s
 
-# ==========================================
-# Volumes nomeados para persistência
-# ==========================================
 volumes:
   static_volume:
     driver: local
@@ -57,9 +47,6 @@ volumes:
     driver: local
     name: resumo_academico_media
 
-# ==========================================
-# Rede compartilhada
-# ==========================================
 networks:
   global_network:
-    external: true  # Usa a rede já existente
+    external: true
